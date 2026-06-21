@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>祝二十歳 | JR九州労組 特別カタログギフト</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700;900&family=Noto+Sans+JP:wght@300;400;500;700&display=swap');
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: #fdfaf5;
+  }
+  .serif { font-family: 'Noto Serif JP', serif; }
+
+  .gold-text {
+    background: linear-gradient(135deg, #d4af37 0%, #f4e5a1 25%, #d4af37 50%, #b8860b 75%, #d4af37 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .gold-border {
+    border-color: #d4af37;
+  }
+
+  .jr-red {
+    background-color: #c8102e;
+  }
+
+  .jr-red-text {
+    color: #c8102e;
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .fade-in-up {
+    animation: fadeInUp 0.9s ease-out forwards;
+    opacity: 0;
+  }
+  .fade-in {
+    animation: fadeIn 1.2s ease-out forwards;
+    opacity: 0;
+  }
+  .delay-1 { animation-delay: 0.15s; }
+  .delay-2 { animation-delay: 0.35s; }
+  .delay-3 { animation-delay: 0.55s; }
+  .delay-4 { animation-delay: 0.75s; }
+  .delay-5 { animation-delay: 0.95s; }
+
+  .screen {
+    transition: opacity 0.5s ease;
+  }
+  .hidden-screen {
+    display: none;
+  }
+
+  .shimmer-line {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #d4af37, transparent);
+  }
+
+  .catalog-frame {
+    width: 100%;
+    height: 70vh;
+    border: 2px solid #d4af37;
+    border-radius: 0.75rem;
+  }
+
+  .btn-gold {
+    background: linear-gradient(135deg, #d4af37, #b8860b);
+    transition: all 0.3s ease;
+  }
+  .btn-gold:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px -8px rgba(184, 134, 11, 0.6);
+  }
+
+  .btn-red {
+    background: linear-gradient(135deg, #c8102e, #8f0a20);
+    transition: all 0.3s ease;
+  }
+  .btn-red:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px -8px rgba(200, 16, 46, 0.6);
+  }
+
+  .card-shadow {
+    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+  }
+
+  .kanji-bg {
+    position: absolute;
+    font-size: 18rem;
+    font-weight: 900;
+    color: rgba(200, 16, 46, 0.04);
+    line-height: 1;
+    user-select: none;
+    z-index: 0;
+  }
+</style>
+</head>
+<body class="min-h-screen text-gray-800 relative overflow-x-hidden">
+
+<!-- decorative background kanji -->
+<div class="kanji-bg serif" style="top:-2rem; left:-3rem;">祝</div>
+
+<!-- ============ HEADER ============ -->
+<header class="relative z-10 jr-red text-white py-3 px-4 sm:px-8 flex items-center justify-between shadow-md">
+  <div class="flex items-center gap-2">
+    <span class="text-xs sm:text-sm font-semibold tracking-wider">JR九州労組</span>
+    <span class="hidden sm:inline text-xs opacity-80">中央本部 青年・女性委員会</span>
+  </div>
+  <span class="text-xs sm:text-sm font-light tracking-widest gold-text bg-white/0">SPECIAL CATALOG GIFT</span>
+</header>
+
+<!-- ============ SCREEN 1: WELCOME + LOGIN ============ -->
+<main id="screen-login" class="screen relative z-10 max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
+
+  <section class="text-center mb-12">
+    <p class="fade-in text-sm sm:text-base tracking-[0.3em] text-gray-500 mb-3">CONGRATULATIONS ON YOUR COMING OF AGE</p>
+    <h1 class="fade-in-up serif text-6xl sm:text-8xl font-black mb-2">
+      <span class="jr-red-text">祝</span><span class="gold-text">二十歳</span>
+    </h1>
+    <div class="shimmer-line w-40 sm:w-64 mx-auto my-6 fade-in delay-2"></div>
+
+    <div class="fade-in-up delay-2 bg-white rounded-2xl card-shadow p-6 sm:p-10 text-left sm:text-center leading-relaxed text-sm sm:base text-gray-700 border gold-border/30">
+      <p class="mb-4">
+        この度は、二十歳という人生の節目を迎えられたこと、心よりお祝い申し上げます。<br>
+        JR九州労組より、ささやかではございますがお祝いの品をお送りいたします。<br>
+        これからの歩みが、希望に満ちた素晴らしいものとなりますよう心よりお祈りいたします。
+      </p>
+      <p class="serif font-semibold text-gray-600">―― JR九州労組 中央本部青年・女性委員会一同</p>
+    </div>
+  </section>
+
+  <section class="fade-in-up delay-3 bg-white rounded-2xl card-shadow border gold-border/30 p-6 sm:p-10 max-w-md mx-auto">
+    <h2 class="serif text-xl sm:text-2xl font-bold text-center mb-1 jr-red-text">専用ページ ログイン</h2>
+    <p class="text-center text-xs text-gray-500 mb-6">受付番号とパスワードを入力してください</p>
+
+    <form id="login-form" class="space-y-4" autocomplete="off">
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 mb-1">受付番号 (ID)</label>
+        <input id="input-id" type="text" placeholder="例: 90051 B25735 0002"
+          class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37] transition">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 mb-1">パスワード (PW)</label>
+        <input id="input-pw" type="password" placeholder="例: 71896"
+          class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37] transition">
+      </div>
+
+      <p id="login-error" class="hidden-screen text-sm text-red-600 font-medium text-center"></p>
+
+      <button type="submit"
+        class="btn-red w-full text-white font-bold py-3 rounded-lg shadow-md text-sm sm:text-base tracking-wide">
+        専用ページへ進む
+      </button>
+    </form>
+  </section>
+
+  <p class="fade-in delay-4 text-center text-xs text-gray-400 mt-8">
+    ※ 受付番号・パスワードは、お送りした案内状に記載のものをご入力ください。
+  </p>
+</main>
+
+<!-- ============ SCREEN 2: WELCOME (PERSONALIZED) + CATALOG ============ -->
+<main id="screen-gift" class="screen hidden-screen relative z-10 max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
+
+  <section class="text-center mb-10">
+    <p class="fade-in text-xs sm:text-sm tracking-[0.25em] text-gray-500 mb-2">FOR OUR SPECIAL MEMBER</p>
+    <h2 id="greeting-name" class="fade-in-up serif text-3xl sm:text-5xl font-black mb-3 leading-snug">
+      <span class="jr-red-text"></span>
+    </h2>
+    <div class="shimmer-line w-32 sm:w-48 mx-auto fade-in delay-1"></div>
+  </section>
+
+  <section class="fade-in-up delay-1 bg-white rounded-2xl card-shadow border gold-border/30 p-6 sm:p-8 mb-8 text-center">
+    <p class="text-sm sm:text-base text-gray-700 leading-relaxed">
+      二十歳という素晴らしい節目を、心よりお祝い申し上げます。<br>
+      下記より専用のWebカタログをご覧いただき、お好きな品をお選びください。
+    </p>
+    <p class="mt-3 text-xs text-gray-400">コース： <span class="font-semibold gold-text">ORANGE</span></p>
+  </section>
+
+  <section class="fade-in-up delay-2 mb-8">
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
+      <button id="btn-show-catalog"
+        class="btn-gold text-white font-bold px-8 py-4 rounded-full shadow-lg text-sm sm:text-base tracking-wide w-full sm:w-auto">
+        カタログを見る
+      </button>
+      <a id="btn-order" href="https://order.harmonick.co.jp" target="_blank" rel="noopener noreferrer"
+        class="btn-red text-white font-bold px-8 py-4 rounded-full shadow-lg text-sm sm:text-base tracking-wide w-full sm:w-auto text-center">
+        商品を受け取る（申し込む）
+      </a>
+    </div>
+
+    <div id="catalog-wrapper" class="hidden-screen fade-in">
+      <iframe class="catalog-frame" src="https://www.harmonick.co.jp/custom/webcatalog.html?id=bmg_2527&page=1" title="Webカタログ"></iframe>
+    </div>
+  </section>
+
+  <section class="fade-in-up delay-3 bg-white rounded-2xl card-shadow border gold-border/30 p-6 sm:p-8">
+    <h3 class="serif font-bold jr-red-text mb-3 text-sm sm:text-base">ご案内・ご注意事項</h3>
+    <ul class="text-xs sm:text-sm text-gray-600 space-y-2 list-disc pl-5 leading-relaxed">
+      <li>お申し込み期限は、お受け取り日より<span class="font-semibold">4ヶ月以内</span>となります。期限を過ぎますとお申し込みができなくなりますので、お早めにお手続きください。</li>
+      <li>お届け希望日をご指定いただく場合は、お申し込み時の入力欄にてご指定ください。商品によりお届けまでお時間をいただく場合があります。</li>
+      <li>お申し込みの際は、本ページでご利用の受付番号・パスワードをそのまま申し込みサイトでもご使用ください。</li>
+      <li>ご不明な点がございましたら、JR九州労組 中央本部青年・女性委員会までお問い合わせください。</li>
+    </ul>
+  </section>
+
+  <div class="text-center mt-8">
+    <button id="btn-logout" class="text-xs text-gray-400 underline hover:text-gray-600">別の受付番号でログインする</button>
+  </div>
+</main>
+
+<footer class="relative z-10 text-center text-xs text-gray-400 py-8 border-t border-gray-200 mt-4">
+  &copy; JR九州労組 中央本部青年・女性委員会
+</footer>
+
+<script>
+  const MEMBERS = [
+    { id: "90051 B25735 0002", pw: "71896", name: "日山 凌雅" },
+    { id: "90051 B25735 0003", pw: "64556", name: "大鶴 瑛司" },
+    { id: "90051 B25735 0004", pw: "20420", name: "丸井 光輝" }
+  ];
+
+  const normalize = (s) => s.trim().replace(/\s+/g, " ");
+
+  const loginForm = document.getElementById("login-form");
+  const inputId = document.getElementById("input-id");
+  const inputPw = document.getElementById("input-pw");
+  const loginError = document.getElementById("login-error");
+  const screenLogin = document.getElementById("screen-login");
+  const screenGift = document.getElementById("screen-gift");
+  const greetingName = document.getElementById("greeting-name");
+  const btnShowCatalog = document.getElementById("btn-show-catalog");
+  const catalogWrapper = document.getElementById("catalog-wrapper");
+  const btnLogout = document.getElementById("btn-logout");
+
+  loginForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const id = normalize(inputId.value);
+    const pw = normalize(inputPw.value);
+
+    const matched = MEMBERS.find(m => m.id === id && m.pw === pw);
+
+    if (matched) {
+      loginError.classList.add("hidden-screen");
+      greetingName.querySelector("span").textContent = `${matched.name} 様、二十歳おめでとうございます！`;
+      screenLogin.classList.add("hidden-screen");
+      screenGift.classList.remove("hidden-screen");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      loginError.textContent = "受付番号またはパスワードが正しくありません";
+      loginError.classList.remove("hidden-screen");
+    }
+  });
+
+  btnShowCatalog.addEventListener("click", () => {
+    catalogWrapper.classList.remove("hidden-screen");
+    catalogWrapper.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  btnLogout.addEventListener("click", () => {
+    inputId.value = "";
+    inputPw.value = "";
+    loginError.classList.add("hidden-screen");
+    catalogWrapper.classList.add("hidden-screen");
+    screenGift.classList.add("hidden-screen");
+    screenLogin.classList.remove("hidden-screen");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+</script>
+
+</body>
+</html>
