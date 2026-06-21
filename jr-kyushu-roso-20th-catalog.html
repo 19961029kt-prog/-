@@ -241,7 +241,7 @@
 
     if (matched) {
       loginError.classList.add("hidden-screen");
-      greetingName.querySelector("span").textContent = `${matched.name} 様、二十歳おめでとうございます！`;
+      greetingName.querySelector("span").innerHTML = `${matched.name} 様<br>二十歳おめでとうございます！`;
       screenLogin.classList.add("hidden-screen");
       screenGift.classList.remove("hidden-screen");
       window.scrollTo({ top: 0, behavior: "smooth" });
