@@ -7,8 +7,6 @@
 <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin></script>
-<script src="https://unpkg.com/prop-types@15/prop-types.min.js" crossorigin></script>
-<script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js" crossorigin></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   body { font-family: -apple-system, "Helvetica Neue", "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif; }
@@ -18,16 +16,10 @@
 <div id="root"></div>
 
 <script type="text/babel" data-presets="react">
-const { useState } = React;
-const {
-  BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis,
-  CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-} = Recharts;
-
 const GOLD = "#D4A017";
 const GOLD_LIGHT = "#E8C766";
 
-/* ---------- Inline SVG Icons (lucide-react代替) ---------- */
+/* ---------- Inline SVG Icons ---------- */
 const Icon = ({ d, size = 20, color = "currentColor", className = "", children }) => (
   <svg
     width={size}
@@ -100,7 +92,85 @@ const dwellData = [
   { range: "30分以上", percent: 5 },
 ];
 
-/* ---------- Components ---------- */
+/* ---------- Pure CSS/SVG Charts (CDN依存なし) ---------- */
+function DonutChart({ data, colors, size = 200, thickness = 32 }) {
+  const radius = size / 2;
+  const innerRadius = radius - thickness;
+  const center = radius;
+  let cumulative = 0;
+
+  const segments = data.map((d, idx) => {
+    const startAngle = (cumulative / 100) * 360;
+    cumulative += d.value;
+    const endAngle = (cumulative / 100) * 360;
+    return { ...d, startAngle, endAngle, color: colors[idx % colors.length] };
+  });
+
+  const polarToCartesian = (angleDeg, r) => {
+    const angleRad = ((angleDeg - 90) * Math.PI) / 180;
+    return { x: center + r * Math.cos(angleRad), y: center + r * Math.sin(angleRad) };
+  };
+
+  const arcPath = (startAngle, endAngle) => {
+    const startOuter = polarToCartesian(startAngle, radius);
+    const endOuter = polarToCartesian(endAngle, radius);
+    const startInner = polarToCartesian(endAngle, innerRadius);
+    const endInner = polarToCartesian(startAngle, innerRadius);
+    const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+    return [
+      `M ${startOuter.x} ${startOuter.y}`,
+      `A ${radius} ${radius} 0 ${largeArc} 1 ${endOuter.x} ${endOuter.y}`,
+      `L ${startInner.x} ${startInner.y}`,
+      `A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${endInner.x} ${endInner.y}`,
+      "Z",
+    ].join(" ");
+  };
+
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      {segments.map((seg) => (
+        <path
+          key={seg.name}
+          d={arcPath(seg.startAngle, seg.endAngle)}
+          fill={seg.color}
+          stroke="#fff"
+          strokeWidth="2"
+        >
+          <title>{`${seg.name}: ${seg.value}%`}</title>
+        </path>
+      ))}
+    </svg>
+  );
+}
+
+function BarChartSimple({ data, dataKey, labelKey, highlightFirst = true }) {
+  const max = Math.max(...data.map((d) => d[dataKey]));
+  return (
+    <div className="flex items-end justify-between gap-3 h-56 px-2">
+      {data.map((d, idx) => {
+        const heightPct = (d[dataKey] / max) * 100;
+        const isHighlight = highlightFirst && idx === 0;
+        return (
+          <div key={d[labelKey]} className="flex flex-col items-center flex-1 h-full justify-end">
+            <span className="text-xs font-semibold text-gray-700 mb-1">{d[dataKey]}%</span>
+            <div
+              className="w-full rounded-t-md transition-all"
+              style={{
+                height: `${heightPct}%`,
+                backgroundColor: isHighlight ? GOLD : GOLD_LIGHT,
+                opacity: isHighlight ? 1 : 0.55,
+                minHeight: "4px",
+              }}
+            />
+            <span className="text-xs text-gray-400 mt-2 text-center">{d[labelKey]}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ---------- Layout Components ---------- */
 function Sidebar() {
   const navItems = [
     { icon: LayoutDashboard, label: "ダッシュボード", active: true },
@@ -222,16 +292,9 @@ function ODCard() {
       <p className="text-xs text-gray-400 mb-4">駅から先の移動手段に関する潜在需要（目的地別ボリューム）</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-        <ResponsiveContainer width="100%" height={220}>
-          <PieChart>
-            <Pie data={odData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={2}>
-              {odData.map((entry, idx) => (
-                <Cell key={entry.name} fill={odColors[idx % odColors.length]} />
-              ))}
-            </Pie>
-            <Tooltip formatter={(v) => `${v}%`} />
-          </PieChart>
-        </ResponsiveContainer>
+        <div className="flex justify-center">
+          <DonutChart data={odData} colors={odColors} />
+        </div>
 
         <ul className="space-y-2">
           {odData.map((d, idx) => (
@@ -268,19 +331,7 @@ function DwellCard() {
       </div>
       <p className="text-xs text-gray-400 mb-4">下車客の滞在時間ごとの人数分布（ヒストグラム）</p>
 
-      <ResponsiveContainer width="100%" height={240}>
-        <BarChart data={dwellData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F1F1" />
-          <XAxis dataKey="range" tick={{ fontSize: 12, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fontSize: 12, fill: "#9CA3AF" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
-          <Tooltip formatter={(v) => `${v}%`} />
-          <Bar dataKey="percent" radius={[6, 6, 0, 0]}>
-            {dwellData.map((entry, idx) => (
-              <Cell key={entry.range} fill={idx === 0 ? GOLD : GOLD_LIGHT} fillOpacity={idx === 0 ? 1 : 0.45} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+      <BarChartSimple data={dwellData} dataKey="percent" labelKey="range" />
 
       <InsightBox icon={AlertTriangle} tone="warning">
         下車客の<span className="font-bold" style={{ color: GOLD }}> 65%</span>
