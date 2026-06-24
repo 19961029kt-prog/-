@@ -4,371 +4,362 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>KYUSHU Re-START Platform</title>
-<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin></script>
-<script src="https://cdn.tailwindcss.com"></script>
 <style>
-  body { font-family: -apple-system, "Helvetica Neue", "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif; }
+  :root {
+    --gold: #D4A017;
+    --gold-light: #E8C766;
+    --gold-bg: #FDF6E3;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Helvetica Neue", "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+    background: #F9FAFB;
+    color: #111827;
+  }
+  .app { display: flex; min-height: 100vh; }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar {
+    width: 256px;
+    background: #fff;
+    border-right: 1px solid #E5E7EB;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+  .sidebar-logo { padding: 24px 24px 20px; border-bottom: 1px solid #F3F4F6; }
+  .sidebar-logo h1 { font-size: 20px; font-weight: 800; margin: 0; }
+  .sidebar-logo .gold { color: var(--gold); font-weight: 800; }
+  .sidebar-logo p { font-size: 11px; color: #9CA3AF; margin: 4px 0 0; letter-spacing: 0.05em; }
+
+  .nav { flex: 1; padding: 20px 12px; display: flex; flex-direction: column; gap: 4px; }
+  .nav-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px; border-radius: 8px; font-size: 14px; font-weight: 500;
+    color: #6B7280; cursor: pointer; border: none; background: none; width: 100%; text-align: left;
+  }
+  .nav-item:hover { background: #F9FAFB; color: #1F2937; }
+  .nav-item.active { background: #FFFBEB; color: #111827; box-shadow: inset 3px 0 0 var(--gold); }
+  .nav-item .left { display: flex; align-items: center; gap: 12px; }
+
+  .sidebar-user { padding: 18px 16px; border-top: 1px solid #F3F4F6; display: flex; align-items: center; gap: 12px; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--gold); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
+  .sidebar-user .name { font-size: 14px; font-weight: 500; color: #1F2937; margin: 0; }
+  .sidebar-user .plan { font-size: 12px; color: #9CA3AF; margin: 2px 0 0; }
+
+  /* ---------- Main ---------- */
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #fff; border-bottom: 1px solid #E5E7EB; padding: 16px 24px;
+  }
+  .header-eyebrow { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #9CA3AF; }
+  .header h2 { font-size: 18px; font-weight: 700; margin: 4px 0 0; }
+  .header-actions { display: flex; align-items: center; gap: 16px; }
+  .search-box {
+    display: flex; align-items: center; gap: 8px; background: #F9FAFB; border: 1px solid #E5E7EB;
+    border-radius: 8px; padding: 8px 12px; width: 240px;
+  }
+  .search-box input { border: none; outline: none; background: transparent; font-size: 14px; color: #4B5563; width: 100%; }
+  .bell-btn { position: relative; padding: 8px; border-radius: 8px; border: none; background: none; cursor: pointer; }
+  .bell-btn:hover { background: #F9FAFB; }
+  .bell-dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); }
+
+  .content { flex: 1; padding: 24px; display: flex; flex-direction: column; gap: 24px; }
+
+  /* ---------- Stat cards ---------- */
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .stat-card {
+    background: #fff; border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .stat-card .label { font-size: 12px; font-weight: 500; color: #9CA3AF; margin: 0; }
+  .stat-card .value { font-size: 24px; font-weight: 700; margin: 4px 0 0; }
+  .stat-card .sub { font-size: 12px; color: #9CA3AF; margin: 4px 0 0; }
+  .stat-icon { width: 44px; height: 44px; border-radius: 10px; background: var(--gold-bg); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+  /* ---------- Chart cards ---------- */
+  .card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+  .card { background: #fff; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; }
+  .card-eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.03em; color: var(--gold); margin: 0; }
+  .card-title { font-size: 16px; font-weight: 700; margin: 4px 0 0; }
+  .card-head { display: flex; align-items: flex-start; justify-content: space-between; }
+  .card-desc { font-size: 12px; color: #9CA3AF; margin: 6px 0 16px; }
+
+  .chart-flex { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: center; }
+  .legend-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .legend-list li { display: flex; align-items: center; justify-content: space-between; font-size: 14px; color: #4B5563; }
+  .legend-list .left { display: flex; align-items: center; gap: 8px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .legend-value { font-weight: 600; color: #111827; }
+
+  .bar-chart { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; height: 220px; padding: 0 8px; }
+  .bar-col { display: flex; flex-direction: column; align-items: center; flex: 1; height: 100%; justify-content: flex-end; }
+  .bar-value { font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+  .bar-rect { width: 100%; border-radius: 6px 6px 0 0; }
+  .bar-label { font-size: 12px; color: #9CA3AF; margin-top: 8px; text-align: center; }
+
+  .insight-box { display: flex; gap: 12px; border-radius: 8px; border: 1px solid #E5E7EB; background: #F9FAFB; padding: 16px; margin-top: 16px; }
+  .insight-box.warning { background: #FFFBEB; border-color: #FDE68A; }
+  .insight-box p { font-size: 14px; color: #4B5563; line-height: 1.6; margin: 0; }
+  .insight-box .gold-text { color: var(--gold); font-weight: 700; }
+  .insight-box .strong-text { font-weight: 600; color: #1F2937; }
+  .insight-icon { flex-shrink: 0; margin-top: 2px; }
+
+  @media (max-width: 1024px) {
+    .stat-grid { grid-template-columns: 1fr; }
+    .card-grid { grid-template-columns: 1fr; }
+    .chart-flex { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .search-box { display: none; }
+  }
 </style>
 </head>
-<body class="bg-gray-50">
-<div id="root"></div>
+<body>
 
-<script type="text/babel" data-presets="react">
-const GOLD = "#D4A017";
-const GOLD_LIGHT = "#E8C766";
-
-/* ---------- Inline SVG Icons ---------- */
-const Icon = ({ d, size = 20, color = "currentColor", className = "", children }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke={color}
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    {children}
-  </svg>
-);
-
-const LayoutDashboard = (p) => (
-  <Icon {...p}><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></Icon>
-);
-const MapIcon = (p) => (
-  <Icon {...p}><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></Icon>
-);
-const TrendingUp = (p) => (
-  <Icon {...p}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></Icon>
-);
-const Users = (p) => (
-  <Icon {...p}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></Icon>
-);
-const SettingsIcon = (p) => (
-  <Icon {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></Icon>
-);
-const Bell = (p) => (
-  <Icon {...p}><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></Icon>
-);
-const Search = (p) => (
-  <Icon {...p}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></Icon>
-);
-const ChevronRight = (p) => (
-  <Icon {...p}><polyline points="9 18 15 12 9 6"/></Icon>
-);
-const TrainFront = (p) => (
-  <Icon {...p}><rect x="4" y="3" width="16" height="16" rx="2"/><path d="M4 11h16"/><path d="M12 3v8"/><path d="M8 19l-2 3"/><path d="M16 19l2 3"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/></Icon>
-);
-const Bike = (p) => (
-  <Icon {...p}><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></Icon>
-);
-const Clock = (p) => (
-  <Icon {...p}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></Icon>
-);
-const AlertTriangle = (p) => (
-  <Icon {...p}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></Icon>
-);
-const Lightbulb = (p) => (
-  <Icon {...p}><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.9V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.1A7 7 0 0 0 12 2z"/></Icon>
-);
-
-/* ---------- Data ---------- */
-const odData = [
-  { name: "自宅エリア", value: 45 },
-  { name: "商業エリア", value: 25 },
-  { name: "工業団地", value: 20 },
-  { name: "その他", value: 10 },
-];
-const odColors = ["#D4A017", "#9CA3AF", "#6B7280", "#D1D5DB"];
-
-const dwellData = [
-  { range: "0-5分", percent: 65 },
-  { range: "5-15分", percent: 20 },
-  { range: "15-30分", percent: 10 },
-  { range: "30分以上", percent: 5 },
-];
-
-/* ---------- Pure CSS/SVG Charts (CDN依存なし) ---------- */
-function DonutChart({ data, colors, size = 200, thickness = 32 }) {
-  const radius = size / 2;
-  const innerRadius = radius - thickness;
-  const center = radius;
-  let cumulative = 0;
-
-  const segments = data.map((d, idx) => {
-    const startAngle = (cumulative / 100) * 360;
-    cumulative += d.value;
-    const endAngle = (cumulative / 100) * 360;
-    return { ...d, startAngle, endAngle, color: colors[idx % colors.length] };
-  });
-
-  const polarToCartesian = (angleDeg, r) => {
-    const angleRad = ((angleDeg - 90) * Math.PI) / 180;
-    return { x: center + r * Math.cos(angleRad), y: center + r * Math.sin(angleRad) };
-  };
-
-  const arcPath = (startAngle, endAngle) => {
-    const startOuter = polarToCartesian(startAngle, radius);
-    const endOuter = polarToCartesian(endAngle, radius);
-    const startInner = polarToCartesian(endAngle, innerRadius);
-    const endInner = polarToCartesian(startAngle, innerRadius);
-    const largeArc = endAngle - startAngle > 180 ? 1 : 0;
-    return [
-      `M ${startOuter.x} ${startOuter.y}`,
-      `A ${radius} ${radius} 0 ${largeArc} 1 ${endOuter.x} ${endOuter.y}`,
-      `L ${startInner.x} ${startInner.y}`,
-      `A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${endInner.x} ${endInner.y}`,
-      "Z",
-    ].join(" ");
-  };
-
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      {segments.map((seg) => (
-        <path
-          key={seg.name}
-          d={arcPath(seg.startAngle, seg.endAngle)}
-          fill={seg.color}
-          stroke="#fff"
-          strokeWidth="2"
-        >
-          <title>{`${seg.name}: ${seg.value}%`}</title>
-        </path>
-      ))}
-    </svg>
-  );
-}
-
-function BarChartSimple({ data, dataKey, labelKey, highlightFirst = true }) {
-  const max = Math.max(...data.map((d) => d[dataKey]));
-  return (
-    <div className="flex items-end justify-between gap-3 h-56 px-2">
-      {data.map((d, idx) => {
-        const heightPct = (d[dataKey] / max) * 100;
-        const isHighlight = highlightFirst && idx === 0;
-        return (
-          <div key={d[labelKey]} className="flex flex-col items-center flex-1 h-full justify-end">
-            <span className="text-xs font-semibold text-gray-700 mb-1">{d[dataKey]}%</span>
-            <div
-              className="w-full rounded-t-md transition-all"
-              style={{
-                height: `${heightPct}%`,
-                backgroundColor: isHighlight ? GOLD : GOLD_LIGHT,
-                opacity: isHighlight ? 1 : 0.55,
-                minHeight: "4px",
-              }}
-            />
-            <span className="text-xs text-gray-400 mt-2 text-center">{d[labelKey]}</span>
-          </div>
-        );
-      })}
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h1>KYUSHU <span class="gold">Re-</span>START</h1>
+      <p>PLATFORM</p>
     </div>
-  );
-}
-
-/* ---------- Layout Components ---------- */
-function Sidebar() {
-  const navItems = [
-    { icon: LayoutDashboard, label: "ダッシュボード", active: true },
-    { icon: MapIcon, label: "エリア分析" },
-    { icon: TrendingUp, label: "需要予測" },
-    { icon: Users, label: "ペルソナ" },
-    { icon: SettingsIcon, label: "設定" },
-  ];
-
-  return (
-    <aside className="hidden md:flex md:flex-col w-64 bg-white border-r border-gray-200 h-screen sticky top-0">
-      <div className="px-6 py-6 border-b border-gray-100">
-        <h1 className="text-xl font-bold text-gray-900">
-          KYUSHU <span style={{ color: GOLD }} className="font-extrabold">Re-</span>START
-        </h1>
-        <p className="text-xs text-gray-400 mt-1 tracking-wide">PLATFORM</p>
-      </div>
-
-      <nav className="flex-1 px-3 py-6 space-y-1">
-        {navItems.map(({ icon: Ic, label, active }) => (
-          <button
-            key={label}
-            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              active ? "bg-amber-50 text-gray-900" : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"
-            }`}
-            style={active ? { boxShadow: `inset 3px 0 0 ${GOLD}` } : {}}
-          >
-            <span className="flex items-center gap-3">
-              <Ic size={18} color={active ? GOLD : "#9CA3AF"} />
-              {label}
-            </span>
-            {active && <ChevronRight size={14} color="#D1D5DB" />}
-          </button>
-        ))}
-      </nav>
-
-      <div className="px-4 py-5 border-t border-gray-100">
-        <div className="flex items-center gap-3 px-2">
-          <div
-            className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-semibold"
-            style={{ backgroundColor: GOLD }}
-          >
-            HK
-          </div>
-          <div className="leading-tight">
-            <p className="text-sm font-medium text-gray-800">起業家ユーザー</p>
-            <p className="text-xs text-gray-400">無料プラン</p>
-          </div>
-        </div>
-      </div>
-    </aside>
-  );
-}
-
-function Header() {
-  return (
-    <header className="flex items-center justify-between bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-10">
+    <nav class="nav">
+      <button class="nav-item active">
+        <span class="left">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D4A017" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+          ダッシュボード
+        </span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      <button class="nav-item">
+        <span class="left">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+          エリア分析
+        </span>
+      </button>
+      <button class="nav-item">
+        <span class="left">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          需要予測
+        </span>
+      </button>
+      <button class="nav-item">
+        <span class="left">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          ペルソナ
+        </span>
+      </button>
+      <button class="nav-item">
+        <span class="left">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          設定
+        </span>
+      </button>
+    </nav>
+    <div class="sidebar-user">
+      <div class="avatar">HK</div>
       <div>
-        <div className="flex items-center gap-2 text-sm text-gray-400">
-          <TrainFront size={16} />
+        <p class="name">起業家ユーザー</p>
+        <p class="plan">無料プラン</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <header class="header">
+      <div>
+        <div class="header-eyebrow">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="16" rx="2"/><path d="M4 11h16"/><path d="M12 3v8"/><path d="M8 19l-2 3"/><path d="M16 19l2 3"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/></svg>
           <span>分析対象エリア</span>
         </div>
-        <h2 className="text-lg font-bold text-gray-900 mt-0.5">佐世保駅 周辺エリア分析</h2>
+        <h2>佐世保駅 周辺エリア分析</h2>
       </div>
-
-      <div className="flex items-center gap-4">
-        <div className="hidden sm:flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 w-64">
-          <Search size={16} color="#9CA3AF" />
-          <input
-            type="text"
-            placeholder="駅名・エリアを検索"
-            className="bg-transparent outline-none text-sm text-gray-600 w-full placeholder:text-gray-400"
-          />
+      <div class="header-actions">
+        <div class="search-box">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="駅名・エリアを検索" />
         </div>
-        <button className="relative p-2 rounded-lg hover:bg-gray-50">
-          <Bell size={20} color="#6B7280" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style={{ backgroundColor: GOLD }} />
+        <button class="bell-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="bell-dot"></span>
         </button>
       </div>
     </header>
-  );
-}
 
-function StatCard({ label, value, sub, icon: Ic }) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center justify-between">
-      <div>
-        <p className="text-xs font-medium text-gray-400">{label}</p>
-        <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-        <p className="text-xs text-gray-400 mt-1">{sub}</p>
-      </div>
-      <div className="w-11 h-11 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#FDF6E3" }}>
-        <Ic size={20} color={GOLD} />
-      </div>
-    </div>
-  );
-}
-
-function InsightBox({ icon: Ic, children, tone = "default" }) {
-  const toneStyles = tone === "warning" ? "bg-amber-50 border-amber-200" : "bg-gray-50 border-gray-200";
-  return (
-    <div className={`rounded-lg border ${toneStyles} p-4 flex gap-3 mt-4`}>
-      <Ic size={18} color={GOLD} className="flex-shrink-0 mt-0.5" />
-      <p className="text-sm text-gray-600 leading-relaxed">{children}</p>
-    </div>
-  );
-}
-
-function ODCard() {
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6">
-      <div className="flex items-start justify-between mb-1">
-        <div>
-          <p className="text-xs font-semibold tracking-wide" style={{ color: GOLD }}>O-D データ分析</p>
-          <h3 className="text-base font-bold text-gray-900 mt-1">ラストワンマイルの移動ボトルネック</h3>
+    <main class="content">
+      <!-- Stat cards -->
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div>
+            <p class="label">二次交通カバー率</p>
+            <p class="value">32%</p>
+            <p class="sub">3km圏内エリア比</p>
+          </div>
+          <div class="stat-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D4A017" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
+          </div>
         </div>
-        <Bike size={20} color="#D1D5DB" />
-      </div>
-      <p className="text-xs text-gray-400 mb-4">駅から先の移動手段に関する潜在需要（目的地別ボリューム）</p>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-        <div className="flex justify-center">
-          <DonutChart data={odData} colors={odColors} />
+        <div class="stat-card">
+          <div>
+            <p class="label">平均滞在時間</p>
+            <p class="value">4.2分</p>
+            <p class="sub">平日18時台・30代</p>
+          </div>
+          <div class="stat-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D4A017" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
         </div>
-
-        <ul className="space-y-2">
-          {odData.map((d, idx) => (
-            <li key={d.name} className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 text-gray-600">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: odColors[idx % odColors.length] }} />
-                {d.name}
-              </span>
-              <span className="font-semibold text-gray-900">{d.value}%</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <InsightBox icon={Lightbulb}>
-        駅から半径<span className="font-semibold text-gray-800">3km圏内</span>への移動が全体の
-        <span className="font-bold" style={{ color: GOLD }}> 70%</span>
-        を占めるが、二次交通の接続が弱いエリアが存在します。
-        <span className="font-semibold text-gray-800">シェアサイクルの最適ポート設置候補地</span>です。
-      </InsightBox>
-    </div>
-  );
-}
-
-function DwellCard() {
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6">
-      <div className="flex items-start justify-between mb-1">
-        <div>
-          <p className="text-xs font-semibold tracking-wide" style={{ color: GOLD }}>滞在時間分析（平日18時台 / 30代）</p>
-          <h3 className="text-base font-bold text-gray-900 mt-1">駅周辺の隠れスキマ時間（滞留）</h3>
+        <div class="stat-card">
+          <div>
+            <p class="label">ビジネス機会スコア</p>
+            <p class="value">A+</p>
+            <p class="sub">駅ナカ出店適性</p>
+          </div>
+          <div class="stat-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D4A017" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          </div>
         </div>
-        <Clock size={20} color="#D1D5DB" />
       </div>
-      <p className="text-xs text-gray-400 mb-4">下車客の滞在時間ごとの人数分布（ヒストグラム）</p>
 
-      <BarChartSimple data={dwellData} dataKey="percent" labelKey="range" />
+      <!-- Chart cards -->
+      <div class="card-grid">
+        <!-- O-D Card -->
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <p class="card-eyebrow">O-D データ分析</p>
+              <h3 class="card-title">ラストワンマイルの移動ボトルネック</h3>
+            </div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
+          </div>
+          <p class="card-desc">駅から先の移動手段に関する潜在需要（目的地別ボリューム）</p>
 
-      <InsightBox icon={AlertTriangle} tone="warning">
-        下車客の<span className="font-bold" style={{ color: GOLD }}> 65%</span>
-        が5分以内に帰路についており、深刻な<span className="font-semibold text-gray-800">「滞留の空白地帯」</span>
-        が発生しています。駅ナカの
-        <span className="font-semibold text-gray-800">テイクアウト専門店やスマートロッカーサービス</span>
-        の出店リスクが極めて低いエリアです。
-      </InsightBox>
-    </div>
-  );
-}
-
-function App() {
-  return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
-      <div className="flex-1 flex flex-col">
-        <Header />
-        <main className="flex-1 p-6 space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatCard label="二次交通カバー率" value="32%" sub="3km圏内エリア比" icon={Bike} />
-            <StatCard label="平均滞在時間" value="4.2分" sub="平日18時台・30代" icon={Clock} />
-            <StatCard label="ビジネス機会スコア" value="A+" sub="駅ナカ出店適性" icon={TrendingUp} />
+          <div class="chart-flex">
+            <div style="display:flex; justify-content:center;">
+              <svg id="donut-chart" width="200" height="200" viewBox="0 0 200 200"></svg>
+            </div>
+            <ul class="legend-list">
+              <li><span class="left"><span class="dot" style="background:#D4A017;"></span>自宅エリア</span><span class="legend-value">45%</span></li>
+              <li><span class="left"><span class="dot" style="background:#9CA3AF;"></span>商業エリア</span><span class="legend-value">25%</span></li>
+              <li><span class="left"><span class="dot" style="background:#6B7280;"></span>工業団地</span><span class="legend-value">20%</span></li>
+              <li><span class="left"><span class="dot" style="background:#D1D5DB;"></span>その他</span><span class="legend-value">10%</span></li>
+            </ul>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ODCard />
-            <DwellCard />
+          <div class="insight-box">
+            <svg class="insight-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D4A017" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.9V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.1A7 7 0 0 0 12 2z"/></svg>
+            <p>
+              駅から半径<span class="strong-text">3km圏内</span>への移動が全体の
+              <span class="gold-text">70%</span>
+              を占めるが、二次交通の接続が弱いエリアが存在します。
+              <span class="strong-text">シェアサイクルの最適ポート設置候補地</span>です。
+            </p>
           </div>
-        </main>
-      </div>
-    </div>
-  );
-}
+        </div>
 
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<App />);
+        <!-- Dwell Card -->
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <p class="card-eyebrow">滞在時間分析（平日18時台 / 30代）</p>
+              <h3 class="card-title">駅周辺の隠れスキマ時間（滞留）</h3>
+            </div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <p class="card-desc">下車客の滞在時間ごとの人数分布（ヒストグラム）</p>
+
+          <div class="bar-chart">
+            <div class="bar-col">
+              <span class="bar-value">65%</span>
+              <div class="bar-rect" style="height:100%; background:#D4A017;"></div>
+              <span class="bar-label">0-5分</span>
+            </div>
+            <div class="bar-col">
+              <span class="bar-value">20%</span>
+              <div class="bar-rect" style="height:30.7%; background:#E8C766; opacity:0.55;"></div>
+              <span class="bar-label">5-15分</span>
+            </div>
+            <div class="bar-col">
+              <span class="bar-value">10%</span>
+              <div class="bar-rect" style="height:15.4%; background:#E8C766; opacity:0.55;"></div>
+              <span class="bar-label">15-30分</span>
+            </div>
+            <div class="bar-col">
+              <span class="bar-value">5%</span>
+              <div class="bar-rect" style="height:7.7%; background:#E8C766; opacity:0.55;"></div>
+              <span class="bar-label">30分以上</span>
+            </div>
+          </div>
+
+          <div class="insight-box warning">
+            <svg class="insight-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D4A017" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <p>
+              下車客の<span class="gold-text">65%</span>
+              が5分以内に帰路についており、深刻な<span class="strong-text">「滞留の空白地帯」</span>
+              が発生しています。駅ナカの
+              <span class="strong-text">テイクアウト専門店やスマートロッカーサービス</span>
+              の出店リスクが極めて低いエリアです。
+            </p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+  // ドーナツチャートをSVGで描画（外部ライブラリ不使用）
+  (function () {
+    const data = [
+      { value: 45, color: "#D4A017" },
+      { value: 25, color: "#9CA3AF" },
+      { value: 20, color: "#6B7280" },
+      { value: 10, color: "#D1D5DB" },
+    ];
+    const size = 200;
+    const radius = size / 2;
+    const innerRadius = radius - 32;
+    const center = radius;
+    let cumulative = 0;
+
+    function polarToCartesian(angleDeg, r) {
+      const angleRad = ((angleDeg - 90) * Math.PI) / 180;
+      return { x: center + r * Math.cos(angleRad), y: center + r * Math.sin(angleRad) };
+    }
+
+    function arcPath(startAngle, endAngle) {
+      const startOuter = polarToCartesian(startAngle, radius);
+      const endOuter = polarToCartesian(endAngle, radius);
+      const startInner = polarToCartesian(endAngle, innerRadius);
+      const endInner = polarToCartesian(startAngle, innerRadius);
+      const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+      return [
+        "M " + startOuter.x + " " + startOuter.y,
+        "A " + radius + " " + radius + " 0 " + largeArc + " 1 " + endOuter.x + " " + endOuter.y,
+        "L " + startInner.x + " " + startInner.y,
+        "A " + innerRadius + " " + innerRadius + " 0 " + largeArc + " 0 " + endInner.x + " " + endInner.y,
+        "Z",
+      ].join(" ");
+    }
+
+    const svg = document.getElementById("donut-chart");
+    data.forEach(function (d) {
+      const startAngle = (cumulative / 100) * 360;
+      cumulative += d.value;
+      const endAngle = (cumulative / 100) * 360;
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", arcPath(startAngle, endAngle));
+      path.setAttribute("fill", d.color);
+      path.setAttribute("stroke", "#fff");
+      path.setAttribute("stroke-width", "2");
+      svg.appendChild(path);
+    });
+  })();
 </script>
 </body>
 </html>
