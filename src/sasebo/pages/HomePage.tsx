@@ -1,295 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
-import type { ComponentType, ReactNode } from 'react';
-import {
-  motion,
-  useInView,
-  useMotionValue,
-  useMotionValueEvent,
-  useScroll,
-  useSpring,
-  useTransform,
-  AnimatePresence,
-} from 'framer-motion';
-import {
-  Anchor,
-  Music,
-  Waves,
-  Rocket,
-  Users,
-  Compass,
-  Ship,
-  Sparkles,
-  ArrowRight,
-  ChevronDown,
-  MapPin,
-  Landmark,
-  Timer,
-  Flag,
-} from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { AnimatePresence, motion, useMotionValueEvent, useScroll, useTransform } from 'framer-motion';
+import { ArrowRight, ChevronDown } from 'lucide-react';
+import { STORY_CHAPTERS, FEATURES, STATS } from '../data';
+import { CountUp, Marquee, MagneticButton, TiltCard, NOISE_URL } from '../ui';
+import { HeroIllustration, HistoryIllustration, CultureIllustration, NatureIllustration, CtaIllustration, FeaturePattern } from '../illustrations';
 
-type StoryChapter = {
-  id: string;
-  era: string;
-  title: string;
-  body: string;
-  image: string;
-  coords: string;
-  icon: ComponentType<{ className?: string }>;
+const CHAPTER_ILLUSTRATIONS = {
+  history: HistoryIllustration,
+  culture: CultureIllustration,
+  nature: NatureIllustration,
 };
-
-type Feature = {
-  title: string;
-  body: string;
-  tag: string;
-  image: string;
-  icon: ComponentType<{ className?: string }>;
-  big?: boolean;
-};
-
-type Stat = {
-  value: number;
-  suffix: string;
-  label: string;
-  note: string;
-  icon: ComponentType<{ className?: string }>;
-};
-
-const NOISE_SVG =
-  "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>";
-const NOISE_URL = `url("data:image/svg+xml,${NOISE_SVG.replace(/#/g, '%23')}")`;
-
-const STORY_CHAPTERS: StoryChapter[] = [
-  {
-    id: 'history',
-    era: 'HISTORY — 1889〜',
-    title: '鉄と海が、この街の血になった。',
-    body: '鎮守府が置かれ、日本有数の軍港として名を馳せた佐世保。錆びついた戦艦を蘇らせてきた造船の技術は、いまも港のクレーンに、街の誇りとして宿っている。',
-    image: 'https://placehold.co/900x1100/0b1226/f97316?text=Sasebo+Naval+Port+1889',
-    coords: '33.1608°N, 129.7233°E',
-    icon: Anchor,
-  },
-  {
-    id: 'culture',
-    era: 'CULTURE — 1950s〜',
-    title: 'ジャズが流れ、世界が交差した。',
-    body: '基地の街として、この街には「日本のどこにもない匂い」が流れ込んだ。佐世保バーガーの誕生も、路地に響くジャズも、異国と地元がぶつかり合って生まれた副産物。',
-    image: 'https://placehold.co/900x1100/101a36/fb923c?text=Sasebo+Jazz+%26+Burger',
-    coords: 'SASEBO / SHIMPOJI ST.',
-    icon: Music,
-  },
-  {
-    id: 'nature',
-    era: 'NATURE — 208 islands',
-    title: '208の島が、静かに手招きする。',
-    body: '九十九島の多島美は、世界に誇れる「なんでもない日常の絶景」。人の営みのすぐ隣に、圧倒的な自然が当たり前の顔をして広がっている。',
-    image: 'https://placehold.co/900x1100/082f49/38bdf8?text=Kujukushima+208+Islands',
-    coords: 'KUJUKUSHIMA PEARL SEA',
-    icon: Waves,
-  },
-];
-
-const FEATURES: Feature[] = [
-  {
-    title: '世界と直結する港',
-    body: '軍港から続く国際航路の血脈。ここにいながら、世界とつながる感覚がある。',
-    tag: 'GLOBAL',
-    image: 'https://placehold.co/900x700/0b1226/f97316?text=Global+Port',
-    icon: Ship,
-    big: true,
-  },
-  {
-    title: '30分で全部揃う密度',
-    body: '海も、山も、繁華街も、車で30分圏内。移動時間に人生を溶かさなくていい。',
-    tag: 'COMPACT',
-    image: 'https://placehold.co/700x500/101a36/fb923c?text=30min+Radius',
-    icon: Compass,
-  },
-  {
-    title: '挑戦者を歓迎する土壌',
-    body: '基地文化とベンチャー気質が混在する街。新参者に優しいのは、昔からずっとそう。',
-    tag: 'OPEN',
-    image: 'https://placehold.co/700x500/0b1226/fbbf6d?text=Challenger+Friendly',
-    icon: Rocket,
-  },
-  {
-    title: '濃度の高い人間関係',
-    body: '人口は多すぎず、少なすぎない。顔が見える距離感で、本気の仲間が見つかる。',
-    tag: 'CLOSE',
-    image: 'https://placehold.co/700x500/082f49/38bdf8?text=Real+Connections',
-    icon: Users,
-  },
-  {
-    title: '日常が絶景という反則',
-    body: '通学路の途中に、観光客が写真を撮る夕景がある。それが佐世保の当たり前。',
-    tag: 'SCENIC',
-    image: 'https://placehold.co/700x500/0b1226/f97316?text=Everyday+Scenery',
-    icon: MapPin,
-  },
-  {
-    title: '混ざりものが正義',
-    body: '和と洋、軍と民、都市と自然。相反するものが同居する街だけが持てる自由がある。',
-    tag: 'MIX',
-    image: 'https://placehold.co/700x500/101a36/fbbf6d?text=Cultural+Mix',
-    icon: Sparkles,
-  },
-];
-
-const STATS: Stat[] = [
-  { value: 208, suffix: '島', label: '九十九島の島数', note: 'KUJUKUSHIMA ISLANDS', icon: Waves },
-  { value: 130, suffix: '年+', label: '鎮守府開庁からの歴史', note: 'SINCE 1889', icon: Landmark },
-  { value: 30, suffix: '分', label: '海も山も繁華街も', note: 'ALL WITHIN REACH', icon: Timer },
-  { value: 1946, suffix: '', label: '異国文化が根付いた年', note: 'US NAVY BASE ERA', icon: Flag },
-];
-
-function Grain() {
-  return (
-    <div
-      className="pointer-events-none fixed inset-0 z-[70] opacity-[0.05] mix-blend-overlay"
-      style={{ backgroundImage: NOISE_URL }}
-    />
-  );
-}
-
-function ScrollProgressBar() {
-  const { scrollYProgress } = useScroll();
-  const scaleX = useSpring(scrollYProgress, { stiffness: 200, damping: 40, restDelta: 0.001 });
-  return (
-    <motion.div
-      style={{ scaleX }}
-      className="fixed inset-x-0 top-0 z-[80] h-[3px] origin-left bg-sunrise-gradient"
-    />
-  );
-}
-
-function Marquee({ text, className, duration = 'animate-marquee' }: { text: string; className?: string; duration?: string }) {
-  const block = (key: number) => (
-    <span key={key} className="flex shrink-0 items-center">
-      {Array.from({ length: 8 }).map((_, i) => (
-        <span key={i} className="mx-6 shrink-0">
-          {text}
-        </span>
-      ))}
-    </span>
-  );
-  return (
-    <div className={`relative flex overflow-hidden whitespace-nowrap ${className ?? ''}`}>
-      <div className={`flex shrink-0 ${duration}`}>
-        {block(0)}
-        {block(1)}
-      </div>
-    </div>
-  );
-}
-
-function MagneticButton({
-  children,
-  onClick,
-  href,
-  className,
-}: {
-  children: ReactNode;
-  onClick?: () => void;
-  href?: string;
-  className?: string;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const springX = useSpring(x, { stiffness: 200, damping: 15, mass: 0.4 });
-  const springY = useSpring(y, { stiffness: 200, damping: 15, mass: 0.4 });
-
-  const handleMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = ref.current?.getBoundingClientRect();
-    if (!rect) return;
-    x.set((e.clientX - rect.left - rect.width / 2) * 0.35);
-    y.set((e.clientY - rect.top - rect.height / 2) * 0.35);
-  };
-  const reset = () => {
-    x.set(0);
-    y.set(0);
-  };
-
-  const Tag = href ? 'a' : 'button';
-
-  return (
-    <motion.div
-      ref={ref}
-      onMouseMove={handleMove}
-      onMouseLeave={reset}
-      style={{ x: springX, y: springY }}
-      className="inline-block"
-    >
-      <Tag
-        href={href}
-        onClick={onClick}
-        className={`group inline-flex items-center gap-2 rounded-full bg-sunrise-gradient px-9 py-4 text-sm font-bold tracking-wide text-navy-950 shadow-lg shadow-sunrise-500/40 ${className ?? ''}`}
-      >
-        {children}
-      </Tag>
-    </motion.div>
-  );
-}
-
-function TiltCard({ children, className }: { children: ReactNode; className?: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const rotateX = useMotionValue(0);
-  const rotateY = useMotionValue(0);
-  const springRX = useSpring(rotateX, { stiffness: 180, damping: 18 });
-  const springRY = useSpring(rotateY, { stiffness: 180, damping: 18 });
-
-  const handleMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = ref.current?.getBoundingClientRect();
-    if (!rect) return;
-    const px = (e.clientX - rect.left) / rect.width - 0.5;
-    const py = (e.clientY - rect.top) / rect.height - 0.5;
-    rotateY.set(px * 10);
-    rotateX.set(py * -10);
-  };
-  const reset = () => {
-    rotateX.set(0);
-    rotateY.set(0);
-  };
-
-  return (
-    <motion.div
-      ref={ref}
-      onMouseMove={handleMove}
-      onMouseLeave={reset}
-      style={{ rotateX: springRX, rotateY: springRY, transformPerspective: 900 }}
-      className={className}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-function CountUp({ target, suffix }: { target: number; suffix: string }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const isInView = useInView(ref, { once: true, amount: 0.6 });
-  const [value, setValue] = useState(0);
-
-  useEffect(() => {
-    if (!isInView) return;
-    let raf: number;
-    let start: number | null = null;
-    const duration = 1600;
-    const step = (ts: number) => {
-      if (start === null) start = ts;
-      const progress = Math.min((ts - start) / duration, 1);
-      setValue(Math.floor(progress * target));
-      if (progress < 1) raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [isInView, target]);
-
-  return (
-    <span ref={ref} className="font-display text-5xl font-black text-white sm:text-6xl">
-      {value.toLocaleString()}
-      <span className="ml-1 text-2xl font-bold text-sunrise-400 sm:text-3xl">{suffix}</span>
-    </span>
-  );
-}
 
 function Hero() {
   const heroRef = useRef<HTMLDivElement>(null);
@@ -315,12 +36,8 @@ function Hero() {
       className="relative flex h-screen min-h-[720px] w-full items-center justify-center overflow-hidden bg-navy-950"
     >
       <motion.div style={{ y: bgY }} className="pointer-events-none absolute inset-0 scale-110">
-        <img
-          src="https://placehold.co/1920x1200/04070f/1e293b?text=Sasebo+Night+Sea"
-          alt=""
-          className="h-full w-full object-cover opacity-50"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-950/70 to-navy-950/30" />
+        <HeroIllustration className="h-full w-full" />
+        <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-950/60 to-navy-950/20" />
         <div className="absolute inset-0 bg-gradient-to-r from-navy-950/80 via-transparent to-navy-950/80" />
       </motion.div>
 
@@ -403,7 +120,7 @@ function Hero() {
   );
 }
 
-function StoryTimeline() {
+function StoryTeaser() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: containerRef, offset: ['start start', 'end end'] });
   const [active, setActive] = useState(0);
@@ -414,6 +131,7 @@ function StoryTimeline() {
   });
 
   const ActiveIcon = STORY_CHAPTERS[active].icon;
+  const ActiveIllustration = CHAPTER_ILLUSTRATIONS[STORY_CHAPTERS[active].slug as keyof typeof CHAPTER_ILLUSTRATIONS];
 
   return (
     <section id="story" className="relative bg-navy-900 py-32">
@@ -428,9 +146,10 @@ function StoryTimeline() {
         <div className="flex flex-col gap-[18vh] pb-[20vh]">
           {STORY_CHAPTERS.map((chapter, index) => {
             const Icon = chapter.icon;
+            const Illustration = CHAPTER_ILLUSTRATIONS[chapter.slug as keyof typeof CHAPTER_ILLUSTRATIONS];
             return (
               <motion.div
-                key={chapter.id}
+                key={chapter.slug}
                 initial={{ opacity: 0, y: 60 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.5 }}
@@ -452,15 +171,18 @@ function StoryTimeline() {
                   {chapter.title}
                 </h3>
                 <p className="relative mt-4 max-w-md text-sm leading-relaxed text-slate-400 sm:text-base">
-                  {chapter.body}
+                  {chapter.lead}
                 </p>
+                <Link
+                  to={`/story/${chapter.slug}`}
+                  className="group relative mt-5 inline-flex w-fit items-center gap-1.5 text-sm font-bold text-sunrise-400"
+                >
+                  続きを読む
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
+                </Link>
 
-                <div className="relative mt-6 flex items-center gap-2 lg:hidden">
-                  <img
-                    src={chapter.image}
-                    alt={chapter.title}
-                    className="w-full rounded-2xl border border-white/10 shadow-2xl"
-                  />
+                <div className="relative mt-6 overflow-hidden rounded-2xl border border-white/10 shadow-2xl lg:hidden">
+                  <Illustration className="h-48 w-full" />
                 </div>
               </motion.div>
             );
@@ -471,16 +193,16 @@ function StoryTimeline() {
           <div className="sticky top-24 h-[70vh] w-full">
             <div className="relative h-full w-full overflow-hidden rounded-3xl border border-white/10 shadow-2xl shadow-black/50">
               <AnimatePresence mode="sync">
-                <motion.img
-                  key={STORY_CHAPTERS[active].id}
-                  src={STORY_CHAPTERS[active].image}
-                  alt={STORY_CHAPTERS[active].title}
-                  initial={{ opacity: 0, scale: 1.15 }}
-                  animate={{ opacity: 1, scale: 1.05 }}
+                <motion.div
+                  key={STORY_CHAPTERS[active].slug}
+                  initial={{ opacity: 0, scale: 1.1 }}
+                  animate={{ opacity: 1, scale: 1.02 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 1.1, ease: 'easeOut' }}
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
+                  className="absolute inset-0 h-full w-full"
+                >
+                  <ActiveIllustration className="h-full w-full" />
+                </motion.div>
               </AnimatePresence>
 
               <div
@@ -489,8 +211,8 @@ function StoryTimeline() {
               />
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-navy-950/90 via-transparent to-navy-950/40" />
 
-              <span className="absolute left-6 top-6 h-8 w-8 rounded-full border-2 border-sunrise-500 bg-navy-950/80 backdrop-blur">
-                <ActiveIcon className="m-auto h-4 w-4 translate-y-2 text-sunrise-400" />
+              <span className="absolute left-6 top-6 flex h-8 w-8 items-center justify-center rounded-full border-2 border-sunrise-500 bg-navy-950/80 backdrop-blur">
+                <ActiveIcon className="h-4 w-4 text-sunrise-400" />
               </span>
 
               <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between">
@@ -500,7 +222,7 @@ function StoryTimeline() {
                 <div className="flex gap-1.5">
                   {STORY_CHAPTERS.map((c, i) => (
                     <span
-                      key={c.id}
+                      key={c.slug}
                       className={`h-1.5 rounded-full transition-all duration-500 ${
                         i === active ? 'w-6 bg-sunrise-500' : 'w-1.5 bg-white/30'
                       }`}
@@ -573,10 +295,9 @@ function Features() {
             >
               <TiltCard className="group relative h-full overflow-hidden rounded-2xl border border-white/10 bg-navy-800/60 shadow-xl">
                 <div className={`relative overflow-hidden ${feature.big ? 'h-56 lg:h-[calc(100%-9rem)]' : 'h-40'}`}>
-                  <img
-                    src={feature.image}
-                    alt={feature.title}
-                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  <FeaturePattern
+                    variant={feature.pattern}
+                    className="h-full w-full transition-transform duration-700 group-hover:scale-110"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-950/10 to-transparent" />
                   <div className="absolute inset-0 bg-sunrise-500/0 transition-colors duration-500 group-hover:bg-sunrise-500/10" />
@@ -607,13 +328,8 @@ function Cta() {
 
   return (
     <section className="relative overflow-hidden bg-navy-950 py-32">
-      <div className="pointer-events-none absolute inset-0 opacity-25">
-        <img
-          src="https://placehold.co/1920x1080/f97316/0b1226?text=Sasebo+Sunrise"
-          alt=""
-          className="h-full w-full object-cover"
-        />
-        <div className="absolute inset-0 bg-navy-950/85" />
+      <div className="pointer-events-none absolute inset-0 opacity-40">
+        <CtaIllustration className="h-full w-full" />
       </div>
       <div className="pointer-events-none absolute -left-24 bottom-0 h-80 w-80 rounded-full bg-sunrise-600/20 blur-3xl animate-blob" />
       <div className="pointer-events-none absolute -right-24 top-0 h-80 w-80 rounded-full bg-sky-500/10 blur-3xl animate-blob-delay" />
@@ -644,7 +360,12 @@ function Cta() {
           <br />
           この街の続きは、まだ誰も書いていない。
         </p>
-        <div className="mt-10">
+        <div className="mt-6">
+          <Link to="/challengers" className="text-sm font-bold text-sunrise-400 underline underline-offset-4">
+            すでに挑戦している先輩たちを見る →
+          </Link>
+        </div>
+        <div className="mt-8">
           <MagneticButton onClick={scrollToTop} className="hover:brightness-110">
             もう一度、佐世保をたどる
             <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
@@ -655,40 +376,14 @@ function Cta() {
   );
 }
 
-function Header() {
-  const { scrollY } = useScroll();
-  const [solid, setSolid] = useState(false);
-
-  useMotionValueEvent(scrollY, 'change', (v) => {
-    setSolid(v > 80);
-  });
-
+export default function HomePage() {
   return (
-    <header
-      className={`fixed inset-x-0 top-0 z-50 flex items-center justify-between px-6 py-5 transition-colors duration-300 sm:px-10 ${
-        solid ? 'bg-navy-950/80 backdrop-blur-md' : 'bg-transparent'
-      }`}
-    >
-      <span className="text-sm font-black tracking-[0.2em] text-white">SASEBO/</span>
-      <span className="hidden text-xs tracking-[0.2em] text-slate-400 sm:block">NAGASAKI, JAPAN</span>
-    </header>
-  );
-}
-
-export default function SaseboLandingPage() {
-  return (
-    <div className="min-h-screen w-full bg-navy-950 font-display">
-      <Grain />
-      <ScrollProgressBar />
-      <Header />
+    <>
       <Hero />
-      <StoryTimeline />
+      <StoryTeaser />
       <Stats />
       <Features />
       <Cta />
-      <footer className="bg-navy-950 py-10 text-center text-xs tracking-widest text-slate-500">
-        SASEBO BRANDING PROJECT — FOR THE NEXT GENERATION
-      </footer>
-    </div>
+    </>
   );
 }
