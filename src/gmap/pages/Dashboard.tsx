@@ -3,13 +3,24 @@ import { SUBJECTS } from '../data';
 import { computeSubjectStats, getWrongQuestions, useProgress } from '../progress';
 
 export function Dashboard() {
-  const { state } = useProgress();
+  const { state, profile, cloudSyncEnabled, logout } = useProgress();
   const wrongCount = new Set(getWrongQuestions(state).map((r) => `${r.subject}|${r.topicNumber}|${r.quizIndex}`)).size;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
       <header>
-        <h1 className="text-2xl font-bold text-slate-900">GMAP対策</h1>
+        <div className="flex items-start justify-between gap-2">
+          <h1 className="text-2xl font-bold text-slate-900">GMAP対策</h1>
+          <div className="text-right">
+            <p className="text-xs text-slate-500">{profile?.name} さん</p>
+            <p className="text-[10px] text-slate-400">
+              {cloudSyncEnabled ? 'クラウド同期 有効' : 'クラウド同期 未設定(この端末のみ)'}
+            </p>
+            <button type="button" onClick={logout} className="mt-1 text-[10px] text-indigo-500 underline">
+              プロフィール切替
+            </button>
+          </div>
+        </div>
         <p className="mt-1 text-sm text-slate-500">
           6科目・合格基準は各科目正答率60%以上。『グロービスMBAマネジメント・ブック』の内容をもとにしたオリジナル解説と演習問題です。
         </p>
