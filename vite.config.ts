@@ -13,6 +13,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         sasebo: resolve(__dirname, 'sasebo.html'),
+        gmap: resolve(__dirname, 'gmap.html'),
       },
     },
   },
