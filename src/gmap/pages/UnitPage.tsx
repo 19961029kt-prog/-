@@ -42,7 +42,8 @@ export function UnitPage() {
   const { subject, topicNumber } = useParams<{ subject: string; topicNumber: string }>();
   const meta = getSubject(subject ?? '');
   const { markUnitStudied } = useProgress();
-  const unit = meta?.data.units.find((u) => u.topicNumber === Number(topicNumber));
+  const unitIndex = meta?.data.units.findIndex((u) => u.topicNumber === Number(topicNumber)) ?? -1;
+  const unit = unitIndex >= 0 ? meta?.data.units[unitIndex] : undefined;
 
   useEffect(() => {
     if (meta && unit) markUnitStudied(meta.key as SubjectKey, unit.topicNumber);
@@ -59,7 +60,7 @@ export function UnitPage() {
         {unit.part} {unit.chapter ? `/ ${unit.chapter}` : ''}
       </p>
       <h1 className="text-xl font-bold text-slate-900">
-        {unit.topicNumber}. {unit.topicTitle}
+        {unitIndex + 1}. {unit.topicTitle}
       </h1>
 
       <section className="mt-4">
