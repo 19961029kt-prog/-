@@ -1,10 +1,14 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { createElement } from 'react';
 import type { SubjectData, SubjectKey } from './types';
 import { questionId } from './types';
+import { clearProfile, loadProfile, saveProfile } from './profile';
+import type { Profile } from './profile';
+import { isFirebaseConfigured, subscribeProfile, writeProfile } from './cloudSync';
 
 const STORAGE_KEY = 'gmap_progress_v1';
+const SYNC_DEBOUNCE_MS = 1500;
 
 interface AnswerRecord {
   timesAnswered: number;
@@ -41,12 +45,35 @@ function saveState(state: ProgressState) {
   }
 }
 
+/** ローカルとクラウド(他端末)の進捗をマージする。回答は新しい方を採用、学習済みフラグは和集合。 */
+function mergeState(local: ProgressState, remote: Partial<ProgressState>): ProgressState {
+  const answers: Record<string, AnswerRecord> = { ...local.answers };
+  for (const [id, remoteRecord] of Object.entries(remote.answers ?? {})) {
+    const localRecord = answers[id];
+    if (!localRecord || remoteRecord.lastAnsweredAt > localRecord.lastAnsweredAt) {
+      answers[id] = remoteRecord;
+    }
+  }
+  return {
+    answers,
+    studiedUnits: { ...(remote.studiedUnits ?? {}), ...local.studiedUnits },
+  };
+}
+
+function statesEqual(a: ProgressState, b: ProgressState): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 function unitKey(subject: SubjectKey, topicNumber: number): string {
   return `${subject}|${topicNumber}`;
 }
 
 interface ProgressContextValue {
   state: ProgressState;
+  profile: Profile | null;
+  cloudSyncEnabled: boolean;
+  login: (profile: Profile) => void;
+  logout: () => void;
   recordAnswer: (subject: SubjectKey, topicNumber: number, quizIndex: number, correct: boolean) => void;
   markUnitStudied: (subject: SubjectKey, topicNumber: number) => void;
   isUnitStudied: (subject: SubjectKey, topicNumber: number) => boolean;
@@ -56,11 +83,57 @@ interface ProgressContextValue {
 const ProgressContext = createContext<ProgressContextValue | null>(null);
 
 export function ProgressProvider({ children }: { children: ReactNode }) {
+  const [profile, setProfile] = useState<Profile | null>(() => loadProfile());
   const [state, setState] = useState<ProgressState>(() => loadState());
+  const isApplyingRemote = useRef(false);
+  const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ローカルキャッシュへの保存(常時)
   useEffect(() => {
     saveState(state);
   }, [state]);
+
+  // クラウド購読: ログイン中のプロフィールがあればFirestoreの変更を購読し、ローカルへマージする
+  useEffect(() => {
+    if (!profile) return undefined;
+    const unsubscribe = subscribeProfile(profile.profileKey, (remote) => {
+      setState((prev) => {
+        const merged = mergeState(prev, remote as Partial<ProgressState>);
+        if (statesEqual(merged, prev)) return prev;
+        isApplyingRemote.current = true;
+        return merged;
+      });
+    });
+    return unsubscribe;
+  }, [profile]);
+
+  // クラウドへの書き込み: リモート由来の更新では書き込まない(往復ループ防止)。デバウンスして送信。
+  useEffect(() => {
+    if (!profile) return undefined;
+    if (isApplyingRemote.current) {
+      isApplyingRemote.current = false;
+      return undefined;
+    }
+    if (syncTimer.current) clearTimeout(syncTimer.current);
+    syncTimer.current = setTimeout(() => {
+      writeProfile(profile.profileKey, { answers: state.answers, studiedUnits: state.studiedUnits }).catch((err) =>
+        console.error('GMAP cloud sync: write failed', err),
+      );
+    }, SYNC_DEBOUNCE_MS);
+    return () => {
+      if (syncTimer.current) clearTimeout(syncTimer.current);
+    };
+  }, [state, profile]);
+
+  const login = useCallback((newProfile: Profile) => {
+    saveProfile(newProfile);
+    setProfile(newProfile);
+  }, []);
+
+  const logout = useCallback(() => {
+    clearProfile();
+    setProfile(null);
+  }, []);
 
   const recordAnswer = useCallback(
     (subject: SubjectKey, topicNumber: number, quizIndex: number, correct: boolean) => {
@@ -95,8 +168,18 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   const resetProgress = useCallback(() => setState(emptyState()), []);
 
   const value = useMemo<ProgressContextValue>(
-    () => ({ state, recordAnswer, markUnitStudied, isUnitStudied, resetProgress }),
-    [state, recordAnswer, markUnitStudied, isUnitStudied, resetProgress],
+    () => ({
+      state,
+      profile,
+      cloudSyncEnabled: isFirebaseConfigured(),
+      login,
+      logout,
+      recordAnswer,
+      markUnitStudied,
+      isUnitStudied,
+      resetProgress,
+    }),
+    [state, profile, login, logout, recordAnswer, markUnitStudied, isUnitStudied, resetProgress],
   );
 
   return createElement(ProgressContext.Provider, { value }, children);
