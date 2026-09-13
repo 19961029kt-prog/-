@@ -26,7 +26,7 @@ export function SubjectPage() {
       </Link>
 
       <ul className="mt-6 space-y-2">
-        {meta.data.units.map((unit) => {
+        {meta.data.units.map((unit, index) => {
           const studied = isUnitStudied(meta.key as SubjectKey, unit.topicNumber);
           return (
             <li key={unit.topicNumber}>
@@ -35,7 +35,7 @@ export function SubjectPage() {
                 className="flex items-center justify-between rounded-lg bg-white px-4 py-3 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50"
               >
                 <span className="text-sm text-slate-800">
-                  <span className="mr-2 text-slate-400">{unit.topicNumber}.</span>
+                  <span className="mr-2 text-slate-400">{index + 1}.</span>
                   {unit.topicTitle}
                 </span>
                 {studied && <span className="text-xs font-medium text-emerald-600">学習済み</span>}
