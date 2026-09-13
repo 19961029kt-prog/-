@@ -5,12 +5,12 @@
 // この値はクライアント側で公開される情報であり、秘密鍵ではありません
 // (アクセス制御はFirestoreのセキュリティルール側で行います)。
 export const firebaseConfig = {
-  apiKey: 'YOUR_API_KEY',
-  authDomain: 'YOUR_PROJECT_ID.firebaseapp.com',
-  projectId: 'YOUR_PROJECT_ID',
-  storageBucket: 'YOUR_PROJECT_ID.appspot.com',
-  messagingSenderId: 'YOUR_SENDER_ID',
-  appId: 'YOUR_APP_ID',
+  apiKey: 'AIzaSyDx5pVFTpE5cqhEWLAb9OgswasTWKG5XOs',
+  authDomain: 'gmap-498a1.firebaseapp.com',
+  projectId: 'gmap-498a1',
+  storageBucket: 'gmap-498a1.firebasestorage.app',
+  messagingSenderId: '929987493368',
+  appId: '1:929987493368:web:2b04380f9885b07d70ea0d',
 };
 
 /** firebaseConfig が実際の値に置き換えられているかどうか。 */
