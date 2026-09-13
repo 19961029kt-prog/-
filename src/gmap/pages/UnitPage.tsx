@@ -2,7 +2,23 @@ import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { getSubject } from '../data';
 import { useProgress } from '../progress';
-import type { SubjectKey, Term } from '../types';
+import { resolveDiagramUrl } from '../diagramAssets';
+import type { DiagramRef, SubjectKey, Term } from '../types';
+
+function DiagramFigure({ diagram }: { diagram: DiagramRef }) {
+  const url = resolveDiagramUrl(diagram.file);
+  if (!url) return null;
+  return (
+    <figure className="overflow-hidden rounded-lg bg-white ring-1 ring-slate-200">
+      <img src={url} alt={diagram.caption} className="w-full" loading="lazy" />
+      {diagram.caption && (
+        <figcaption className="border-t border-slate-100 px-3 py-2 text-xs text-slate-500">
+          {diagram.caption}
+        </figcaption>
+      )}
+    </figure>
+  );
+}
 
 function TermCard({ term }: { term: Term }) {
   const [flipped, setFlipped] = useState(false);
@@ -54,6 +70,17 @@ export function UnitPage() {
           ))}
         </ul>
       </section>
+
+      {unit.diagrams && unit.diagrams.length > 0 && (
+        <section className="mt-5">
+          <h2 className="text-sm font-semibold text-slate-700">図解(教科書より)</h2>
+          <div className="mt-2 space-y-3">
+            {unit.diagrams.map((d, i) => (
+              <DiagramFigure key={i} diagram={d} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {unit.formulas.length > 0 && (
         <section className="mt-5">

@@ -62,6 +62,12 @@
           "answerIndex": 1,
           "explanation": "資金は金融市場から企業に流れ込み事業投資に充てられ、そこから生まれた収益は企業内で再投資されるか、投資家・銀行に還元されるという循環を成す。"
         }
+      ],
+      "diagrams": [
+        {
+          "file": "diagrams/finance_1_p244.jpg",
+          "caption": "企業と金融市場の間の資金の流れ(財務管理者を介した資本調達・事業投資・リターン還元の循環図)"
+        }
       ]
     },
     {
@@ -124,6 +130,12 @@
           ],
           "answerIndex": 1,
           "explanation": "企業金融理論の中心的なテーマは、企業が資金調達を行う際、どのような手段で調達すれば企業価値を最大化できるかということである。"
+        }
+      ],
+      "diagrams": [
+        {
+          "file": "diagrams/finance_2_p246.jpg",
+          "caption": "投資理論(インベストメント)と企業金融理論(コーポレート・ファイナンス)の関係図"
         }
       ]
     },
@@ -193,6 +205,12 @@
           ],
           "answerIndex": 0,
           "explanation": "PV=200/1.04≈192.3円。"
+        }
+      ],
+      "diagrams": [
+        {
+          "file": "diagrams/finance_3_p253.jpg",
+          "caption": "金銭の時間的価値の図解(1年後の100円は割引率5%で現在価値95.24円になる)"
         }
       ]
     },
@@ -282,6 +300,12 @@
           "answerIndex": 1,
           "explanation": "DCF法では、資産の金銭的価値を将来生み出すキャッシュフローの現在価値と定義する。"
         }
+      ],
+      "diagrams": [
+        {
+          "file": "diagrams/finance_4_p255.jpg",
+          "caption": "DCF法のロジック(住宅のキャッシュフローと現在価値の等価関係)"
+        }
       ]
     },
     {
@@ -354,6 +378,12 @@
           ],
           "answerIndex": 2,
           "explanation": "ペイバック法はむしろ直感的で計算がシンプルなため実務で広く使われている。複雑さは欠点ではない。"
+        }
+      ],
+      "diagrams": [
+        {
+          "file": "diagrams/finance_5_p261.jpg",
+          "caption": "NPVと割引率の関係を示すグラフ(IRRの位置づけ)"
         }
       ]
     },
@@ -443,6 +473,16 @@
           "answerIndex": 2,
           "explanation": "ファイナンスでは利回り分布のばらつきを表す標準偏差(または分散)をリスクの尺度として用いる。"
         }
+      ],
+      "diagrams": [
+        {
+          "file": "diagrams/finance_6_p263.jpg",
+          "caption": "図1 投資のリスク評価(資産A・Bの利回り分布と標準偏差)"
+        },
+        {
+          "file": "diagrams/finance_6_p264.jpg",
+          "caption": "図2 ポートフォリオによるリスクの低減(相関係数別のリスク・リターン曲線)"
+        }
       ]
     },
     {
@@ -509,6 +549,20 @@
           ],
           "answerIndex": 1,
           "explanation": "分散投資によるリスク低減には限界があり、ある一定の水準(システマティック・リスク)以下には下がらない。"
+        }
+      ],
+      "diagrams": [
+        {
+          "file": "diagrams/finance_7_p267.jpg",
+          "caption": "図1 2種類のリスク(アンシステマティック・リスクとシステマティック・リスク)"
+        },
+        {
+          "file": "diagrams/finance_7_p268.jpg",
+          "caption": "図2 効率的フロンティア(リスク資産の組み合わせがつくる上縁部)"
+        },
+        {
+          "file": "diagrams/finance_7_p268b.jpg",
+          "caption": "図3 資本市場線(無リスク資産とマーケット・ポートフォリオの組み合わせ)"
         }
       ]
     },
@@ -591,6 +645,12 @@
           "answerIndex": 2,
           "explanation": "マーケット・ポートフォリオのβは基準として1と規定される。"
         }
+      ],
+      "diagrams": [
+        {
+          "file": "diagrams/finance_8_p271.jpg",
+          "caption": "βと期待利回りの関係を示す証券市場線(CAPM)"
+        }
       ]
     },
     {
@@ -666,6 +726,12 @@
           "answerIndex": 0,
           "explanation": "転換社債は、将来社債の償還の代わりに発行企業の株式を一定数受け取ることを選択できる権利(転換権)を付した社債である。"
         }
+      ],
+      "diagrams": [
+        {
+          "file": "diagrams/finance_9_p275.jpg",
+          "caption": "資金調達形態別(借入金・社債・株式等)の調達コスト・アベイラビリティ・安全性比較表"
+        }
       ]
     },
     {
@@ -734,6 +800,12 @@
           ],
           "answerIndex": 0,
           "explanation": "支払利息は税額計算上費用として控除されるため、税引後の実質負債コストはrD×(1−税率)と低くなる。"
+        }
+      ],
+      "diagrams": [
+        {
+          "file": "diagrams/finance_10_p280.jpg",
+          "caption": "WACC(加重平均資本コスト)の構成と計算式の図解"
         }
       ]
     },
@@ -808,6 +880,12 @@
           ],
           "answerIndex": 0,
           "explanation": "配当割引モデルは、将来にわたる配当の現在価値の合計が理論株価になるという考え方に基づく。"
+        }
+      ],
+      "diagrams": [
+        {
+          "file": "diagrams/finance_11_p282.jpg",
+          "caption": "CAPMを用いた株主資本コスト推定の計算式の図解"
         }
       ]
     },
@@ -884,6 +962,12 @@
           "answerIndex": 1,
           "explanation": "効率的市場仮説に基づき、市場平均並みの利益を目指す運用をパッシブ運用と呼ぶ。"
         }
+      ],
+      "diagrams": [
+        {
+          "file": "diagrams/finance_12_p287.jpg",
+          "caption": "3段階の効率的市場(ウィーク・セミストロング・ストロングフォーム)の定義比較表"
+        }
       ]
     },
     {
@@ -942,6 +1026,12 @@
           ],
           "answerIndex": 0,
           "explanation": "資本構成だけが異なる2社への投資価値を比較することで、完全市場下では資本構成が価値に影響しないことを示している。"
+        }
+      ],
+      "diagrams": [
+        {
+          "file": "diagrams/finance_13_p289.jpg",
+          "caption": "完全市場におけるU社・L社の資本構成と企業価値が等しいことを示す図"
         }
       ]
     },
@@ -1006,6 +1096,12 @@
           "answerIndex": 0,
           "explanation": "節税効果と倒産リスク・プレミアムという2つの相反する効果のバランスが取れる点が最適資本構成となる。"
         }
+      ],
+      "diagrams": [
+        {
+          "file": "diagrams/finance_14_p292.jpg",
+          "caption": "負債比率と企業価値の関係(節税効果と倒産リスク・プレミアムのトレードオフ)"
+        }
       ]
     },
     {
@@ -1064,6 +1160,12 @@
           ],
           "answerIndex": 0,
           "explanation": "成長機会に恵まれた企業は、稼いだ利益を配当せず再投資に回すことが望ましい場合がある。"
+        }
+      ],
+      "diagrams": [
+        {
+          "file": "diagrams/finance_15_p295.jpg",
+          "caption": "配当利回りの推移(東証第一部、1961年〜2000年頃)を示すグラフ"
         }
       ]
     },
@@ -1139,6 +1241,12 @@
           "answerIndex": 0,
           "explanation": "ワーキング・キャピタルの増加は追加の資金調達を必要とするため、FCFの計算式ではマイナス項目として扱われる。"
         }
+      ],
+      "diagrams": [
+        {
+          "file": "diagrams/finance_16_p298.jpg",
+          "caption": "フリー・キャッシュフローの構成要素を示す図解"
+        }
       ]
     },
     {
@@ -1212,6 +1320,12 @@
           ],
           "answerIndex": 0,
           "explanation": "清算価値は、企業をいま解散すると仮定して資産を処分し、負債を差し引いた場合の純資産額である。"
+        }
+      ],
+      "diagrams": [
+        {
+          "file": "diagrams/finance_17_p300.jpg",
+          "caption": "DCF法による企業価値算出プロセスの図解"
         }
       ]
     },
@@ -1287,7 +1401,8 @@
           "answerIndex": 0,
           "explanation": "TEVは債権者と株主の持分を合わせた価値なので、株主の持分を求めるには負債の時価を差し引く。"
         }
-      ]
+      ],
+      "diagrams": []
     },
     {
       "subject": "ファイナンス",
@@ -1351,6 +1466,12 @@
           ],
           "answerIndex": 0,
           "explanation": "EVAの概念がFCFに近いことから、将来発生するEVAの現在価値の総和は正味現在価値(NPV)に等しくなる。"
+        }
+      ],
+      "diagrams": [
+        {
+          "file": "diagrams/finance_19_p309.jpg",
+          "caption": "EVAとFCFの違いを投資年度ごとに比較した図"
         }
       ]
     },
@@ -1434,6 +1555,16 @@
           "answerIndex": 2,
           "explanation": "ブラック=ショールズ式の入力は、現在の資産価格・行使価格・満期までの時間・金利・ボラティリティの5つであり、従業員数は含まれない。"
         }
+      ],
+      "diagrams": [
+        {
+          "file": "diagrams/finance_20_p311.jpg",
+          "caption": "オプションの種類(コール・プット)と買い手・売り手の権利義務の比較表"
+        },
+        {
+          "file": "diagrams/finance_20_p312.jpg",
+          "caption": "オプションのペイオフ・ダイアグラム(コールオプション・プットオプション)"
+        }
       ]
     },
     {
@@ -1505,7 +1636,8 @@
           "answerIndex": 2,
           "explanation": "買収防衛策の導入には事前開示や株主意思の尊重が求められ、経営陣が単独で非開示に決定することは望ましくない。"
         }
-      ]
+      ],
+      "diagrams": []
     },
     {
       "subject": "ファイナンス",
@@ -1571,6 +1703,12 @@
           ],
           "answerIndex": 0,
           "explanation": "プライベート・エクイティ・ファンドは、未公開企業を対象に投資を行う場合が多い。"
+        }
+      ],
+      "diagrams": [
+        {
+          "file": "diagrams/finance_22_p319.jpg",
+          "caption": "再生ファンドの投資プロセス例(投資決定から投資回収までの6段階)"
         }
       ]
     }

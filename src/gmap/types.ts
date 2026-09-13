@@ -18,6 +18,11 @@ export interface Formula {
   note: string;
 }
 
+export interface DiagramRef {
+  file: string;
+  caption: string;
+}
+
 export interface Unit {
   subject: string;
   part?: string;
@@ -28,6 +33,7 @@ export interface Unit {
   terms: Term[];
   formulas: Formula[];
   quiz: QuizQuestion[];
+  diagrams?: DiagramRef[];
 }
 
 export interface SubjectData {
