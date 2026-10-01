@@ -31,12 +31,12 @@ jobs:
           GITHUB_PAGES_BASE: /${{ github.event.repository.name }}/
         run: npm run build
       - name: Copy standalone static pages
-        # index.html/sasebo.html/gmap.html はVite側でビルド済みのものをdistに出力しているため
+        # index.html/sasebo.html/gmap.html/kyushu.html はVite側でビルド済みのものをdistに出力しているため
         # ここでは上書きせず、Viteのビルド対象に含まれていない単独の静的HTMLだけをdistにコピーする
         run: |
           for f in *.html; do
             case "$f" in
-              index.html|sasebo.html|gmap.html) ;;
+              index.html|sasebo.html|gmap.html|kyushu.html) ;;
               *) cp "$f" dist/ ;;
             esac
           done

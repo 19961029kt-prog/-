@@ -14,6 +14,7 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         sasebo: resolve(__dirname, 'sasebo.html'),
         gmap: resolve(__dirname, 'gmap.html'),
+        kyushu: resolve(__dirname, 'kyushu.html'),
       },
     },
   },
