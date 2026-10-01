@@ -139,9 +139,10 @@ body{font-family:"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;background:#
 
 <!-- QUIZ -->
 <div id="s-quiz" class="screen">
-  <div class="progress-wrap">
-    <div class="progress-bar"><div class="progress-fill" id="prog"></div></div>
+  <div class="progress-wrap" style="display:flex;align-items:center;gap:8px">
+    <div style="flex:1"><div class="progress-bar"><div class="progress-fill" id="prog"></div></div></div>
     <div class="progress-txt" id="prog-txt"></div>
+    <button class="btn" style="font-size:12px;padding:.3rem .7rem;white-space:nowrap" onclick="pauseQuiz()">⏸ 中断</button>
   </div>
   <div class="q-meta">
     <span class="badge badge-blue" id="q-badge"></span>
@@ -4514,6 +4515,8 @@ async function saveProgress() {
   const data = {
     mode: curMode,
     style: curStyle,
+    selExam: selExamVal,
+    selGenre: selGenreVal,
     itemIds: quizItems.map(q => q.id),
     origIds: origItems.map(q => q.id),
     answers: answers,
@@ -4534,6 +4537,13 @@ async function loadSave() {
     console.error('中断データの取得に失敗しました', e);
     return null;
   }
+}
+
+// クイズを中断してホームへ戻る（進捗は saveProgress で既に保存済み）
+async function pauseQuiz() {
+  await saveProgress();
+  await renderHome();
+  showScreen('s-home');
 }
 
 // 中断データを Firestore から削除する（クイズ完走時・ユーザーが破棄を選択した時）
@@ -4619,14 +4629,24 @@ function historyStatusBadge(records) {
 async function goConfig() {
   if(!curMode){alert("出題モードを選択してください");return;}
   if(!curStyle){alert("解答スタイルを選択してください");return;}
-  // 履歴を取得してtopicごとに集計
-  const hist = await loadHistory();
+  // 履歴とセーブデータを並行取得
+  const [hist, save] = await Promise.all([loadHistory(), loadSave()]);
   const histByTopic = {};
   hist.forEach(h => {
     if(!h.topic) return;
     if(!histByTopic[h.topic]) histByTopic[h.topic] = [];
     histByTopic[h.topic].push(h);
   });
+  // 中断バッジ生成：セーブデータが一致する場合に表示
+  function pauseBadge(examVal, genreVal) {
+    if(!save) return '';
+    const examMatch = examVal && save.selExam === examVal;
+    const genreMatch = genreVal && save.selGenre === genreVal;
+    if(!examMatch && !genreMatch) return '';
+    const done = save.curIdx || 0;
+    const total = (save.itemIds || []).length;
+    return `<span style="font-size:12px;color:#2563eb;font-weight:600;margin-left:6px">⏸ ${done}/${total}問 中断中</span>`;
+  }
   let html = "";
   if(curMode==="year"){
     document.getElementById('cfg-title').textContent="年度・試験種別を選択";
@@ -4636,15 +4656,18 @@ async function goConfig() {
       const cKey=`${y}年度 共通`; const sKey=`${y}年度 専門Ⅰ`;
       const cBadge = historyStatusBadge(histByTopic[cKey]);
       const sBadge = historyStatusBadge(histByTopic[sKey]);
-      html += `<div class="card" data-exam="${y}-common" onclick="selExam(this)"><div class="card-title">📄 ${y}年度 共通試験</div><div class="card-desc" style="display:flex;justify-content:space-between;align-items:center"><span>全30問（法規・物理・数学・軌道・電気等）</span><span>${cBadge}</span></div></div>`;
-      html += `<div class="card" data-exam="${y}-senmon1" onclick="selExam(this)"><div class="card-title">⚡ ${y}年度 専門試験Ⅰ（鉄道電気）</div><div class="card-desc" style="display:flex;justify-content:space-between;align-items:center"><span>全30問（選択式・真偽問題）</span><span>${sBadge}</span></div></div>`;
+      const cPause = pauseBadge(`${y}-common`, null);
+      const sPause = pauseBadge(`${y}-senmon1`, null);
+      html += `<div class="card" data-exam="${y}-common" onclick="selExam(this)"><div class="card-title">📄 ${y}年度 共通試験</div><div class="card-desc" style="display:flex;justify-content:space-between;align-items:center"><span>全30問（法規・物理・数学・軌道・電気等）</span><span>${cBadge}${cPause}</span></div></div>`;
+      html += `<div class="card" data-exam="${y}-senmon1" onclick="selExam(this)"><div class="card-title">⚡ ${y}年度 専門試験Ⅰ（鉄道電気）</div><div class="card-desc" style="display:flex;justify-content:space-between;align-items:center"><span>全30問（選択式・真偽問題）</span><span>${sBadge}${sPause}</span></div></div>`;
     });
   } else if(curMode==="genre"){
     document.getElementById('cfg-title').textContent="ジャンルを選択";
     document.getElementById('cfg-sub').textContent="学習したい分野を選んでください";
     html = ALL_GENRES.map(g=>{
       const badge = historyStatusBadge(histByTopic[g]);
-      return `<div class="card" data-genre="${g}" onclick="selGenre(this)"><div class="card-title">${g}</div><div class="card-desc" style="display:flex;justify-content:space-between;align-items:center"><span>${countGenre(g)}問収録</span><span>${badge}</span></div></div>`;
+      const pause = pauseBadge(null, g);
+      return `<div class="card" data-genre="${g}" onclick="selGenre(this)"><div class="card-title">${g}</div><div class="card-desc" style="display:flex;justify-content:space-between;align-items:center"><span>${countGenre(g)}問収録</span><span>${badge}${pause}</span></div></div>`;
     }).join('');
   } else {
     document.getElementById('cfg-title').textContent="ランダム出題";
