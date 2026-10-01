@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { PREFECTURES, type PrefId, type User } from '../data';
-import { newId } from '../store';
+import type { ProfileInput } from '../store';
 
 interface Props {
   initial?: User | null;
   submitLabel: string;
-  onSubmit: (user: User) => void;
+  onSubmit: (input: ProfileInput) => Promise<boolean>;
   onCancel?: () => void;
 }
 
@@ -13,16 +13,19 @@ export default function ProfileForm({ initial, submitLabel, onSubmit, onCancel }
   const [name, setName] = useState(initial?.name ?? '');
   const [pref, setPref] = useState<PrefId | null>(initial?.pref ?? null);
   const [bio, setBio] = useState(initial?.bio ?? '');
+  const [saving, setSaving] = useState(false);
 
-  const canSubmit = name.trim().length > 0 && pref !== null;
+  const canSubmit = name.trim().length > 0 && pref !== null && !saving;
 
   return (
     <form
       className="space-y-5"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
         if (!canSubmit) return;
-        onSubmit({ id: initial?.id ?? newId(), name: name.trim(), pref, bio: bio.trim() });
+        setSaving(true);
+        await onSubmit({ name: name.trim(), pref, bio: bio.trim() });
+        setSaving(false);
       }}
     >
       <label className="block">
@@ -77,7 +80,7 @@ export default function ProfileForm({ initial, submitLabel, onSubmit, onCancel }
           disabled={!canSubmit}
           className="flex-1 rounded-xl bg-orange-500 py-3 font-bold text-white shadow-lg shadow-orange-500/30 transition disabled:opacity-40"
         >
-          {submitLabel}
+          {saving ? '保存中…' : submitLabel}
         </button>
       </div>
     </form>

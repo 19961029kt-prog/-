@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { House, Map as MapIcon, Plus, User as UserIcon } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { House, LoaderCircle, Map as MapIcon, Plus, User as UserIcon, X } from 'lucide-react';
 import { PREFECTURES } from './data';
 import { useKyushuStore } from './store';
 import Composer from './components/Composer';
@@ -29,6 +29,32 @@ export default function KyushuApp() {
     window.scrollTo({ top: 0 });
   };
 
+  if (store.fatal) {
+    return (
+      <CenteredScreen>
+        <p className="text-3xl">🌧️</p>
+        <p className="mt-2 font-bold text-stone-800">サーバーにつながりませんでした</p>
+        <p className="mt-1 text-sm text-stone-600">{store.fatal}</p>
+        <button
+          type="button"
+          onClick={() => location.reload()}
+          className="mt-5 rounded-xl bg-orange-500 px-6 py-2.5 font-bold text-white"
+        >
+          再読み込み
+        </button>
+      </CenteredScreen>
+    );
+  }
+
+  if (!store.ready) {
+    return (
+      <CenteredScreen>
+        <LoaderCircle size={32} className="mx-auto animate-spin text-orange-500" />
+        <p className="mt-3 text-sm font-bold text-stone-500">九州につないどるよ…</p>
+      </CenteredScreen>
+    );
+  }
+
   if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-orange-50 to-amber-50 px-4 py-10">
@@ -47,10 +73,11 @@ export default function KyushuApp() {
             </p>
           </div>
           <div className="mt-8 rounded-3xl bg-white p-6 shadow-xl shadow-orange-900/5">
-            <ProfileForm submitLabel="はじめる" onSubmit={store.setUser} />
+            <ProfileForm submitLabel="はじめる" onSubmit={store.saveProfile} />
           </div>
+          {store.error && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{store.error}</p>}
           <p className="mt-4 text-center text-xs text-stone-400">
-            ※ 現在は試作版です。投稿はこの端末のブラウザにだけ保存されます。
+            ※ 試作版です。ログイン情報はこのブラウザに保存されるため、別の端末やブラウザでは別のユーザーになります。
           </p>
         </div>
       </div>
@@ -72,11 +99,14 @@ export default function KyushuApp() {
         </div>
       </header>
 
-      {store.storageError && (
+      {store.error && (
         <div className="mx-auto mt-3 max-w-xl px-4">
-          <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
-            保存容量がいっぱいです。写真付きの古い投稿を削除すると保存できるようになります。
-          </p>
+          <div role="alert" className="flex items-start gap-2 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+            <p className="flex-1">{store.error}</p>
+            <button type="button" onClick={store.dismissError} aria-label="閉じる" className="text-red-400">
+              <X size={16} />
+            </button>
+          </div>
         </div>
       )}
 
@@ -126,14 +156,25 @@ export default function KyushuApp() {
         <Composer
           user={user}
           onClose={() => setComposing(false)}
-          onSubmit={(input) => {
-            store.addPost(input);
-            setComposing(false);
-            setFilter({ ...EMPTY_FILTER, sort: 'new' });
-            goTab('home');
+          onSubmit={async (input) => {
+            const ok = await store.addPost(input);
+            if (ok) {
+              setComposing(false);
+              setFilter({ ...EMPTY_FILTER, sort: 'new' });
+              goTab('home');
+            }
+            return ok;
           }}
         />
       )}
+    </div>
+  );
+}
+
+function CenteredScreen({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-orange-50 to-amber-50 px-6">
+      <div className="max-w-sm text-center">{children}</div>
     </div>
   );
 }

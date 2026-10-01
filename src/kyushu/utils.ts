@@ -11,8 +11,11 @@ export function timeAgo(ts: number, now = Date.now()): string {
   return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
 }
 
-/** 画像を長辺maxSizeに縮小してJPEGのdata URLにする(localStorageの容量対策)。 */
-export function resizeImage(file: File, maxSize = 960, quality = 0.75): Promise<string> {
+/** Firestoreの1ドキュメントあたりの上限(1MiB)に収めるための、画像data URLの最大文字数 */
+export const MAX_IMAGE_CHARS = 700_000;
+
+/** 画像を長辺maxSizeに縮小してJPEGのdata URLにする(Firestoreに直接保存するための容量対策)。 */
+export function resizeImage(file: File, maxSize = 800, quality = 0.7): Promise<string> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new Image();

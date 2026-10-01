@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Heart, MessageCircle, Send, Trash2 } from 'lucide-react';
 import { CATEGORY_BY_ID, PREF_BY_ID, type Post, type User } from '../data';
-import type { KyushuStore } from '../store';
+import { usePostComments, type KyushuStore } from '../store';
 import { timeAgo } from '../utils';
 import { Avatar, PrefChip } from './ui';
 
@@ -15,14 +15,17 @@ interface Props {
 export default function PostCard({ post, user, store, onSelectPref }: Props) {
   const [showComments, setShowComments] = useState(false);
   const [draft, setDraft] = useState('');
+  const [sending, setSending] = useState(false);
+  const comments = usePostComments(post.id, showComments);
   const liked = post.likes.includes(user.id);
   const category = CATEGORY_BY_ID[post.category];
 
-  const submitComment = () => {
+  const submitComment = async () => {
     const text = draft.trim();
-    if (!text) return;
-    store.addComment(post.id, text);
-    setDraft('');
+    if (!text || sending) return;
+    setSending(true);
+    if (await store.addComment(post.id, text)) setDraft('');
+    setSending(false);
   };
 
   return (
@@ -66,7 +69,7 @@ export default function PostCard({ post, user, store, onSelectPref }: Props) {
       <footer className="mt-3 flex items-center gap-1 border-t border-stone-100 pt-2">
         <button
           type="button"
-          onClick={() => store.toggleLike(post.id)}
+          onClick={() => store.toggleLike(post)}
           aria-pressed={liked}
           className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold transition ${
             liked ? 'bg-rose-50 text-rose-500' : 'text-stone-500 hover:bg-stone-100'
@@ -82,14 +85,15 @@ export default function PostCard({ post, user, store, onSelectPref }: Props) {
           className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold text-stone-500 hover:bg-stone-100"
         >
           <MessageCircle size={18} />
-          コメント {post.comments.length > 0 && post.comments.length}
+          コメント {post.commentCount > 0 && post.commentCount}
         </button>
       </footer>
 
       {showComments && (
         <div className="mt-2 space-y-3 rounded-xl bg-stone-50 p-3">
-          {post.comments.length === 0 && <p className="text-sm text-stone-400">まだコメントはなかよ。一番乗りでどうぞ！</p>}
-          {post.comments.map((c) => (
+          {comments === null && <p className="text-sm text-stone-400">読み込み中…</p>}
+          {comments?.length === 0 && <p className="text-sm text-stone-400">まだコメントはなかよ。一番乗りでどうぞ！</p>}
+          {comments?.map((c) => (
             <div key={c.id} className="flex gap-2">
               <Avatar name={c.authorName} pref={c.authorPref} size={28} />
               <div className="min-w-0 flex-1">
@@ -128,7 +132,7 @@ export default function PostCard({ post, user, store, onSelectPref }: Props) {
             />
             <button
               type="submit"
-              disabled={!draft.trim()}
+              disabled={!draft.trim() || sending}
               className="rounded-full bg-orange-500 p-2 text-white disabled:opacity-40"
               aria-label="コメントを送信"
             >

@@ -1,0 +1,94 @@
+// よかとこ九州(kyushu.html)用のFirestoreセキュリティルール
+//
+// 【重要】このファイルは単体でデプロイしないでください。
+// GMAP対策アプリと同じFirebaseプロジェクトを共有しているため、
+// Firebaseコンソール > Firestore Database > ルール に既にあるルール(profiles など)は残したまま、
+// 下の「ここから」〜「ここまで」を `match /databases/{database}/documents { ... }` の中に追記してください。
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===== よかとこ九州: ここから =====
+    function kyushuSignedIn() {
+      return request.auth != null;
+    }
+
+    function kyushuPref(p) {
+      return p in ['fukuoka', 'saga', 'nagasaki', 'kumamoto', 'oita', 'miyazaki', 'kagoshima', 'okinawa'];
+    }
+
+    function kyushuName(n) {
+      return n is string && n.size() > 0 && n.size() <= 20;
+    }
+
+    match /kyushu_users/{uid} {
+      allow read: if kyushuSignedIn();
+      allow write: if kyushuSignedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name', 'pref', 'bio', 'updatedAt'])
+        && kyushuName(request.resource.data.name)
+        && kyushuPref(request.resource.data.pref)
+        && request.resource.data.bio is string && request.resource.data.bio.size() <= 60;
+    }
+
+    match /kyushu_posts/{postId} {
+      allow read: if kyushuSignedIn();
+
+      allow create: if kyushuSignedIn()
+        && request.resource.data.keys().hasOnly(
+             ['authorId', 'authorName', 'authorPref', 'pref', 'category', 'text', 'image', 'createdAt', 'likes', 'commentCount'])
+        && request.resource.data.authorId == request.auth.uid
+        && kyushuName(request.resource.data.authorName)
+        && kyushuPref(request.resource.data.authorPref)
+        && kyushuPref(request.resource.data.pref)
+        && request.resource.data.category in ['gourmet', 'scenery', 'onsen', 'festival', 'dialect', 'hidden', 'other']
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 280
+        && (!('image' in request.resource.data)
+            || (request.resource.data.image is string && request.resource.data.image.size() <= 700000))
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.likes == []
+        && request.resource.data.commentCount == 0;
+
+      allow update: if kyushuSignedIn() && (
+        // 投稿者本人: プロフィール変更に伴う表示名・出身県の更新だけ
+        (resource.data.authorId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['authorName', 'authorPref'])
+          && kyushuName(request.resource.data.authorName)
+          && kyushuPref(request.resource.data.authorPref))
+        // 誰でも: 自分の「よかね!」の付け外しだけ
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])
+          && request.resource.data.likes.toSet().difference(resource.data.likes.toSet()).hasOnly([request.auth.uid])
+          && resource.data.likes.toSet().difference(request.resource.data.likes.toSet()).hasOnly([request.auth.uid])
+          && request.resource.data.likes.size() == request.resource.data.likes.toSet().size())
+        // 誰でも: コメント追加・削除に伴うコメント数の±1だけ
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount'])
+          && (request.resource.data.commentCount == resource.data.commentCount + 1
+              || request.resource.data.commentCount == resource.data.commentCount - 1))
+      );
+
+      allow delete: if kyushuSignedIn() && resource.data.authorId == request.auth.uid;
+
+      match /comments/{commentId} {
+        allow read: if kyushuSignedIn();
+
+        allow create: if kyushuSignedIn()
+          && exists(/databases/$(database)/documents/kyushu_posts/$(postId))
+          && request.resource.data.keys().hasOnly(['authorId', 'authorName', 'authorPref', 'text', 'createdAt'])
+          && request.resource.data.authorId == request.auth.uid
+          && kyushuName(request.resource.data.authorName)
+          && kyushuPref(request.resource.data.authorPref)
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 200
+          && request.resource.data.createdAt == request.time;
+
+        // コメントを書いた本人か、投稿者(投稿ごと削除するとき)だけ削除できる
+        allow delete: if kyushuSignedIn() && (
+          resource.data.authorId == request.auth.uid
+          || get(/databases/$(database)/documents/kyushu_posts/$(postId)).data.authorId == request.auth.uid
+        );
+      }
+    }
+    // ===== よかとこ九州: ここまで =====
+  }
+}

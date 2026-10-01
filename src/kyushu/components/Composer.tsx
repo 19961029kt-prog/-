@@ -2,13 +2,13 @@ import { useRef, useState } from 'react';
 import { ImagePlus, X } from 'lucide-react';
 import { CATEGORIES, PREFECTURES, type CategoryId, type PrefId, type User } from '../data';
 import type { NewPostInput } from '../store';
-import { resizeImage } from '../utils';
+import { MAX_IMAGE_CHARS, resizeImage } from '../utils';
 
 const MAX_LENGTH = 280;
 
 interface Props {
   user: User;
-  onSubmit: (input: NewPostInput) => void;
+  onSubmit: (input: NewPostInput) => Promise<boolean>;
   onClose: () => void;
 }
 
@@ -18,9 +18,10 @@ export default function Composer({ user, onSubmit, onClose }: Props) {
   const [text, setText] = useState('');
   const [image, setImage] = useState<string | undefined>();
   const [imageError, setImageError] = useState('');
+  const [sending, setSending] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const canSubmit = text.trim().length > 0 && text.length <= MAX_LENGTH;
+  const canSubmit = text.trim().length > 0 && text.length <= MAX_LENGTH && !sending;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={onClose}>
@@ -40,10 +41,12 @@ export default function Composer({ user, onSubmit, onClose }: Props) {
 
         <form
           className="mt-4 space-y-4"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
             if (!canSubmit) return;
-            onSubmit({ pref, category, text: text.trim(), image });
+            setSending(true);
+            // 成功時は親がこの画面を閉じる。失敗時は入力内容を残してもう一度送れるようにする
+            if (!(await onSubmit({ pref, category, text: text.trim(), image }))) setSending(false);
           }}
         >
           <div>
@@ -130,7 +133,12 @@ export default function Composer({ user, onSubmit, onClose }: Props) {
               e.target.value = '';
               if (!file) return;
               try {
-                setImage(await resizeImage(file));
+                const dataUrl = await resizeImage(file);
+                if (dataUrl.length > MAX_IMAGE_CHARS) {
+                  setImageError('画像のサイズが大きすぎます。別の画像を試してください。');
+                  return;
+                }
+                setImage(dataUrl);
                 setImageError('');
               } catch {
                 setImageError('画像を読み込めませんでした。別の画像を試してください。');
@@ -143,7 +151,7 @@ export default function Composer({ user, onSubmit, onClose }: Props) {
             disabled={!canSubmit}
             className="w-full rounded-xl bg-orange-500 py-3 font-bold text-white shadow-lg shadow-orange-500/30 disabled:opacity-40"
           >
-            投稿する
+            {sending ? '送信中…' : '投稿する'}
           </button>
         </form>
       </div>

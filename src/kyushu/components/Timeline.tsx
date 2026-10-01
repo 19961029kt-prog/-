@@ -12,7 +12,7 @@ interface Props {
 }
 
 function score(post: Post) {
-  return post.likes.length + post.comments.length * 2;
+  return post.likes.length + post.commentCount * 2;
 }
 
 export default function Timeline({ user, store, filter, onFilterChange }: Props) {

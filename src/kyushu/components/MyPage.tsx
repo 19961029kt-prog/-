@@ -21,9 +21,10 @@ export default function MyPage({ user, store }: { user: User; store: KyushuStore
           <ProfileForm
             initial={user}
             submitLabel="保存する"
-            onSubmit={(next) => {
-              store.setUser(next);
-              setEditing(false);
+            onSubmit={async (input) => {
+              const ok = await store.saveProfile(input);
+              if (ok) setEditing(false);
+              return ok;
             }}
             onCancel={() => setEditing(false)}
           />
