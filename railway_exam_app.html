@@ -4604,22 +4604,48 @@ function countGenre(g) {
   return allQuestions().filter(q=>q.genre===g).length;
 }
 
-function goConfig() {
+function historyStatusBadge(records) {
+  if(!records || !records.length) return '<span style="color:#9ca3af;font-size:12px">未実施</span>';
+  const last = records[0];
+  const count = records.length;
+  const pct = last.pct != null ? Math.round(last.pct) : null;
+  const scoreStr = (last.totalOk != null && last.totalSubs != null)
+    ? `${last.totalOk}/${last.totalSubs}問正解`
+    : (pct != null ? `${pct}%` : '');
+  const color = pct == null ? '#6b7280' : pct >= 80 ? '#16a34a' : pct >= 60 ? '#d97706' : '#dc2626';
+  return `<span style="font-size:12px;color:${color};font-weight:600">${scoreStr}</span><span style="font-size:11px;color:#9ca3af;margin-left:6px">${count}回実施</span>`;
+}
+
+async function goConfig() {
   if(!curMode){alert("出題モードを選択してください");return;}
   if(!curStyle){alert("解答スタイルを選択してください");return;}
+  // 履歴を取得してtopicごとに集計
+  const hist = await loadHistory();
+  const histByTopic = {};
+  hist.forEach(h => {
+    if(!h.topic) return;
+    if(!histByTopic[h.topic]) histByTopic[h.topic] = [];
+    histByTopic[h.topic].push(h);
+  });
   let html = "";
   if(curMode==="year"){
     document.getElementById('cfg-title').textContent="年度・試験種別を選択";
     document.getElementById('cfg-sub').textContent="解きたい試験を選んでください";
     html = "";
     YEARS.forEach(y=>{
-      html += `<div class="card" data-exam="${y}-common" onclick="selExam(this)"><div class="card-title">📄 ${y}年度 共通試験</div><div class="card-desc">全30問（法規・物理・数学・軌道・電気等）</div></div>`;
-      html += `<div class="card" data-exam="${y}-senmon1" onclick="selExam(this)"><div class="card-title">⚡ ${y}年度 専門試験Ⅰ（鉄道電気）</div><div class="card-desc">全30問（選択式・真偽問題）</div></div>`;
+      const cKey=`${y}年度 共通`; const sKey=`${y}年度 専門Ⅰ`;
+      const cBadge = historyStatusBadge(histByTopic[cKey]);
+      const sBadge = historyStatusBadge(histByTopic[sKey]);
+      html += `<div class="card" data-exam="${y}-common" onclick="selExam(this)"><div class="card-title">📄 ${y}年度 共通試験</div><div class="card-desc" style="display:flex;justify-content:space-between;align-items:center"><span>全30問（法規・物理・数学・軌道・電気等）</span><span>${cBadge}</span></div></div>`;
+      html += `<div class="card" data-exam="${y}-senmon1" onclick="selExam(this)"><div class="card-title">⚡ ${y}年度 専門試験Ⅰ（鉄道電気）</div><div class="card-desc" style="display:flex;justify-content:space-between;align-items:center"><span>全30問（選択式・真偽問題）</span><span>${sBadge}</span></div></div>`;
     });
   } else if(curMode==="genre"){
     document.getElementById('cfg-title').textContent="ジャンルを選択";
     document.getElementById('cfg-sub').textContent="学習したい分野を選んでください";
-    html = ALL_GENRES.map(g=>`<div class="card" data-genre="${g}" onclick="selGenre(this)"><div class="card-title">${g}</div><div class="card-desc">${countGenre(g)}問収録</div></div>`).join('');
+    html = ALL_GENRES.map(g=>{
+      const badge = historyStatusBadge(histByTopic[g]);
+      return `<div class="card" data-genre="${g}" onclick="selGenre(this)"><div class="card-title">${g}</div><div class="card-desc" style="display:flex;justify-content:space-between;align-items:center"><span>${countGenre(g)}問収録</span><span>${badge}</span></div></div>`;
+    }).join('');
   } else {
     document.getElementById('cfg-title').textContent="ランダム出題";
     document.getElementById('cfg-sub').textContent="全問からシャッフルして出題します";
