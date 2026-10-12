@@ -31,13 +31,22 @@ interface TermRowProps {
   termIndex: number;
   term: string;
   definition: string;
-  initialMasked: boolean;
+  initialTermMasked: boolean;
+  initialDefMasked: boolean;
 }
 
-function TermRow({ subject, topicNumber, termIndex, term, definition, initialMasked }: TermRowProps) {
+function TermRow({
+  subject,
+  topicNumber,
+  termIndex,
+  term,
+  definition,
+  initialTermMasked,
+  initialDefMasked,
+}: TermRowProps) {
   const { toggleTermKnown, isTermKnown } = useProgress();
-  const [termMasked, setTermMasked] = useState(initialMasked);
-  const [defMasked, setDefMasked] = useState(initialMasked);
+  const [termMasked, setTermMasked] = useState(initialTermMasked);
+  const [defMasked, setDefMasked] = useState(initialDefMasked);
   const known = isTermKnown(subject, topicNumber, termIndex);
 
   return (
@@ -63,7 +72,9 @@ function TermRow({ subject, topicNumber, termIndex, term, definition, initialMas
 export function TermsPage() {
   const { subject } = useParams<{ subject: string }>();
   const meta = getSubject(subject ?? '');
-  const [maskCommand, setMaskCommand] = useState<{ mode: 'show' | 'hide'; id: number } | null>(null);
+  const [maskCommand, setMaskCommand] = useState<{ target: 'term' | 'definition' | 'none'; id: number } | null>(
+    null,
+  );
 
   if (!meta) return <Navigate to="/" replace />;
 
@@ -86,15 +97,22 @@ export function TermsPage() {
       <div className="mt-4 flex gap-2">
         <button
           type="button"
-          onClick={() => setMaskCommand((c) => ({ mode: 'hide', id: (c?.id ?? 0) + 1 }))}
-          className="flex-1 rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white"
+          onClick={() => setMaskCommand((c) => ({ target: 'term', id: (c?.id ?? 0) + 1 }))}
+          className="flex-1 rounded-lg bg-slate-800 px-3 py-2 text-xs font-medium text-white sm:text-sm"
         >
-          すべて隠す
+          用語を隠す
         </button>
         <button
           type="button"
-          onClick={() => setMaskCommand((c) => ({ mode: 'show', id: (c?.id ?? 0) + 1 }))}
-          className="flex-1 rounded-lg bg-slate-200 px-4 py-2 text-sm font-medium text-slate-800"
+          onClick={() => setMaskCommand((c) => ({ target: 'definition', id: (c?.id ?? 0) + 1 }))}
+          className="flex-1 rounded-lg bg-slate-800 px-3 py-2 text-xs font-medium text-white sm:text-sm"
+        >
+          意味を隠す
+        </button>
+        <button
+          type="button"
+          onClick={() => setMaskCommand((c) => ({ target: 'none', id: (c?.id ?? 0) + 1 }))}
+          className="flex-1 rounded-lg bg-slate-200 px-3 py-2 text-xs font-medium text-slate-800 sm:text-sm"
         >
           すべて表示
         </button>
@@ -115,7 +133,8 @@ export function TermsPage() {
                   termIndex={termIndex}
                   term={t.term}
                   definition={t.definition}
-                  initialMasked={maskCommand?.mode === 'hide'}
+                  initialTermMasked={maskCommand?.target === 'term'}
+                  initialDefMasked={maskCommand?.target === 'definition'}
                 />
               ))}
             </ul>
