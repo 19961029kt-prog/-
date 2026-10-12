@@ -3,6 +3,7 @@ import { ProgressProvider, useProgress } from './progress';
 import { LoginGate } from './pages/LoginGate';
 import { Dashboard } from './pages/Dashboard';
 import { SubjectPage } from './pages/SubjectPage';
+import { TermsPage } from './pages/TermsPage';
 import { UnitPage } from './pages/UnitPage';
 import { QuizPage } from './pages/QuizPage';
 import { ReviewPage } from './pages/ReviewPage';
@@ -20,6 +21,7 @@ function Gate() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/s/:subject" element={<SubjectPage />} />
+        <Route path="/s/:subject/terms" element={<TermsPage />} />
         <Route path="/s/:subject/quiz" element={<QuizPage />} />
         <Route path="/s/:subject/u/:topicNumber" element={<UnitPage />} />
         <Route path="/s/:subject/u/:topicNumber/quiz" element={<QuizPage />} />

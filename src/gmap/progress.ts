@@ -20,10 +20,11 @@ interface AnswerRecord {
 interface ProgressState {
   answers: Record<string, AnswerRecord>;
   studiedUnits: Record<string, true>;
+  knownTerms: Record<string, true>;
 }
 
 function emptyState(): ProgressState {
-  return { answers: {}, studiedUnits: {} };
+  return { answers: {}, studiedUnits: {}, knownTerms: {} };
 }
 
 function loadState(): ProgressState {
@@ -31,7 +32,7 @@ function loadState(): ProgressState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return emptyState();
     const parsed = JSON.parse(raw) as Partial<ProgressState>;
-    return { answers: parsed.answers ?? {}, studiedUnits: parsed.studiedUnits ?? {} };
+    return { answers: parsed.answers ?? {}, studiedUnits: parsed.studiedUnits ?? {}, knownTerms: parsed.knownTerms ?? {} };
   } catch {
     return emptyState();
   }
@@ -57,6 +58,7 @@ function mergeState(local: ProgressState, remote: Partial<ProgressState>): Progr
   return {
     answers,
     studiedUnits: { ...(remote.studiedUnits ?? {}), ...local.studiedUnits },
+    knownTerms: { ...(remote.knownTerms ?? {}), ...local.knownTerms },
   };
 }
 
@@ -68,6 +70,10 @@ function unitKey(subject: SubjectKey, topicNumber: number): string {
   return `${subject}|${topicNumber}`;
 }
 
+function termKey(subject: SubjectKey, topicNumber: number, termIndex: number): string {
+  return `${subject}|${topicNumber}|${termIndex}`;
+}
+
 interface ProgressContextValue {
   state: ProgressState;
   profile: Profile | null;
@@ -77,6 +83,8 @@ interface ProgressContextValue {
   recordAnswer: (subject: SubjectKey, topicNumber: number, quizIndex: number, correct: boolean) => void;
   markUnitStudied: (subject: SubjectKey, topicNumber: number) => void;
   isUnitStudied: (subject: SubjectKey, topicNumber: number) => boolean;
+  toggleTermKnown: (subject: SubjectKey, topicNumber: number, termIndex: number) => void;
+  isTermKnown: (subject: SubjectKey, topicNumber: number, termIndex: number) => boolean;
   resetProgress: () => void;
 }
 
@@ -116,9 +124,11 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     }
     if (syncTimer.current) clearTimeout(syncTimer.current);
     syncTimer.current = setTimeout(() => {
-      writeProfile(profile.profileKey, { answers: state.answers, studiedUnits: state.studiedUnits }).catch((err) =>
-        console.error('GMAP cloud sync: write failed', err),
-      );
+      writeProfile(profile.profileKey, {
+        answers: state.answers,
+        studiedUnits: state.studiedUnits,
+        knownTerms: state.knownTerms,
+      }).catch((err) => console.error('GMAP cloud sync: write failed', err));
     }, SYNC_DEBOUNCE_MS);
     return () => {
       if (syncTimer.current) clearTimeout(syncTimer.current);
@@ -165,6 +175,25 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     [state.studiedUnits],
   );
 
+  const toggleTermKnown = useCallback((subject: SubjectKey, topicNumber: number, termIndex: number) => {
+    const key = termKey(subject, topicNumber, termIndex);
+    setState((prev) => {
+      const next = { ...prev.knownTerms };
+      if (next[key]) {
+        delete next[key];
+      } else {
+        next[key] = true;
+      }
+      return { ...prev, knownTerms: next };
+    });
+  }, []);
+
+  const isTermKnown = useCallback(
+    (subject: SubjectKey, topicNumber: number, termIndex: number) =>
+      Boolean(state.knownTerms[termKey(subject, topicNumber, termIndex)]),
+    [state.knownTerms],
+  );
+
   const resetProgress = useCallback(() => setState(emptyState()), []);
 
   const value = useMemo<ProgressContextValue>(
@@ -177,9 +206,22 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       recordAnswer,
       markUnitStudied,
       isUnitStudied,
+      toggleTermKnown,
+      isTermKnown,
       resetProgress,
     }),
-    [state, profile, login, logout, recordAnswer, markUnitStudied, isUnitStudied, resetProgress],
+    [
+      state,
+      profile,
+      login,
+      logout,
+      recordAnswer,
+      markUnitStudied,
+      isUnitStudied,
+      toggleTermKnown,
+      isTermKnown,
+      resetProgress,
+    ],
   );
 
   return createElement(ProgressContext.Provider, { value }, children);
