@@ -24,6 +24,12 @@ export function SubjectPage() {
       >
         この科目の問題を解く(ランダム15問)
       </Link>
+      <Link
+        to={`/s/${meta.key}/terms`}
+        className="mt-3 block rounded-xl bg-white px-5 py-3 text-center font-semibold text-slate-800 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50"
+      >
+        用語一覧で暗記する
+      </Link>
 
       <ul className="mt-6 space-y-2">
         {meta.data.units.map((unit, index) => {
