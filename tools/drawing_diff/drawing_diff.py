@@ -505,6 +505,56 @@ def text_diff(old: list[TextItem], new: list[TextItem], T: Transform) -> list[tu
     return out
 
 
+# PDF の注記（PDF ビューアで書き込んだ手書き・図形・付箋・スタンプなど）。図面本体とは別に保存されている
+ANNOT_NAMES = {"Ink": "手書き", "Square": "四角形", "Circle": "円", "Line": "線", "PolyLine": "折れ線",
+               "Polygon": "多角形", "FreeText": "テキスト注記", "Text": "付箋", "Highlight": "ハイライト",
+               "Underline": "下線", "StrikeOut": "取り消し線", "Squiggly": "波線", "Stamp": "スタンプ",
+               "Caret": "挿入記号", "FileAttachment": "添付ファイル"}
+ANNOT_SKIP = {"Link", "Popup", "Widget"}
+
+
+def annot_items(page: fitz.Page) -> list[TextItem]:
+    """注記を (種類と内容, 表示上の範囲[pt]) のリストにする"""
+    rm = page.rotation_matrix
+    out = []
+    for a in page.annots():
+        kind = a.type[1]
+        if kind in ANNOT_SKIP:
+            continue
+        name = ANNOT_NAMES.get(kind, kind)
+        content = (a.info.get("content") or "").strip().replace("\n", " ")
+        label = f"{name}「{content[:30]}」" if content else name
+        out.append(TextItem(label, fitz.Rect(a.rect) * rm))
+    return out
+
+
+def annot_diff(old: list[TextItem], new: list[TextItem], T: Transform) -> list[tuple[fitz.Rect, int, str]]:
+    """注記の追加・削除。同じ種類・内容で、位置がほぼ同じものは「変更なし」とみなす"""
+    if not T.identity:
+        c, s = math.cos(T.th), math.sin(T.th)
+        def mv(p):
+            x, y = p.x - T.cx, p.y - T.cy
+            return fitz.Point(T.sc * (c * x - s * y) + T.cx + T.tx, T.sc * (s * x + c * y) + T.cy + T.ty)
+        new = [TextItem(n.text, fitz.Rect(mv(n.rect.tl), mv(n.rect.br)).normalize()) for n in new]
+    used = [False] * len(old)
+    out = []
+    for n in new:
+        tol = max(1.0, 0.2 * max(n.rect.width, n.rect.height))
+        hit = -1
+        for i, o in enumerate(old):
+            if not used[i] and o.text == n.text and \
+                    max(abs(o.rect.x0 - n.rect.x0), abs(o.rect.y0 - n.rect.y0),
+                        abs(o.rect.x1 - n.rect.x1), abs(o.rect.y1 - n.rect.y1)) <= tol:
+                hit = i
+                break
+        if hit >= 0:
+            used[hit] = True
+        else:
+            out.append((n.rect, 2, f"注記追加: {n.text}"))
+    out += [(o.rect, 1, f"注記削除: {o.text}") for o, u in zip(old, used) if not u]
+    return out
+
+
 def merge_text_changes(regions: list[Region], changes, D: float, pad: int, shape) -> list[Region]:
     """文字の変更を変更箇所に統合する（重なる箇所があれば説明を付け、なければ新しい箇所にする）"""
     H, W = shape
@@ -697,6 +747,11 @@ def compare_page(old_page: fitz.Page, new_page: fitz.Page, p: Params, log=print)
         changes = text_diff(to, tn, T.scaled(1 / S))
         log(f"    文字の比較: {len(to)} / {len(tn)} 個中、変更 {len(changes)} 件")
         regions = merge_text_changes(regions, changes, D, pad, rem_d.shape)
+    ao, an = annot_items(old_page), annot_items(new_page)
+    if ao or an:
+        changes = annot_diff(ao, an, T.scaled(1 / S))
+        log(f"    注記の比較: {len(ao)} / {len(an)} 個中、変更 {len(changes)} 件")
+        regions = merge_text_changes(regions, changes, D, pad, rem_d.shape)
     overview = colorize(ink_d, rem_d, add_d, max(1, round(D / 300)), p.common_alpha)
     draw_boxes(overview, regions, D / 300)
     draw_legend(overview, len(regions), D / 300)
@@ -766,7 +821,7 @@ def add_detail_page(pdf: fitz.Document, pno: int, no: int, g: Region, res: PageR
     page.insert_text((28, 30), title, fontsize=11, fontname="F0")
     if g.notes:
         shown = g.notes[:12]
-        note = "文字: " + " / ".join(shown) + (f" ほか {len(g.notes) - len(shown)} 件" if len(g.notes) > len(shown) else "")
+        note = "内容: " + " / ".join(shown) + (f" ほか {len(g.notes) - len(shown)} 件" if len(g.notes) > len(shown) else "")
         page.insert_textbox(fitz.Rect(28, 35, 814, 58), note, fontsize=7.5, fontname="F0", color=(0.6, 0.2, 0))
     captions = ("差分（赤＝削除　青＝追加）", "旧版", "新版")
     h, w = imgs[0].shape[:2]
@@ -839,7 +894,7 @@ def process(old_pdf: Path, new_pdf: Path, out_dir: Path, p: Params, pages: list[
     csv_path = out_dir / "changes.csv"
     with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:  # BOM 付き: Excel で文字化けしない
         w = csv.writer(f)
-        w.writerow(["page", "no", "type", "x_mm", "y_mm", "w_mm", "h_mm", "text_change"])
+        w.writerow(["page", "no", "type", "x_mm", "y_mm", "w_mm", "h_mm", "notes"])
         w.writerows(rows)
 
     print(f"\n完了: 変更箇所 合計 {total} 件")
