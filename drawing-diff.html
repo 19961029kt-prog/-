@@ -191,7 +191,7 @@ tbody tr:hover, tbody tr.sel { background: var(--surface-2); }
 </head>
 <body>
 <main>
-  <h1>図面差分チェッカー</h1>
+  <h1>図面差分チェッカー <small style="font-size:12px;font-weight:400;color:var(--muted)">版 2.1（2026-10-17）</small></h1>
   <p class="lead">旧版と新版の図面PDFを重ね、<b style="color:var(--removed)">削除＝赤</b>、<b style="color:var(--added)">追加＝青</b>で変更点をハイライトします。CADから出力した超長尺・極小文字の図面にも、スキャン図面にも使えます。</p>
   <div class="privacy">🔒 図面はこのPCのブラウザ内だけで処理されます。どこにも送信されません。</div>
 
@@ -762,8 +762,18 @@ function findRegions(removed, added, w, h, p) {
       sizes.push(vl);
     }
     sizes.sort((x, y) => x - y);
+    // PDF の注記（PDF ビューアで書き込んだ手書き・図形・付箋・スタンプなど）。図面本体とは別に保存されている
+    const annots = [];
+    for (const a of await page.getAnnotations()) {
+      if (!a.rect || ANNOT_SKIP.has(a.subtype)) continue;
+      const [x0, y0, x1, y1] = vp.convertToViewportRectangle(a.rect);
+      const name = ANNOT_NAMES[a.subtype] || a.subtype;
+      const content = String((a.contentsObj && a.contentsObj.str) || a.contents || '').trim().replace(/\s+/g, ' ');
+      annots.push({ text: content ? `${name}「${content.slice(0, 30)}」` : name,
+        x0: Math.min(x0, x1), y0: Math.min(y0, y1), x1: Math.max(x0, x1), y1: Math.max(y0, y1) });
+    }
     const kind = (nImages > 0 && nPaths < 200) || (nImages === 0 && nPaths < 50 && !items.length) ? 'scan' : 'cad';
-    return { wPt: vp.width, hPt: vp.height, kind, nImages, nPaths, items, textSize: sizes.length ? sizes[Math.floor(sizes.length / 10)] : 0 };
+    return { wPt: vp.width, hPt: vp.height, kind, nImages, nPaths, items, annots, textSize: sizes.length ? sizes[Math.floor(sizes.length / 10)] : 0 };
   }
   function autoDpi(kind, nText) { return kind === 'scan' ? 300 : nText >= 10 ? 600 : 1200; }
   function effKind() { const k = $('kind').value; return k === 'auto' ? (state.info ? state.info.kind : 'cad') : k; }
@@ -946,6 +956,28 @@ function findRegions(removed, added, w, h, p) {
     added.forEach((a, j) => { if (!taken[j]) out.push({ ...a, bits: 2, desc: `文字追加「${a.text}」` }); });
     return out;
   }
+  const ANNOT_NAMES = { Ink: '手書き', Square: '四角形', Circle: '円', Line: '線', PolyLine: '折れ線', Polygon: '多角形',
+    FreeText: 'テキスト注記', Text: '付箋', Highlight: 'ハイライト', Underline: '下線', StrikeOut: '取り消し線',
+    Squiggly: '波線', Stamp: 'スタンプ', Caret: '挿入記号', FileAttachment: '添付ファイル' };
+  const ANNOT_SKIP = new Set(['Link', 'Popup', 'Widget']);
+  // 注記の追加・削除。同じ種類・内容で、位置がほぼ同じものは「変更なし」とみなす
+  function annotDiff(old, neu, T) {
+    if (!T.identity) {
+      const c = Math.cos(T.th), s = Math.sin(T.th);
+      const mv = (x, y) => { x -= T.cx; y -= T.cy; return [T.sc * (c * x - s * y) + T.cx + T.tx, T.sc * (s * x + c * y) + T.cy + T.ty]; };
+      neu = neu.map((n) => { const [a, b] = mv(n.x0, n.y0), [p, q] = mv(n.x1, n.y1);
+        return { text: n.text, x0: Math.min(a, p), y0: Math.min(b, q), x1: Math.max(a, p), y1: Math.max(b, q) }; });
+    }
+    const used = new Uint8Array(old.length), out = [];
+    for (const n of neu) {
+      const tol = Math.max(1, 0.2 * Math.max(n.x1 - n.x0, n.y1 - n.y0));
+      const i = old.findIndex((o, k) => !used[k] && o.text === n.text &&
+        Math.max(Math.abs(o.x0 - n.x0), Math.abs(o.y0 - n.y0), Math.abs(o.x1 - n.x1), Math.abs(o.y1 - n.y1)) <= tol);
+      if (i >= 0) used[i] = 1; else out.push({ ...n, bits: 2, desc: `注記追加: ${n.text}` });
+    }
+    old.forEach((o, i) => { if (!used[i]) out.push({ ...o, bits: 1, desc: `注記削除: ${o.text}` }); });
+    return out;
+  }
   function mergeText(regions, changes, D, pad, W, H) {
     const s = D / 72;
     for (const ch of changes) {
@@ -1058,6 +1090,9 @@ function findRegions(removed, added, w, h, p) {
         textInfo = { n: changes.length };
         regions = mergeText(regions, changes, D, pad, dw, dh);
       }
+      if (io.annots.length || inew.annots.length) {
+        regions = mergeText(regions, annotDiff(io.annots, inew.annots, scaleT(T, 1 / S)), D, pad, dw, dh);
+      }
       const band = Math.max(1, Math.floor(dh / 40));
       regions.sort((a, b) => (Math.floor(a.y / band) - Math.floor(b.y / band)) || (a.x - b.x));
 
@@ -1107,7 +1142,7 @@ function findRegions(removed, added, w, h, p) {
       <div class="stat"><b style="color:var(--removed)">${nR}</b><span>削除</span></div>
       <div class="stat"><b style="color:var(--added)">${nA}</b><span>追加</span></div>
       <div class="stat"><b style="color:var(--changed)">${nC}</b><span>変更（削除＋追加）</span></div>
-      ${r.textInfo ? `<div class="stat"><b style="color:var(--note)">${nT}</b><span>文字の変更を含む</span></div>` : ''}
+      ${nT ? `<div class="stat"><b style="color:var(--note)">${nT}</b><span>文字・注記の変更を含む</span></div>` : ''}
       <div class="stat"><b style="font-size:14px;line-height:1.9">${alignTxt}</b><span>${r.kind === 'cad' ? 'CAD' : 'スキャン'}・${r.dpi} dpi・${(r.ms / 1000).toFixed(1)} 秒</span></div>`;
     if (r.regions.length > 300)
       showWarn('変更箇所がとても多く検出されました。位置合わせがうまくいっていない可能性があります。図面の種類や「ズレの許容幅」を見直してください。');
@@ -1203,7 +1238,7 @@ function findRegions(removed, added, w, h, p) {
     focusRegion(g);
     const [, kt] = kindOf(g), mm = (v) => (v * MM / r.D).toFixed(1);
     $('dTitle').textContent = `変更箇所 ${i + 1}　${kt}　位置 ${mm(g.x)}, ${mm(g.y)} mm　大きさ ${mm(g.w)}×${mm(g.h)} mm`;
-    $('dNote').textContent = g.notes.length ? `文字: ${g.notes.join(' / ')}` : '';
+    $('dNote').textContent = g.notes.length ? `内容: ${g.notes.join(' / ')}` : '';
     $('detail').classList.add('on');
     $('dPrev').disabled = i <= 0; $('dNext').disabled = i >= r.regions.length - 1;
     const dc = $('dCanvas'); dc.width = 1; dc.height = 1;
@@ -1298,7 +1333,7 @@ function findRegions(removed, added, w, h, p) {
   $('dlCsv').onclick = () => {
     const r = state.result, mm = (v) => (v * MM / r.D).toFixed(1);
     const q = (s) => `"${String(s).replace(/"/g, '""')}"`;
-    const rows = [['ページ', 'No', '種別', 'x_mm', 'y_mm', '幅_mm', '高さ_mm', '文字の変更']];
+    const rows = [['ページ', 'No', '種別', 'x_mm', 'y_mm', '幅_mm', '高さ_mm', '内容（文字・注記の変更）']];
     r.regions.forEach((g, i) => rows.push([r.page, i + 1, kindOf(g)[1], mm(g.x), mm(g.y), mm(g.w), mm(g.h), q(g.notes.join(' / '))]));
     download(new Blob(['﻿' + rows.map((x) => x.join(',')).join('\r\n')], { type: 'text/csv' }), `${baseName()}.csv`);
   };
