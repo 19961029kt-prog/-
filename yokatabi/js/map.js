@@ -18,9 +18,31 @@
     [112, 166], [150, 140], [188, 134], [206, 118], [222, 90], [250, 76], [280, 64],
   ];
   const AMAKUSA = [[176, 392], [204, 384], [216, 410], [198, 442], [170, 430]];
-  const SAKURAJIMA = [[247, 586], [257, 584], [260, 594], [250, 599]];
-  const YAKUSHIMA = [[178, 760], [198, 752], [218, 762], [216, 784], [196, 792], [176, 782]];
+  const SAKURAJIMA = [[246, 584], [256, 581], [262, 590], [252, 599], [244, 594]];
+  // 屋久島は縮尺外の枠内に、丸みのある「森の島」として大きめに置く
+  const YAKUSHIMA = [[174, 768], [184, 752], [202, 748], [220, 756], [226, 774], [216, 792], [196, 798], [178, 790]];
   const TANEGASHIMA = [[262, 752], [270, 744], [276, 770], [266, 800], [258, 788]];
+
+  // 山地・高原：本島シルエットの内側に、等高線つきのやわらかい起伏として描く
+  // [中心x, 中心y, 半径x, 半径y, 回転, 名前]
+  const HIGHLANDS = [
+    [368, 440, 50, 84, -18, ''],
+    [348, 262, 52, 40, -10, ''],
+    [302, 548, 30, 22, 10, '霧島'],
+    [172, 346, 18, 14, 0, ''],
+    [178, 194, 36, 14, -12, ''],
+    [300, 642, 22, 18, 0, ''],
+    [446, 318, 26, 30, 0, ''],
+  ];
+  // 山のアイコン [x, y, 大きさ, 名前]
+  const PEAKS = [
+    [296, 214, 1.0, 'くじゅう'],
+    [302, 540, 1.1, ''],
+    [172, 342, 0.85, '雲仙'],
+    [338, 424, 1.0, ''],
+    [360, 446, 0.85, '九州山地'],
+    [214, 766, 0.75, ''],
+  ];
 
   // 点列を Catmull-Rom → 3次ベジェで閉じた滑らかなパスにする
   function smoothClosed(pts) {
@@ -58,24 +80,42 @@
   function buildDefs() {
     const defs = el('defs', {}, svg);
     defs.innerHTML = `
-      <pattern id="p-wave" width="36" height="18" patternUnits="userSpaceOnUse">
-        <path d="M0 12 Q9 6 18 12 T36 12" fill="none" stroke="#ffffff" stroke-opacity=".07" stroke-width="1.5"/>
+      <pattern id="p-wave" width="44" height="22" patternUnits="userSpaceOnUse">
+        <path d="M0 14 Q11 7 22 14 T44 14" fill="none" stroke="#ffffff" stroke-opacity=".08" stroke-width="1.6"/>
+        <path d="M-22 3 Q-11 -4 0 3 T22 3 T44 3" fill="none" stroke="#ffffff" stroke-opacity=".04" stroke-width="1.2"/>
       </pattern>
-      <linearGradient id="g-land" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#fbf4e2"/><stop offset=".6" stop-color="#eef0d6"/><stop offset="1" stop-color="#e3ebcf"/>
+      <linearGradient id="g-land" x1="0" y1="0" x2=".7" y2="1">
+        <stop offset="0" stop-color="#fdf6e3"/><stop offset=".45" stop-color="#f1efd2"/><stop offset="1" stop-color="#e2ebc8"/>
+      </linearGradient>
+      <radialGradient id="g-highland">
+        <stop offset="0" stop-color="#a9c98a" stop-opacity=".95"/>
+        <stop offset=".6" stop-color="#c3d9a4" stop-opacity=".6"/>
+        <stop offset="1" stop-color="#d9e6bd" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="g-forest" cx=".45" cy=".4" r=".7">
+        <stop offset="0" stop-color="#8fc27a"/><stop offset=".7" stop-color="#5e9a5f"/><stop offset="1" stop-color="#3f7a4b"/>
+      </radialGradient>
+      <linearGradient id="g-peak" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#7fa66a"/><stop offset="1" stop-color="#4f7d4f"/>
       </linearGradient>
       <radialGradient id="g-gold" cx=".35" cy=".3" r=".8">
         <stop offset="0" stop-color="#fff7c2"/><stop offset=".45" stop-color="#f7c948"/><stop offset="1" stop-color="#b7791f"/>
       </radialGradient>
+      <filter id="f-paper" x="0" y="0" width="100%" height="100%">
+        <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="7" result="n"/>
+        <feColorMatrix in="n" type="matrix" values="0 0 0 0 .45  0 0 0 0 .36  0 0 0 0 .2  0 0 0 .5 0"/>
+      </filter>
+      <filter id="f-soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6"/></filter>
       <filter id="f-glow" x="-100%" y="-100%" width="300%" height="300%">
         <feGaussianBlur stdDeviation="4" result="b"/>
         <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
       </filter>
       <filter id="f-shadow" x="-20%" y="-20%" width="140%" height="140%">
-        <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#04142b" flood-opacity=".45"/>
+        <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#04142b" flood-opacity=".5"/>
       </filter>`;
   }
 
+  // 盤面：海 → 浅瀬のにじみ → 島（影つき）→ 紙の質感 → 山地の等高線 → 山アイコン → 装飾
   function buildBoard() {
     // 海は viewBox の外まで広げ、枠の縦横比が違っても余白が出ないようにする（svg は overflow: visible）
     const [vx, vy, vw, vh] = D.meta.viewBox;
@@ -83,11 +123,57 @@
     // 下地の色は .map-frame の背景（CSS）に任せ、ここでは波模様だけ敷く
     el('rect', { ...sea, fill: 'url(#p-wave)' }, layers.bg);
 
+    const islands = [MAINLAND, AMAKUSA, TANEGASHIMA, SAKURAJIMA].map(smoothClosed);
+    const yaku = smoothClosed(YAKUSHIMA);
+    const defs = svg.querySelector('defs');
+    const clip = el('clipPath', { id: 'c-land' }, defs);
+    [...islands, yaku].forEach((d) => el('path', { d }, clip));
+
+    // 浅瀬：海岸線のまわりに水色のにじみを2重に
+    const shore = el('g', { class: 'shore' }, layers.bg);
+    [...islands, yaku].forEach((d) => {
+      el('path', { d, class: 'shore-far' }, shore);
+      el('path', { d, class: 'shore-near' }, shore);
+    });
+
     const land = el('g', { filter: 'url(#f-shadow)' }, layers.bg);
-    [MAINLAND, AMAKUSA, YAKUSHIMA, TANEGASHIMA].forEach((pts) =>
-      el('path', { d: smoothClosed(pts), class: 'land' }, land)
-    );
-    el('path', { d: smoothClosed(SAKURAJIMA), class: 'land land-volcano' }, layers.bg);
+    islands.forEach((d, i) => el('path', { d, class: i === 3 ? 'land land-volcano' : 'land' }, land));
+    el('path', { d: yaku, class: 'land land-forest' }, land);
+
+    // 島の内側だけに描くもの（紙の質感・山地）
+    const inner = el('g', { 'clip-path': 'url(#c-land)' }, layers.bg);
+    el('rect', { x: vx, y: vy, width: vw, height: vh, filter: 'url(#f-paper)', class: 'land-texture' }, inner);
+    HIGHLANDS.forEach(([x, y, rx, ry, rot, name]) => {
+      const g = el('g', { transform: `translate(${x} ${y}) rotate(${rot})` }, inner);
+      el('ellipse', { rx: rx * 1.25, ry: ry * 1.25, fill: 'url(#g-highland)', filter: 'url(#f-soft)' }, g);
+      [0.95, 0.68, 0.42].forEach((k) => el('ellipse', { rx: rx * k, ry: ry * k, class: 'contour' }, g));
+      if (name) {
+        const t = el('text', { y: ry * 0.95 + 12, 'text-anchor': 'middle', transform: `rotate(${-rot})`, class: 'terrain-label' }, g);
+        t.textContent = name;
+      }
+    });
+    // 阿蘇の外輪山：カルデラをぐるりと囲むリング
+    const aso = D.byId.aso;
+    if (aso) {
+      el('ellipse', { cx: aso.x + 2, cy: aso.y - 4, rx: 34, ry: 28, class: 'caldera' }, inner);
+      el('ellipse', { cx: aso.x + 2, cy: aso.y - 4, rx: 34, ry: 28, class: 'caldera-rim' }, inner);
+    }
+    // 島のふち：内側に細い白のハイライト（紙の盤面を切り抜いたような立体感）
+    [...islands, yaku].forEach((d) => el('path', { d, class: 'land-rim' }, inner));
+
+    const peaks = el('g', { class: 'peaks' }, layers.bg);
+    PEAKS.forEach(([x, y, k, name]) => {
+      const g = el('g', { transform: `translate(${x} ${y}) scale(${k})`, class: 'peak' }, peaks);
+      el('path', { d: 'M-13 7 Q-7 -4 -2 -10 Q1 -12 3 -9 Q8 -3 13 7 Z', fill: 'url(#g-peak)' }, g);
+      el('path', { d: 'M-4 -6 Q-1 -11 3 -9 L5 -6 Q2 -4 0 -6 Q-2 -4 -4 -6 Z', class: 'peak-snow' }, g);
+      if (name) {
+        const t = el('text', { y: 18, 'text-anchor': 'middle', class: 'terrain-label' }, g);
+        t.textContent = name;
+      }
+    });
+    // 桜島の噴煙
+    const smoke = el('g', { class: 'smoke', transform: 'translate(254 578)' }, layers.bg);
+    [0, 1, 2].forEach((i) => el('circle', { r: 3 + i, style: `--i:${i}` }, smoke));
 
     // 縮尺外の離島枠
     el('rect', { x: 150, y: 736, width: 140, height: 72, rx: 10, class: 'inset-frame' }, layers.bg);
@@ -98,26 +184,61 @@
     const deco = el('g', { class: 'map-deco', transform: 'translate(500 60)' }, layers.bg);
     deco.innerHTML = `<circle r="20" class="compass"/><path d="M0 -16 L5 0 L0 16 L-5 0Z" class="compass-needle"/>
       <text y="-24" text-anchor="middle" class="compass-n">N</text>`;
-    const sea1 = el('text', { x: 40, y: 120, class: 'sea-label' }, layers.bg);
-    sea1.textContent = '玄界灘';
-    const sea2 = el('text', { x: 470, y: 470, class: 'sea-label' }, layers.bg);
-    sea2.textContent = '日向灘';
-    const sea3 = el('text', { x: 40, y: 520, class: 'sea-label' }, layers.bg);
-    sea3.textContent = '東シナ海';
+    [['玄界灘', 40, 120], ['日向灘', 470, 470], ['東シナ海', 40, 520], ['有明海', 190, 276]].forEach(([name, x, y], i) => {
+      const s = el('text', { x, y, class: i === 3 ? 'sea-label sea-label-sm' : 'sea-label' }, layers.bg);
+      s.textContent = name;
+    });
+    // 海に浮かぶ波しるし（盤面のにぎやかし）
+    [[96, 470], [480, 600], [470, 160], [120, 640], [330, 760], [500, 380]].forEach(([x, y]) =>
+      el('path', { d: `M${x} ${y} q5 -6 10 0 t10 0 t10 0`, class: 'wave-mark' }, layers.bg)
+    );
   }
 
+  // 路線種別ごとの線のつくり。線は下から順に重ねる。
+  const ROUTE_STYLES = {
+    // 新幹線：太い白の車体に青のライン。光の筋が高速で流れる
+    shinkansen: ['shin-outer', 'shin-body', 'shin-stripe', 'shin-streak'],
+    // 在来線：昔ながらの白黒の線路
+    local: ['rail-base', 'rail-dash'],
+    // 観光列車：枕木の上を、えんじ色のレールと金の飾り線が走る
+    scenic: ['scenic-ties', 'scenic-rail', 'scenic-gold'],
+    // 航路：海の上にうっすら航跡を描き、点線が流れる
+    ferry: ['ferry-wake', 'ferry-line'],
+    // バス連絡：オレンジの丸い点線
+    bus: ['bus-outline', 'bus-dots'],
+  };
+  const ROUTE_BADGE = { scenic: '✨', ferry: '⛴', bus: '🚌' };
+
   function buildRoutes() {
-    D.edges.forEach((e) => {
-      const d = segmentD(e.a, e.b);
-      const type = e.type || 'rail';
-      const g = el('g', { class: `route route-${type}`, 'data-edge': e.key }, layers.routes);
-      if (type === 'rail') {
-        el('path', { d, class: 'rail-base' }, g);
-        el('path', { d, class: 'rail-dash' }, g);
-      } else {
-        el('path', { d, class: `${type}-line` }, g);
-      }
-    });
+    const order = ['ferry', 'bus', 'local', 'scenic', 'shinkansen']; // 新幹線が一番上に来るよう描画順をそろえる
+    const types = D.routeTypes || {};
+    [...D.edges]
+      .sort((x, y) => order.indexOf(routeType(x)) - order.indexOf(routeType(y)))
+      .forEach((e) => {
+        const d = segmentD(e.a, e.b);
+        const type = routeType(e);
+        const g = el('g', { class: `route route-${type}`, 'data-edge': e.key }, layers.routes);
+        const title = el('title', {}, g);
+        title.textContent = `${(types[type] || {}).label || ''}｜${e.name || ''}（${D.byId[e.a].name}〜${D.byId[e.b].name}）`;
+        ROUTE_STYLES[type].forEach((cls) => el('path', { d, class: cls }, g));
+        if (ROUTE_BADGE[type]) {
+          const p = el('path', { d }, layers.routes);
+          const len = p.getTotalLength();
+          const m = p.getPointAtLength(len / 2);
+          p.remove();
+          if (len < 60) return; // 短い区間はしるしを置くと駅名とぶつかるので省く
+          const b = el('g', { class: `route-badge badge-${type}`, transform: `translate(${m.x.toFixed(1)} ${m.y.toFixed(1)})` }, layers.badges);
+          el('circle', { r: 8.5 }, b);
+          const t = el('text', { y: 4, 'text-anchor': 'middle' }, b);
+          t.textContent = ROUTE_BADGE[type];
+        }
+      });
+  }
+
+  // 旧データの "rail" は在来線として扱う
+  function routeType(e) {
+    const t = e.type === 'rail' || !e.type ? 'local' : e.type;
+    return ROUTE_STYLES[t] ? t : 'local';
   }
 
   const LABEL_OFFSET = {
@@ -187,7 +308,7 @@
       svg.innerHTML = '';
       buildDefs();
       layers = {};
-      ['bg', 'routes', 'trail', 'nodes', 'train'].forEach((k) => (layers[k] = el('g', { class: `layer-${k}` }, svg)));
+      ['bg', 'routes', 'badges', 'trail', 'nodes', 'train'].forEach((k) => (layers[k] = el('g', { class: `layer-${k}` }, svg)));
       buildBoard();
       buildRoutes();
       buildNodes();

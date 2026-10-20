@@ -95,8 +95,12 @@ yokatabi/
       "stays":    [ … 同上 … ]
     }
   },
-  "routeOverrides": [                   // 区間の見た目（省略時は鉄道・直線）
-    { "between": ["kagoshima-chuo", "yakushima"], "type": "ferry", "via": [305, 725] }
+  "routeTypes": {                       // 路線種別と凡例の名前
+    "shinkansen": { "label": "新幹線" }, "local": { "label": "在来線" },
+    "scenic": { "label": "観光列車" }, "ferry": { "label": "航路" }, "bus": { "label": "バス連絡" }
+  },
+  "routeOverrides": [                   // 区間ごとの種別・路線名・曲線（省略時は在来線・直線）
+    { "between": ["kagoshima-chuo", "yakushima"], "type": "ferry", "name": "鹿児島港〜宮之浦港 航路（高速船・フェリー）", "via": [305, 725] }
   ],
   "stations": [
     {
@@ -116,6 +120,19 @@ yokatabi/
 }
 ```
 
+### 路線種別と盤面のデザイン（`map.js` の `ROUTE_STYLES`、`style.css` の「路線」）
+| type | 見た目 | 割り当ての考え方 |
+|---|---|---|
+| `shinkansen` | 太い白い車体に青のライン＋光の筋が流れる | 九州新幹線・西九州新幹線の区間 |
+| `local` | 白黒の線路 | 通常の在来線（JR・第三セクター） |
+| `scenic` | 枕木の上にえんじ色のレールと金の飾り線＋✨ | 観光特急・観光列車が走る路線（列車の商品名は書かず、路線名で示す） |
+| `ferry` | 航跡のにじみの上を点線が流れる＋⛴ | 離島への航路 |
+| `bus` | オレンジの丸い点線＋🚌 | 鉄道がない区間のバス連絡（実際に鉄道がない区間を鉄道として描かない） |
+
+- 区間の真ん中のしるし（✨⛴🚌）は、長さ60未満の短い区間では駅名とぶつかるので省く。路線にマウスを乗せると `name` がツールチップで出る。
+- 盤面は下から「海の波模様 → 浅瀬のにじみ → 島（影つき）→ 紙の質感 → 山地の等高線・阿蘇の外輪山 → 山アイコン → 地名・装飾」の順に重ねる。海岸線は `MAINLAND` などの点列を Catmull-Rom 曲線でなめらかにつないだもので、屋久島は縮尺外の枠に「森の島」として置く。
+- 地形・地名ラベルは駅名とぶつからない位置に置く（`HIGHLANDS`・`PEAKS` の座標を調整）。駅を増やしたら必ず画面で重なりを確認する。
+
 ### アフィリエイトURLの組み立て（`app.js` の `buildUrl`）
 1. `url` の `{kw}` を URL エンコードしたキーワードに置き換える
 2. `params` のうち値が空でないものをクエリに足す（例：Amazon アソシエイトの `tag`）
@@ -126,8 +143,8 @@ yokatabi/
 ### 駅を追加するとき（100駅以上への拡張）
 1. `stations.json` の `stations` に1件足す（座標は `viewBox` 内。九州シルエットとの位置関係を画面で確かめる）
 2. 接続する駅の `connections` にも **お互いに** IDを書く
-3. `node tools/build-fallback.mjs` を実行する（検証：必須項目・memo の文字数・接続先の存在と双方向性 → `js/stations-fallback.js` を生成）
-4. 地図の外側に置く離島などは、`routeOverrides` で `type: "ferry"` と `via`（曲線の制御点）を指定する
+3. 新しい区間の `routeOverrides` に `type`・`name`（必要なら `via`＝曲線の制御点）を足す。離島は `type: "ferry"`
+4. `node tools/build-fallback.mjs` を実行する（検証：必須項目・memo の文字数・接続先の存在と双方向性・路線種別 → `js/stations-fallback.js` を生成）
 - 駅が増えて盤面が混み合ったら、`viewBox` を広げるか、地方ごとの盤面に分ける（`meta` に盤面定義を足す）。ロジックは駅数に依存しない。
 
 ## 6. ゲームロジック

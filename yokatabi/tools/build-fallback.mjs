@@ -30,6 +30,16 @@ for (const s of data.stations) {
     }
   }
 }
+const types = Object.keys(data.routeTypes ?? {});
+for (const o of data.routeOverrides ?? []) {
+  const label = (o.between ?? []).join(' ⇄ ');
+  if (!o.between || o.between.length !== 2 || !o.between.every((id) => ids.has(id))) {
+    errors.push(`routeOverrides ${label}: 駅IDが正しくありません`);
+  } else if (!data.stations.find((s) => s.id === o.between[0]).connections.includes(o.between[1])) {
+    errors.push(`routeOverrides ${label}: connections に存在しない区間です`);
+  }
+  if (o.type && !types.includes(o.type)) errors.push(`routeOverrides ${label}: 不明な路線種別 ${o.type}`);
+}
 if (errors.length) {
   console.error('stations.json の検証に失敗しました:\n  ' + errors.join('\n  '));
   process.exit(1);

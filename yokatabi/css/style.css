@@ -93,25 +93,70 @@ body.is-busy .station { cursor: progress; }
 }
 .map-legend span { display: inline-flex; align-items: center; gap: 4px; }
 .lg { display: inline-block; width: 18px; height: 4px; border-radius: 2px; }
-.lg-rail { background: repeating-linear-gradient(90deg, #1b2440 0 5px, #fff 5px 9px); outline: 1px solid #1b2440; }
-.lg-bus { background: repeating-linear-gradient(90deg, #f39c12 0 3px, transparent 3px 6px); }
-.lg-ferry { background: repeating-linear-gradient(90deg, #8fd3ff 0 6px, transparent 6px 10px); }
+.lg-shin { height: 7px; background: linear-gradient(#0b1a3a 0 1.5px, #fff 1.5px 2.5px, #2a6fdb 2.5px 4.5px, #fff 4.5px 5.5px, #0b1a3a 5.5px); }
+.lg-local { background: repeating-linear-gradient(90deg, #1b2440 0 5px, #fff 5px 9px); outline: 1px solid #1b2440; }
+.lg-scenic { height: 7px; background: linear-gradient(transparent 2px, #9b2335 2px 5px, transparent 5px), repeating-linear-gradient(90deg, #8a5a2b 0 2px, transparent 2px 5px); }
+.lg-ferry { background: repeating-linear-gradient(90deg, #e6f7ff 0 6px, transparent 6px 10px); }
+.lg-bus { width: 14px; height: 5px; background: radial-gradient(circle, #ffb340 1.6px, transparent 2px) 0 0 / 5px 5px; }
 .lg-gold { width: 10px; height: 10px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff7c2, #f7c948 50%, #b7791f); box-shadow: 0 0 6px #f7c948; }
 
-.land { fill: url(#g-land); stroke: #c8b78e; stroke-width: 1.5; }
-.land-volcano { fill: #d9cdb0; stroke: #a8946a; }
+/* 地形 */
+.shore-far { fill: none; stroke: #7fd3ec; stroke-opacity: .13; stroke-width: 30; stroke-linejoin: round; }
+.shore-near { fill: none; stroke: #a8e6f5; stroke-opacity: .28; stroke-width: 11; stroke-linejoin: round; }
+.land { fill: url(#g-land); stroke: #b9a273; stroke-width: 1.6; }
+.land-volcano { fill: #d6c6a2; stroke: #9c8457; }
+.land-forest { fill: url(#g-forest); stroke: #2f5e3a; }
+.land-texture { opacity: .55; mix-blend-mode: multiply; }
+.land-rim { fill: none; stroke: #fffdf4; stroke-opacity: .9; stroke-width: 3; }
+.contour { fill: none; stroke: #7f9f66; stroke-opacity: .35; stroke-width: 1; }
+.caldera { fill: #cfe1ad; fill-opacity: .55; }
+.caldera-rim { fill: none; stroke: #7f9f66; stroke-opacity: .65; stroke-width: 5; stroke-dasharray: 1 4; stroke-linecap: round; }
+.terrain-label { fill: #5f7d4c; font-size: 9px; font-weight: 900; letter-spacing: .2em; opacity: .85; pointer-events: none; }
+.peak { pointer-events: none; }
+.peak-snow { fill: #fffdf4; opacity: .9; }
+.smoke circle { fill: #fff; opacity: 0; animation: smoke 4s ease-out infinite; animation-delay: calc(var(--i) * 1.3s); }
+@keyframes smoke { 0% { opacity: .7; transform: translate(0, 0) scale(.6); } 100% { opacity: 0; transform: translate(10px, -26px) scale(2.2); } }
+.wave-mark { fill: none; stroke: #fff; stroke-opacity: .22; stroke-width: 2; stroke-linecap: round; }
 .inset-frame { fill: rgba(255, 255, 255, .04); stroke: #8fd3ff; stroke-width: 1.2; stroke-dasharray: 5 4; }
 .inset-label { fill: #bfe6ff; font-size: 9px; font-weight: 700; }
 .sea-label { fill: #fff; fill-opacity: .28; font-size: 13px; font-weight: 700; letter-spacing: .3em; writing-mode: vertical-rl; }
+.sea-label-sm { font-size: 9px; fill: #3d7aa6; fill-opacity: .6; letter-spacing: .15em; }
 .compass { fill: rgba(255, 255, 255, .08); stroke: rgba(255, 255, 255, .35); }
 .compass-needle { fill: var(--gold); }
 .compass-n { fill: #fff; font-size: 11px; font-weight: 900; }
 
-.rail-base { fill: none; stroke: #1b2440; stroke-width: 7; stroke-linecap: round; }
-.rail-dash { fill: none; stroke: #fff; stroke-width: 3.4; stroke-dasharray: 9 7; stroke-linecap: butt; }
-.bus-line { fill: none; stroke: #f39c12; stroke-width: 3.5; stroke-dasharray: 2 6; stroke-linecap: round; }
-.ferry-line { fill: none; stroke: #8fd3ff; stroke-width: 3; stroke-dasharray: 10 6; stroke-linecap: round; animation: ferry-flow 1.6s linear infinite; }
-@keyframes ferry-flow { to { stroke-dashoffset: -32; } }
+/* 路線：種別ごとにデザインを変える */
+.route path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.route { transition: filter .15s; }
+.route:hover { filter: brightness(1.15) drop-shadow(0 0 4px rgba(255, 255, 255, .8)); }
+/* 新幹線 */
+.shin-outer { stroke: #0b1a3a; stroke-width: 13; }
+.shin-body { stroke: #ffffff; stroke-width: 9; }
+.shin-stripe { stroke: #2a6fdb; stroke-width: 3.2; }
+.shin-streak { stroke: #e9f6ff; stroke-width: 3.2; stroke-dasharray: 18 140; animation: streak 1.4s linear infinite; filter: url(#f-glow); }
+@keyframes streak { to { stroke-dashoffset: -158; } }
+/* 在来線 */
+.rail-base { stroke: #1b2440; stroke-width: 7; }
+.route .rail-dash { stroke: #fff; stroke-width: 3.4; stroke-dasharray: 9 7; stroke-linecap: butt; }
+/* 観光列車 */
+.route .scenic-ties { stroke: #8a5a2b; stroke-width: 14; stroke-dasharray: 2.6 5.4; stroke-linecap: butt; }
+.scenic-rail { stroke: #9b2335; stroke-width: 6; }
+.scenic-gold { stroke: #ffd166; stroke-width: 2; stroke-dasharray: 6 5; animation: scenic 2.8s linear infinite; }
+@keyframes scenic { to { stroke-dashoffset: -44; } }
+/* 航路 */
+.ferry-wake { stroke: #c9efff; stroke-opacity: .2; stroke-width: 15; }
+.ferry-line { stroke: #e6f7ff; stroke-width: 2.8; stroke-dasharray: 9 6; animation: ferry-flow 1.6s linear infinite; }
+@keyframes ferry-flow { to { stroke-dashoffset: -30; } }
+/* バス連絡 */
+.bus-outline { stroke: #7a4300; stroke-width: 6.5; stroke-dasharray: .1 8; }
+.bus-dots { stroke: #ffb340; stroke-width: 4.2; stroke-dasharray: .1 8; }
+/* 区間の真ん中に置く小さなしるし */
+.route-badge { pointer-events: none; }
+.route-badge circle { fill: #fffaf0; stroke: #1b2440; stroke-width: 1.5; }
+.route-badge text { font-size: 10px; }
+.badge-ferry circle { fill: #e6f7ff; stroke: #2e86de; }
+.badge-scenic circle { fill: #fff3d1; stroke: #9b2335; }
+.badge-bus circle { fill: #fff1dc; stroke: #c2410c; }
 .trail-line { fill: none; stroke: var(--gold); stroke-width: 6; stroke-linecap: round; opacity: .85; filter: url(#f-glow); stroke-dasharray: 2 10; animation: trail .5s linear infinite; }
 @keyframes trail { to { stroke-dashoffset: -24; } }
 
@@ -449,6 +494,7 @@ body.is-busy .station { cursor: progress; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(10px); } }
 
 @media (max-width: 639px) {
+  .map-legend { position: static; max-width: none; border-radius: 0; justify-content: center; background: rgba(8, 24, 52, .85); padding: 7px 10px; }
   .station-label { font-size: 17px; stroke-width: 5; }
   .station-hit { r: 28; }
   .logo-title { font-size: 17px; }
