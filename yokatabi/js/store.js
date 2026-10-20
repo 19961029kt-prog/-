@@ -13,6 +13,8 @@
       acquired: {},  // { stationId: { at, via: 'product'|'stay', provider, item } }
       actions: {},   // { stationId: { product?: ISO, stay?: ISO } } … ジャーニー「購入する」「訪れる」
       favorites: {}, // { stationId: true }  … 「つづく」：推し駅登録
+      itineraries: [], // マイ旅しおり：[{ id, savedAt, departDate, title, seq: { g1, day1, day2, g2 } }]
+      tripPrompted: false, // 「旅しおりが作れます」の提案を一度出したか
       rolls: 0,
       muted: false,
     };
@@ -86,6 +88,29 @@
       return !!state.favorites[id];
     },
     isFavorite: (id) => !!state.favorites[id],
+    // マイ旅しおり：道順（seq）だけを保存し、表示のたびに最新データで旅程を組み立て直す
+    saveItinerary({ title, seq, departDate }) {
+      const key = JSON.stringify(seq);
+      const dup = state.itineraries.find((i) => JSON.stringify(i.seq) === key);
+      if (dup) {
+        dup.departDate = departDate || dup.departDate;
+        save();
+        return { item: dup, created: false };
+      }
+      const item = { id: `trip-${Date.now().toString(36)}`, savedAt: new Date().toISOString(), departDate: departDate || '', title, seq };
+      state.itineraries.unshift(item);
+      save();
+      return { item, created: true };
+    },
+    deleteItinerary(id) {
+      state.itineraries = state.itineraries.filter((i) => i.id !== id);
+      save();
+    },
+    getItineraries: () => state.itineraries,
+    markTripPrompted() {
+      state.tripPrompted = true;
+      save();
+    },
     countRoll() {
       state.rolls += 1;
       save();
@@ -95,9 +120,10 @@
       save();
     },
     reset() {
-      const muted = state.muted;
+      const { muted, itineraries } = state;
       state = blank();
       state.muted = muted;
+      state.itineraries = itineraries; // 保存した旅しおりは旅の記録のリセットでは消さない
       save();
     },
   };

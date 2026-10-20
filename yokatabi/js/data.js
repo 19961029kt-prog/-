@@ -107,5 +107,5 @@
     return result;
   }
 
-  YT.Data = { load, shortestPath, diceDestinations, edgeKey };
+  YT.Data = { load, index, shortestPath, diceDestinations, edgeKey };
 })();

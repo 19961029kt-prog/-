@@ -39,7 +39,16 @@ for (const o of data.routeOverrides ?? []) {
     errors.push(`routeOverrides ${label}: connections に存在しない区間です`);
   }
   if (o.type && !types.includes(o.type)) errors.push(`routeOverrides ${label}: 不明な路線種別 ${o.type}`);
+  if (!(o.minutes > 0)) errors.push(`routeOverrides ${label}: 所要時間 minutes（分）がありません`);
 }
+// マイ旅しおり用：駅ごとの過ごし方と滞在時間
+for (const s of data.stations) {
+  const p = s.plan ?? {};
+  if (!(p.minutes > 0) || !p.day || !p.evening || !p.morning) {
+    errors.push(`${s.id}: plan（minutes・day・evening・morning）がそろっていません`);
+  }
+}
+if (!data.stations.some((s) => s.gateway)) errors.push('gateway（旅の出発・到着地）を持つ駅がありません');
 if (errors.length) {
   console.error('stations.json の検証に失敗しました:\n  ' + errors.join('\n  '));
   process.exit(1);

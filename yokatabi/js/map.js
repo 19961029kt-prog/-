@@ -378,7 +378,7 @@
       svg.innerHTML = '';
       buildDefs();
       layers = {};
-      ['bg', 'routes', 'badges', 'trail', 'nodes', 'train'].forEach((k) => (layers[k] = el('g', { class: `layer-${k}` }, svg)));
+      ['bg', 'routes', 'badges', 'course', 'trail', 'nodes', 'train'].forEach((k) => (layers[k] = el('g', { class: `layer-${k}` }, svg)));
       buildBoard();
       buildRoutes();
       buildNodes();
@@ -447,6 +447,25 @@
           }
         };
         requestAnimationFrame(step);
+      });
+    },
+
+    // マイ旅しおりのモデルコースを盤面に重ねる。legs = [[駅ID, ...], ...]（行程ごとの経路）、stops = 巡る順の駅ID
+    showCourse(legs, stops, overnight) {
+      layers.course.innerHTML = '';
+      svg.classList.toggle('has-course', !!legs);
+      if (!legs) return;
+      legs.forEach((path, i) => {
+        for (let k = 0; k < path.length - 1; k++) {
+          el('path', { d: segmentD(path[k], path[k + 1]), class: 'course-line', style: `--i:${i}` }, layers.course);
+        }
+      });
+      stops.forEach((id, i) => {
+        const s = D.byId[id];
+        const g = el('g', { class: `course-pin${id === overnight ? ' is-overnight' : ''}`, transform: `translate(${s.x + 13} ${s.y - 13})` }, layers.course);
+        el('circle', { r: 8 }, g);
+        const t = el('text', { y: 3.5, 'text-anchor': 'middle' }, g);
+        t.textContent = id === overnight ? '泊' : String(i + 1);
       });
     },
 

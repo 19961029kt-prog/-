@@ -18,6 +18,17 @@ window.YOKATABI_FALLBACK_DATA = {
       "よか旅すごろく九州",
       "九州旅"
     ],
+    "trip": {
+      "minAcquired": 2,
+      "day1Start": "09:00",
+      "day1End": "18:00",
+      "morningMinutes": 60,
+      "day2Start": "08:30",
+      "day2End": "17:30",
+      "transferMinutes": 10,
+      "maxStops": 6,
+      "notice": "所要時間は乗り換えを含むおおよその目安です。運行本数・時刻・運休は各社の最新情報をご確認ください。"
+    },
     "prefectures": {
       "福岡": {
         "color": "#e4572e"
@@ -119,6 +130,7 @@ window.YOKATABI_FALLBACK_DATA = {
       ],
       "type": "shinkansen",
       "name": "九州新幹線",
+      "minutes": 80,
       "via": [
         214,
         380
@@ -130,7 +142,8 @@ window.YOKATABI_FALLBACK_DATA = {
         "nagasaki"
       ],
       "type": "shinkansen",
-      "name": "西九州新幹線"
+      "name": "西九州新幹線",
+      "minutes": 25
     },
     {
       "between": [
@@ -139,6 +152,7 @@ window.YOKATABI_FALLBACK_DATA = {
       ],
       "type": "scenic",
       "name": "久大本線（観光特急が走る高原ルート）",
+      "minutes": 130,
       "via": [
         300,
         165
@@ -151,6 +165,7 @@ window.YOKATABI_FALLBACK_DATA = {
       ],
       "type": "scenic",
       "name": "豊肥本線（観光特急が走るカルデラルート）",
+      "minutes": 120,
       "via": [
         392,
         276
@@ -162,7 +177,8 @@ window.YOKATABI_FALLBACK_DATA = {
         "ibusuki"
       ],
       "type": "scenic",
-      "name": "指宿枕崎線（観光特急が走る海辺ルート）"
+      "name": "指宿枕崎線（観光特急が走る海辺ルート）",
+      "minutes": 55
     },
     {
       "between": [
@@ -171,6 +187,7 @@ window.YOKATABI_FALLBACK_DATA = {
       ],
       "type": "scenic",
       "name": "大村線（海沿いの観光列車ルート）",
+      "minutes": 80,
       "via": [
         70,
         300
@@ -182,7 +199,8 @@ window.YOKATABI_FALLBACK_DATA = {
         "mojiko"
       ],
       "type": "trunk",
-      "name": "鹿児島本線"
+      "name": "鹿児島本線",
+      "minutes": 60
     },
     {
       "between": [
@@ -190,7 +208,8 @@ window.YOKATABI_FALLBACK_DATA = {
         "karatsu"
       ],
       "type": "local",
-      "name": "筑肥線"
+      "name": "筑肥線",
+      "minutes": 85
     },
     {
       "between": [
@@ -198,7 +217,8 @@ window.YOKATABI_FALLBACK_DATA = {
         "aso"
       ],
       "type": "local",
-      "name": "鹿児島本線・豊肥本線"
+      "name": "鹿児島本線・豊肥本線",
+      "minutes": 120
     },
     {
       "between": [
@@ -206,7 +226,8 @@ window.YOKATABI_FALLBACK_DATA = {
         "ureshino-onsen"
       ],
       "type": "trunk",
-      "name": "長崎本線・佐世保線（リレー特急）"
+      "name": "長崎本線・佐世保線（リレー特急）",
+      "minutes": 60
     },
     {
       "between": [
@@ -214,7 +235,8 @@ window.YOKATABI_FALLBACK_DATA = {
         "huis-ten-bosch"
       ],
       "type": "local",
-      "name": "筑肥線・松浦鉄道"
+      "name": "筑肥線・松浦鉄道",
+      "minutes": 140
     },
     {
       "between": [
@@ -222,7 +244,8 @@ window.YOKATABI_FALLBACK_DATA = {
         "huis-ten-bosch"
       ],
       "type": "local",
-      "name": "佐世保線・大村線"
+      "name": "佐世保線・大村線",
+      "minutes": 60
     },
     {
       "between": [
@@ -230,7 +253,8 @@ window.YOKATABI_FALLBACK_DATA = {
         "beppu"
       ],
       "type": "trunk",
-      "name": "日豊本線"
+      "name": "日豊本線",
+      "minutes": 90
     },
     {
       "between": [
@@ -238,7 +262,8 @@ window.YOKATABI_FALLBACK_DATA = {
         "yufuin"
       ],
       "type": "local",
-      "name": "久大本線"
+      "name": "久大本線",
+      "minutes": 50
     },
     {
       "between": [
@@ -246,7 +271,8 @@ window.YOKATABI_FALLBACK_DATA = {
         "miyazaki"
       ],
       "type": "trunk",
-      "name": "日豊本線"
+      "name": "日豊本線",
+      "minutes": 200
     },
     {
       "between": [
@@ -254,7 +280,8 @@ window.YOKATABI_FALLBACK_DATA = {
         "kagoshima-chuo"
       ],
       "type": "trunk",
-      "name": "日豊本線"
+      "name": "日豊本線",
+      "minutes": 130
     },
     {
       "between": [
@@ -263,6 +290,7 @@ window.YOKATABI_FALLBACK_DATA = {
       ],
       "type": "ferry",
       "name": "鹿児島港〜宮之浦港 航路（高速船・フェリー）",
+      "minutes": 130,
       "via": [
         305,
         725
@@ -275,6 +303,7 @@ window.YOKATABI_FALLBACK_DATA = {
       ],
       "type": "ferry",
       "name": "指宿港〜屋久島 航路（高速船）",
+      "minutes": 100,
       "via": [
         236,
         725
@@ -286,7 +315,8 @@ window.YOKATABI_FALLBACK_DATA = {
         "kurokawa-onsen"
       ],
       "type": "bus",
-      "name": "路線バス"
+      "name": "路線バス",
+      "minutes": 60
     },
     {
       "between": [
@@ -294,7 +324,8 @@ window.YOKATABI_FALLBACK_DATA = {
         "yufuin"
       ],
       "type": "bus",
-      "name": "路線バス（やまなみハイウェイ）"
+      "name": "路線バス（やまなみハイウェイ）",
+      "minutes": 100
     },
     {
       "between": [
@@ -302,7 +333,8 @@ window.YOKATABI_FALLBACK_DATA = {
         "takachiho"
       ],
       "type": "bus",
-      "name": "路線バス"
+      "name": "路線バス",
+      "minutes": 90
     },
     {
       "between": [
@@ -310,7 +342,8 @@ window.YOKATABI_FALLBACK_DATA = {
         "miyazaki"
       ],
       "type": "bus",
-      "name": "バス＋鉄道連絡（延岡経由）"
+      "name": "バス＋鉄道連絡（延岡経由）",
+      "minutes": 170
     }
   ],
   "stations": [
@@ -346,6 +379,13 @@ window.YOKATABI_FALLBACK_DATA = {
           "keyword": "博多 辛子明太子"
         }
       ],
+      "gateway": "福岡空港・博多駅",
+      "plan": {
+        "minutes": 120,
+        "day": "博多ラーメンやうどんの食べ歩きと、櫛田神社まわりの博多の街歩き",
+        "evening": "中洲の屋台で、博多の夜をはしご酒で締めくくる",
+        "morning": "駅ビルの屋上広場で、列車を見送りながら朝のコーヒー"
+      },
       "stay": {
         "name": "博多駅前の都市型ホテル",
         "kind": "都市型ホテル",
@@ -381,6 +421,12 @@ window.YOKATABI_FALLBACK_DATA = {
           "keyword": "ふぐ 一夜干し 関門"
         }
       ],
+      "plan": {
+        "minutes": 120,
+        "day": "門司港レトロの洋館めぐりと関門海峡の散策。ランチは焼きカレー",
+        "evening": "ライトアップされたレトロ地区と、海峡の夜景を散歩",
+        "morning": "海峡沿いの遊歩道で、朝の潮風と行き交う船を眺める"
+      },
       "stay": {
         "name": "門司港レトロのクラシックホテル",
         "kind": "クラシックホテル",
@@ -416,6 +462,12 @@ window.YOKATABI_FALLBACK_DATA = {
           "keyword": "呼子 イカ しゅうまい"
         }
       ],
+      "plan": {
+        "minutes": 150,
+        "day": "唐津城と虹の松原、足を延ばして呼子でイカの活き造り",
+        "evening": "海辺の宿で、玄界灘の魚介づくしの夕食",
+        "morning": "虹の松原の木陰を朝さんぽ"
+      },
       "stay": {
         "name": "玄界灘を望む海辺の料理宿",
         "kind": "海辺の料理宿",
@@ -452,6 +504,12 @@ window.YOKATABI_FALLBACK_DATA = {
           "keyword": "嬉野 温泉湯豆腐"
         }
       ],
+      "plan": {
+        "minutes": 120,
+        "day": "茶畑の丘と温泉街の散策。名物の温泉湯どうふを味わう",
+        "evening": "とろりとした美肌の湯に、時間を忘れて浸かる",
+        "morning": "嬉野茶を淹れて、茶畑を眺めるおだやかな朝"
+      },
       "stay": {
         "name": "美肌自慢の老舗湯宿",
         "kind": "老舗湯宿",
@@ -487,6 +545,13 @@ window.YOKATABI_FALLBACK_DATA = {
           "keyword": "長崎ちゃんぽん お取り寄せ"
         }
       ],
+      "gateway": "長崎空港・長崎駅",
+      "plan": {
+        "minutes": 150,
+        "day": "路面電車で出島・グラバー園・中華街をめぐり、ちゃんぽんを",
+        "evening": "稲佐山の夜景と、港のそぞろ歩き",
+        "morning": "眼鏡橋から中島川沿いを朝さんぽ"
+      },
       "stay": {
         "name": "夜景が見える高台ホテル",
         "kind": "高台ホテル",
@@ -523,6 +588,12 @@ window.YOKATABI_FALLBACK_DATA = {
           "keyword": "長崎 ワイン"
         }
       ],
+      "plan": {
+        "minutes": 180,
+        "day": "運河と花の街を散策し、チーズとワインでひと休み",
+        "evening": "運河を照らすイルミネーションの中を散歩",
+        "morning": "人の少ない朝の運河沿いをのんびり歩く"
+      },
       "stay": {
         "name": "園内オフィシャルホテル",
         "kind": "オフィシャルホテル",
@@ -560,6 +631,12 @@ window.YOKATABI_FALLBACK_DATA = {
           "keyword": "阿蘇 ジャージー牛乳"
         }
       ],
+      "plan": {
+        "minutes": 150,
+        "day": "草千里と中岳周辺の展望を楽しみ、ランチはあか牛丼",
+        "evening": "高原の宿で、満天の星を眺める",
+        "morning": "条件がそろえば外輪山の雲海に出会える早朝の展望所へ"
+      },
       "stay": {
         "name": "外輪山を望む絶景高原リゾート",
         "kind": "高原リゾート",
@@ -596,6 +673,12 @@ window.YOKATABI_FALLBACK_DATA = {
           "keyword": "黒川温泉 コスメ"
         }
       ],
+      "plan": {
+        "minutes": 150,
+        "day": "入湯手形で、宿の露天風呂を2〜3軒はしご",
+        "evening": "離れの露天風呂で、谷の音だけを聴く夜",
+        "morning": "朝の温泉街をそぞろ歩き、もうひと湯"
+      },
       "stay": {
         "name": "離れのある秘境宿",
         "kind": "秘境の離れ宿",
@@ -633,6 +716,13 @@ window.YOKATABI_FALLBACK_DATA = {
           "keyword": "大分 カボス"
         }
       ],
+      "gateway": "大分空港・別府駅",
+      "plan": {
+        "minutes": 150,
+        "day": "地獄めぐりと地獄蒸し料理、湯けむりの展望スポット",
+        "evening": "展望露天から、湯けむりの立つ夜景を",
+        "morning": "駅前の手湯や朝湯で、旅の疲れをほぐす"
+      },
       "stay": {
         "name": "展望露天の老舗旅館",
         "kind": "老舗旅館",
@@ -669,6 +759,12 @@ window.YOKATABI_FALLBACK_DATA = {
           "keyword": "大分 干し椎茸"
         }
       ],
+      "plan": {
+        "minutes": 150,
+        "day": "湯の坪街道の食べ歩きと、金鱗湖のほとりを散策",
+        "evening": "由布岳を望む離れ宿で、静かな夜",
+        "morning": "朝霧の金鱗湖を見に、少し早起き"
+      },
       "stay": {
         "name": "由布岳を望む高級離れ宿",
         "kind": "高級離れ宿",
@@ -705,6 +801,13 @@ window.YOKATABI_FALLBACK_DATA = {
           "keyword": "地頭鶏 炭火焼"
         }
       ],
+      "gateway": "宮崎空港・宮崎駅",
+      "plan": {
+        "minutes": 150,
+        "day": "青島と日南海岸の青い海へ。ランチは地頭鶏の炭火焼",
+        "evening": "繁華街で地頭鶏の炭火焼とチキン南蛮",
+        "morning": "日向灘から昇る朝日を眺める"
+      },
       "stay": {
         "name": "日向灘の南国リゾートホテル",
         "kind": "南国リゾートホテル",
@@ -741,6 +844,12 @@ window.YOKATABI_FALLBACK_DATA = {
           "keyword": "高千穂 釜炒り茶"
         }
       ],
+      "plan": {
+        "minutes": 150,
+        "day": "高千穂峡のボートと真名井の滝、観光カートで鉄橋へ",
+        "evening": "高千穂神社の夜神楽を鑑賞する",
+        "morning": "神話の里を朝さんぽし、天岩戸神社へ"
+      },
       "stay": {
         "name": "峡谷の静かな和風旅館",
         "kind": "和風旅館",
@@ -778,6 +887,13 @@ window.YOKATABI_FALLBACK_DATA = {
           "keyword": "鹿児島 芋焼酎"
         }
       ],
+      "gateway": "鹿児島空港・鹿児島中央駅",
+      "plan": {
+        "minutes": 120,
+        "day": "天文館の街歩きと黒豚料理、フェリーで桜島へ",
+        "evening": "天文館で、黒豚しゃぶと芋焼酎のお湯割り",
+        "morning": "観覧車や城山展望台から、朝の桜島を眺める"
+      },
       "stay": {
         "name": "桜島ビューホテル",
         "kind": "シティホテル",
@@ -813,6 +929,12 @@ window.YOKATABI_FALLBACK_DATA = {
           "keyword": "さつま揚げ 鹿児島"
         }
       ],
+      "plan": {
+        "minutes": 120,
+        "day": "名物の砂むし温泉と、開聞岳を望む海辺の散策",
+        "evening": "温泉宿で海を眺めながら、湯上がりの一杯",
+        "morning": "朝の砂むしで、体の芯から温まる"
+      },
       "stay": {
         "name": "砂むし温泉直結の宿",
         "kind": "温泉ホテル",
@@ -850,6 +972,12 @@ window.YOKATABI_FALLBACK_DATA = {
           "keyword": "屋久島 たんかん"
         }
       ],
+      "plan": {
+        "minutes": 240,
+        "day": "白谷雲水峡で、苔むす森をトレッキング",
+        "evening": "森のコテージで、雨音と星空に包まれる",
+        "morning": "鳥の声を聞きながら、朝の森をゆっくり散策"
+      },
       "stay": {
         "name": "森のコテージ・ロッジ",
         "kind": "コテージ・ロッジ",

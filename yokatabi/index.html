@@ -52,9 +52,10 @@
       <button id="btn-mute" class="icon-btn" aria-pressed="false" aria-label="サウンドをミュートする">🔊</button>
     </div>
 
-    <nav class="max-w-6xl mx-auto px-4 flex gap-1" role="tablist" aria-label="表示切替">
-      <button class="tab is-active" role="tab" data-tab="map" aria-selected="true">🗾 すごろくマップ</button>
-      <button class="tab" role="tab" data-tab="collection" aria-selected="false">📔 買収済みコレクション手帳</button>
+    <nav class="tabs-nav max-w-6xl mx-auto px-4 flex gap-1" role="tablist" aria-label="表示切替">
+      <button class="tab is-active" role="tab" data-tab="map" aria-selected="true">🗾 <span class="hidden sm:inline">すごろく</span>マップ</button>
+      <button class="tab" role="tab" data-tab="collection" aria-selected="false">📔 <span class="hidden sm:inline">買収済みコレクション</span>手帳</button>
+      <button class="tab" role="tab" data-tab="trip" aria-selected="false">🧳 <span class="hidden sm:inline">マイ</span>旅しおり</button>
     </nav>
   </header>
 
@@ -72,6 +73,11 @@
           <span><i class="lg lg-ferry"></i>航路</span>
           <span><i class="lg lg-bus"></i>バス</span>
           <span><i class="lg lg-gold"></i>買収済み</span>
+        </div>
+        <div id="course-chip" class="course-chip" hidden>
+          <span>🧳 <b id="course-chip-title"></b></span>
+          <button data-tab-jump="trip" class="link-btn">しおりへ</button>
+          <button id="btn-clear-course" class="course-chip-x" aria-label="ルート表示を消す">×</button>
         </div>
         </div>
       </div>
@@ -108,6 +114,7 @@
           <p class="text-xs text-slate-500 mt-1">総資産 <b id="mini-assets" class="text-amber-700">0万円</b></p>
           <div id="mini-grid" class="mini-grid"></div>
           <button class="ghost-btn w-full mt-3" data-tab-jump="collection">手帳をひらく</button>
+          <button id="btn-trip-cta" class="trip-cta w-full mt-2" disabled>🧳 旅しおり</button>
         </div>
 
         <div class="panel how">
@@ -119,6 +126,11 @@
           </ol>
         </div>
       </aside>
+    </section>
+
+    <!-- マイ旅しおりビュー -->
+    <section data-view="trip" hidden>
+      <div id="trip-root" class="trip-root"></div>
     </section>
 
     <!-- コレクション手帳ビュー -->
@@ -169,6 +181,7 @@
   <script src="js/store.js"></script>
   <script src="js/data.js"></script>
   <script src="js/map.js"></script>
+  <script src="js/trip.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

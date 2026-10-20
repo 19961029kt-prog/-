@@ -55,9 +55,12 @@ yokatabi/
 │   ├── sound.js             YT.Sound  … Web Audio API で合成する効果音
 │   ├── store.js             YT.Store  … localStorage（進捗）
 │   ├── data.js              YT.Data   … データ読み込み・路線グラフ探索
-│   ├── map.js               YT.Map    … SVG盤面・駅ノード・列車アニメーション
+│   ├── map.js               YT.Map    … SVG盤面・駅ノード・列車アニメーション・モデルコースの重ね描き
+│   ├── trip.js              YT.Trip   … マイ旅しおり：1泊2日モデルコースの自動生成（画面に触れない純粋ロジック）
 │   └── app.js               UI全体（ヘッダー・サイコロ・物件カード・買収演出・手帳・Xシェア）
-└── tools/build-fallback.mjs stations.json の検証とフォールバックの生成
+└── tools/
+    ├── build-fallback.mjs   stations.json の検証とフォールバックの生成
+    └── test-trip.mjs        モデルコース生成の検証（全2駅組み合わせ・時間割・速度）
 ```
 
 - **技術スタック**：HTML5 / Tailwind CSS（Play CDN、バージョン固定）/ Vanilla JS / インラインSVG。npm もビルドも不要。
@@ -156,14 +159,29 @@ yokatabi/
 4. `node tools/build-fallback.mjs` を実行する（検証：必須項目・memo の文字数・接続先の存在と双方向性・路線種別 → `js/stations-fallback.js` を生成）
 - 駅が増えて盤面が混み合ったら、`viewBox` を広げるか、地方ごとの盤面に分ける（`meta` に盤面定義を足す）。ロジックは駅数に依存しない。
 
-## 6. ゲームロジック
+## 6. マイ旅しおり（買収駅を巡る1泊2日のモデルコース）
+
+North Star の「購入する → **訪れる**」をつなぐ機能。買収駅が `meta.trip.minAcquired`（2駅）に届いた瞬間に、買収完了演出のボタンとトーストで一度だけ提案する（`tripPrompted`）。右側の手帳パネルと「🧳 マイ旅しおり」タブからいつでも開ける。
+
+- **生成（`YT.Trip.generate`）**：区間の `minutes`（所要時間の目安）で全駅間の最短経路を出し、路線が変わるごとに `transferMinutes` を足す。1日目は gateway（空港・主要駅を持つ駅）を `day1Start` に出発 → 買収駅を巡る → 買収駅に泊まる。2日目は泊まった駅で朝の過ごし方（`morningMinutes`）→ 買収駅を巡る → gateway に `day2End` までに着く。時間内に収まる道順をすべて探して採点する。
+  - 採点：巡れる買収駅の数 ≫ 湯けむり物件に泊まる ＞ 評価額の合計 ＞ 移動の短さ。1日目が17時より前に終わる・2日目が昼前に終わる案は減点（午後が丸ごと空く旅を出さない）。
+  - 候補は最大3プラン。泊まる駅が違うものを優先し、最多より2駅以上少ない案は出さない。
+  - 1泊2日に入りきらない買収駅は「入りきらなかった駅」として正直に表示する（無理な行程を作らない）。
+  - 2日目が昼前に終わるときは、まだ買収していない近くの駅を「寄り道候補」として出す（次の買収につなげる）。
+- **宿の比較**：このプランの宿泊地と、ほかの候補プランの宿泊地を並べ、楽天トラベル・じゃらんのボタンを置く。押すと `actions[id].stay`（ジャーニー「訪れる」）を記録する。出発日はしおりの表示用で、予約サイトのURLには渡さない（各サイトの日付パラメータ形式が未確認のため）。
+- **保存**：localStorage の `itineraries` に道順（`seq`）だけを保存し、開くたびに最新データで旅程を組み立て直す。「旅の記録をリセット」では消さない。
+- **そのほか**：地図でルートを見る（番号＝巡る順、泊＝宿泊地）、Xシェア、印刷（`@media print` でしおりと宿比較だけを出す）。
+- **データ**：駅の `plan`（`minutes`＝滞在時間、`day`・`evening`・`morning`＝過ごし方）、`gateway`（出発・解散できる空港・駅名）、区間の `minutes`、`meta.trip`（時間割）。所要時間は乗り換え込みの目安であることを必ず画面に出す（`meta.trip.notice`）。
+- 生成ロジックを変えたら `node tools/test-trip.mjs` を通す。
+
+## 7. ゲームロジック
 
 - **サイコロ**：出目 n に対し、**同じ駅を二度通らない n 区間の道のり** の終点を行き先候補にする（行き止まりなら届く最長距離）。盤面全体が光らないよう、候補は **ランダムに最大3駅**（分かれ道）。候補が1駅なら自動で出発する。
 - **駅を直接タップ**：最短経路（BFS）で移動する。
 - **列車アニメーション**：経路の各区間の SVG パスを `getPointAtLength` でなぞる。1区間 約0.8秒＋1区間増えるごとに0.3秒。進行方向に合わせて🚂を左右反転する。到着後にチャイム → 物件カードを開く。
 - **指標**：九州踏破率＝訪問駅数／全駅、王国経営度＝買収駅数／全駅、総資産額＝買収した駅の `assetValue` の合計（全15駅で67,500万円）。
 
-## 7. ローカルでの動作確認
+## 8. ローカルでの動作確認
 
 ```bash
 cd yokatabi
@@ -173,13 +191,13 @@ python3 -m http.server 8000     # → http://localhost:8000/
 
 - `index.html` をダブルクリック（`file://`）で開いても、内蔵データで動く。
 - 進捗のリセット：コレクション手帳の「旅の記録をリセット」、または DevTools で `localStorage.removeItem('yokatabi.kyushu.v1')`。
-- コミット前に：`node tools/build-fallback.mjs --check`（stations.json とフォールバックがずれていないか）。
+- コミット前に：`node tools/build-fallback.mjs --check`（stations.json とフォールバックがずれていないか）と `node tools/test-trip.mjs`（モデルコース生成）。
 
-## 8. デプロイ
+## 9. デプロイ
 
 リポジトリ直下の `.github/workflows/deploy-pages.yml` が、Vite のビルド結果に `yokatabi/` を丸ごとコピーして公開する（公開URL：`https://<user>.github.io/<repo>/yokatabi/`）。`tools/` と `CLAUDE.md` は公開物から除く。
 
-## 9. コーディング規約
+## 10. コーディング規約
 
 - 依存ライブラリを増やさない（Tailwind CDN と Google Fonts のみ）。CDN の URL はバージョンを固定する。
 - 文字列を HTML に差し込むときは必ず `esc()` を通す（データは自前でも、将来の外部データ化に備える）。

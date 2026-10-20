@@ -44,6 +44,7 @@ jobs:
         # yokatabi/ はビルド不要の静的サイト。開発用の tools/ と CLAUDE.md は公開しない
         run: |
           node yokatabi/tools/build-fallback.mjs --check
+          node yokatabi/tools/test-trip.mjs
           cp -r yokatabi dist/yokatabi
           rm -rf dist/yokatabi/tools dist/yokatabi/CLAUDE.md
       - uses: actions/upload-pages-artifact@v3

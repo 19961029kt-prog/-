@@ -1,7 +1,7 @@
 // UI全体の結線：ヘッダー指標・サイコロ・物件カード（モーダル）・買収演出・コレクション手帳・Xシェア。
 (function () {
   'use strict';
-  const { Data, Store, Sound, Map } = window.YT;
+  const { Data, Store, Sound, Map, Trip } = window.YT;
 
   let D = null;
   let busy = false; // 列車走行中・サイコロ回転中
@@ -88,6 +88,7 @@
     renderCurrent();
     renderMini();
     renderCollection();
+    renderTripCta();
   }
 
   // 右側のミニ手帳：買収した順に並べ、新しく加わったカードだけ裏返しから登場させる
@@ -252,13 +253,13 @@
     return url;
   }
 
-  function affButtons(providers, keyword, via, item) {
+  function affButtons(providers, keyword, via, item, stationId = '') {
     return providers
       .map(
         (p) =>
           `<a class="aff-btn ${esc(p.className || '')}" href="${esc(buildUrl(p, keyword))}" target="_blank"
               rel="sponsored noopener" data-via="${via}" data-provider="${esc(p.id)}" data-label="${esc(p.label)}"
-              data-item="${esc(item)}">${esc(p.label)}<span aria-hidden="true">↗</span></a>`
+              data-item="${esc(item)}" data-station-id="${esc(stationId)}">${esc(p.label)}<span aria-hidden="true">↗</span></a>`
       )
       .join('');
   }
@@ -440,6 +441,7 @@
         <p class="celebrate-msg"><b>${esc(s.name)}駅</b>の正式オーナーになりました。<br>総資産に <b>${yen(s.assetValue)}</b> が加算されます。</p>
         <div class="flex flex-wrap gap-2 justify-center">
           <a class="share-btn is-gold" href="${esc(shareUrl(stationShareText(s)))}" target="_blank" rel="noopener"><span class="x-logo">𝕏</span>買収を自慢する</a>
+          ${canMakeTrip() ? '<button class="ghost-btn ghost-light trip-glow" data-go-trip>🧳 買収駅で旅しおりを作る</button>' : ''}
           <button class="ghost-btn ghost-light" data-go-collection>コレクション手帳へ</button>
           <button class="ghost-btn ghost-light" data-dismiss>カードに戻る</button>
         </div>
@@ -460,6 +462,19 @@
       closeModal();
       showView('collection');
     });
+    const goTrip = $('[data-go-trip]', layer);
+    if (goTrip) {
+      goTrip.addEventListener('click', () => {
+        close();
+        closeModal();
+        openTrip();
+      });
+    }
+    // 買収駅が旅しおりの条件に届いた瞬間に、一度だけ提案する
+    if (canMakeTrip() && !Store.get().tripPrompted) {
+      Store.markTripPrompted();
+      setTimeout(() => toast('🧳 買収駅が増えました！買収した駅を巡る1泊2日のモデルコースを作れます', 'toast-gold'), 900);
+    }
     $('[data-dismiss]', layer).focus();
   }
 
@@ -543,12 +558,318 @@
       t.setAttribute('aria-selected', on);
     });
     if (name === 'collection') renderCollection();
+    if (name === 'trip') renderTrip();
     try {
       sessionStorage.setItem('yokatabi.view', name);
     } catch (e) {
       /* noop */
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ---------- マイ旅しおり ----------
+  // 買収した駅から 1泊2日のモデルコースを自動生成（js/trip.js）し、宿をまとめて比較・保存・共有する
+  const RIDE_ICON = { shinkansen: '🚄', trunk: '🚆', local: '🚃', scenic: '🚞', ferry: '⛴', bus: '🚌' };
+  const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
+  const trip = { key: null, result: null, index: 0, savedId: null, departDate: '' };
+
+  const acquiredIds = () => D.stations.filter((s) => Store.isAcquired(s.id)).map((s) => s.id);
+  const canMakeTrip = () => acquiredIds().length >= D.meta.trip.minAcquired;
+
+  function tripResult() {
+    const ids = acquiredIds();
+    const key = ids.join(',');
+    if (trip.key !== key) {
+      trip.key = key;
+      trip.result = Trip.generate(D, ids);
+      trip.index = 0;
+    }
+    return trip.result;
+  }
+
+  // 表示中のプラン（保存済みを開いているときはそちら）
+  function currentPlan() {
+    if (trip.savedId) {
+      const item = Store.getItineraries().find((i) => i.id === trip.savedId);
+      if (item) return { plan: Trip.build(D, null, item.seq, acquiredIds()), saved: item };
+      trip.savedId = null;
+    }
+    const r = tripResult();
+    return { plan: r.plans[trip.index] || null, saved: null };
+  }
+
+  function dayLabel(offset) {
+    if (!trip.departDate) return '';
+    const d = new Date(`${trip.departDate}T00:00:00`);
+    if (isNaN(d)) return '';
+    d.setDate(d.getDate() + offset);
+    return `${d.getMonth() + 1}/${d.getDate()}（${WEEK[d.getDay()]}）`;
+  }
+
+  function openTrip() {
+    trip.savedId = null;
+    showView('trip');
+  }
+
+  function renderTripCta() {
+    const btn = $('#btn-trip-cta');
+    if (!btn) return;
+    const need = D.meta.trip.minAcquired - acquiredIds().length;
+    btn.disabled = need > 0;
+    btn.innerHTML = need > 0 ? `🧳 あと${need}駅の買収で旅しおりが作れます` : '🧳 買収駅で1泊2日の旅しおりを作る';
+    btn.classList.toggle('trip-glow', need <= 0);
+  }
+
+  function legHtml(it) {
+    const lg = it.leg;
+    const via = lg.path.slice(1, -1).map((id) => D.byId[id].name);
+    return `<li class="tl-leg">
+        <div class="tl-time">${it.depart}<br><span>↓</span><br>${it.arrive}</div>
+        <div class="ticket">
+          ${lg.rides
+            .map(
+              (r) => `<div class="ticket-ride ride-${esc(r.type)}">
+                <span class="ride-icon" aria-hidden="true">${RIDE_ICON[r.type] || '🚃'}</span>
+                <span class="ride-name"><b>${esc(((D.routeTypes || {})[r.type] || {}).label || '')}</b>${esc(r.name)}</span>
+                <span class="ride-min">${Trip.duration(r.minutes)}</span>
+              </div>`
+            )
+            .join('')}
+          <div class="ticket-foot">所要 ${Trip.duration(lg.minutes)}${lg.transfers ? `（乗り換え${lg.transfers}回）` : ''}${via.length ? ` ／ ${esc(via.join('・'))} 経由` : ''}</div>
+        </div>
+      </li>`;
+  }
+
+  function stopHtml(it) {
+    const s = D.byId[it.id];
+    const color = (D.meta.prefectures[s.prefecture] || {}).color;
+    const icon = { start: '🚩', end: '🏁', stop: '📍', stay: '🛏', morning: '☀', free: '🧭' }[it.kind];
+    const name = it.kind === 'start' || it.kind === 'end' ? s.gateway || `${s.name}駅` : `${s.name}`;
+    const owned = Store.isAcquired(s.id) && (it.kind === 'stop' || it.kind === 'stay');
+    return `<li class="tl-stop tl-${it.kind}" style="--pref:${color}">
+        <div class="tl-time">${esc(it.time)}${it.until ? `<br><span>〜${esc(it.until)}</span>` : ''}</div>
+        <div class="tl-body">
+          <span class="tl-dot" aria-hidden="true">${icon}</span>
+          <div class="tl-head">
+            <button class="tl-name" data-open-station="${esc(s.id)}">${esc(name)}</button>
+            <span class="chip chip-pref">${esc(s.prefecture)}</span>
+            ${owned ? '<span class="chip chip-gold">♛ あなたの物件</span>' : ''}
+            ${it.kind === 'free' && it.suggest ? '<span class="chip chip-sea">寄り道候補・未買収</span>' : ''}
+          </div>
+          <p class="tl-text">${esc(it.text)}</p>
+          ${it.kind === 'free' && it.suggest ? `<p class="tl-sub">買収すると、次の旅しおりのコースに入ります。<button class="link-btn" data-open-station="${esc(s.id)}">物件カードを見る</button></p>` : ''}
+          ${it.kind === 'stop' ? `<p class="tl-sub">🎁 おみやげ候補：${s.products.map((p) => esc(p.name)).join('・')}</p>` : ''}
+          ${it.kind === 'stay' ? `<p class="tl-sub">🏨 ${esc(s.stay.name)}（${esc(s.stay.kind)}） <a href="#trip-stays" class="link-btn">宿を比較する ↓</a></p>` : ''}
+        </div>
+      </li>`;
+  }
+
+  function stayRows(plan, others) {
+    const aff = D.meta.affiliate;
+    const ids = [plan.overnight, ...others.filter((id) => id !== plan.overnight)];
+    const check = dayLabel(0);
+    return ids
+      .map((id, i) => {
+        const s = D.byId[id];
+        const color = (D.meta.prefectures[s.prefecture] || {}).color;
+        return `<div class="stay-row ${i === 0 ? 'is-main' : ''}" style="--pref:${color}">
+            <div class="stay-info">
+              <div class="flex items-center gap-2 flex-wrap">
+                <b class="stay-station">${esc(s.name)}</b>
+                <span class="chip chip-pref">${esc(s.prefecture)}</span>
+                <span class="chip">${esc(s.propertyType)}</span>
+                ${i === 0 ? '<span class="chip chip-gold">このプランの宿泊地</span>' : '<span class="chip chip-dim">ほかのプランの宿泊地</span>'}
+              </div>
+              <p class="stay-name">${esc(s.stay.name)} <small>${esc(s.stay.kind)}</small></p>
+              <p class="stay-desc">${esc(s.stay.desc)}</p>
+              ${check ? `<p class="stay-date">📅 チェックイン ${check}・1泊（日付は予約サイトで指定してください）</p>` : ''}
+            </div>
+            <div class="aff-row stay-btns">${affButtons(aff.stays, s.stay.keyword, 'stay', s.stay.name, s.id)}</div>
+          </div>`;
+      })
+      .join('');
+  }
+
+  function savedListHtml() {
+    const list = Store.getItineraries();
+    if (!list.length) return '<p class="saved-empty">まだ保存した旅しおりはありません。気に入ったコースは「しおりに保存」で残せます。</p>';
+    return list
+      .map((it) => {
+        const names = [...it.seq.day1, ...it.seq.day2].map((id) => (D.byId[id] ? D.byId[id].name : id));
+        return `<article class="saved-card ${trip.savedId === it.id ? 'is-active' : ''}">
+            <div>
+              <p class="saved-title">${esc(it.title)}</p>
+              <p class="saved-route">${esc(names.join(' → '))}</p>
+              <p class="saved-meta">${it.departDate ? `出発 ${esc(it.departDate)} ／ ` : ''}保存 ${fmtDate(it.savedAt)}</p>
+            </div>
+            <div class="flex gap-2">
+              <button class="ghost-btn" data-open-saved="${esc(it.id)}">ひらく</button>
+              <button class="ghost-btn danger-btn" data-delete-saved="${esc(it.id)}" aria-label="${esc(it.title)}を削除">削除</button>
+            </div>
+          </article>`;
+      })
+      .join('');
+  }
+
+  function tripShareText(plan) {
+    const route = plan.visits.map((id) => (id === plan.overnight ? `${D.byId[id].name}（泊）` : D.byId[id].name)).join('→');
+    return `【マイ旅しおり】買収した九州の駅を巡る1泊2日🧳\n${route}\n物件の評価額合計 ${yen(plan.asset)}`;
+  }
+
+  function renderTrip() {
+    const root = $('#trip-root');
+    const cfg = D.meta.trip;
+    const ids = acquiredIds();
+    const { plan, saved } = currentPlan();
+    const r = tripResult();
+
+    // 買収駅が足りない：あと何駅で作れるかを見せる
+    if (!plan && !saved && r.reason === 'few') {
+      root.innerHTML = `
+        <div class="booklet booklet-locked">
+          <p class="booklet-kicker">MY TRAVEL BOOKLET</p>
+          <h2 class="booklet-title">マイ旅しおり</h2>
+          <p class="mt-2">買収した駅が <b>${cfg.minAcquired}駅</b> になると、その駅を巡る<b>リアル九州旅行モデルコース（1泊2日）</b>を自動でつくり、宿をまとめて比較できます。</p>
+          <div class="lock-progress"><i style="width:${pct(ids.length, cfg.minAcquired)}%"></i></div>
+          <p class="text-sm mt-1">いまの買収駅 <b>${ids.length}</b> / ${cfg.minAcquired}駅 ── あと<b>${r.need}駅</b></p>
+          <button class="dice-btn mt-4" data-tab-go="map">🎲 すごろくで買収しにいく</button>
+        </div>
+        <section class="saved-sec"><h3 class="sec-title"><span>📚</span>保存した旅しおり</h3>${savedListHtml()}</section>`;
+      return;
+    }
+
+    const tabs = saved
+      ? `<div class="plan-tabs"><span class="chip chip-gold">📚 保存したしおりを表示中</span><button class="link-btn" data-back-plans>自動提案のプランに戻る</button></div>`
+      : `<div class="plan-tabs" role="tablist" aria-label="モデルコースの候補">${r.plans
+          .map((p, i) => {
+            const st = D.byId[p.overnight];
+            return `<button class="plan-tab ${i === trip.index ? 'is-active' : ''}" role="tab" aria-selected="${i === trip.index}" data-plan="${i}">
+                <span class="plan-letter">プラン${'ABC'[i]}</span>
+                <span class="plan-sum">${st.propertyType === '湯けむり物件' ? '♨' : '🏨'} ${esc(st.name)}泊・${p.visits.length}駅</span>
+                <span class="plan-moved">移動 ${p.moved}</span>
+              </button>`;
+          })
+          .join('')}</div>`;
+
+    if (!plan) {
+      root.innerHTML = `${tabs}<div class="booklet"><p>買収した駅どうしが離れていて、1泊2日に収まるコースが見つかりませんでした。もう少し近い駅を買収すると提案できます。</p></div>
+        <section class="saved-sec"><h3 class="sec-title"><span>📚</span>保存した旅しおり</h3>${savedListHtml()}</section>`;
+      return;
+    }
+
+    const left = ids.filter((id) => !plan.visits.includes(id));
+    const otherOvernights = saved ? [] : r.plans.map((p) => p.overnight);
+    root.innerHTML = `
+      ${tabs}
+      <article class="booklet" id="booklet">
+        <div class="booklet-ribbon" aria-hidden="true">1泊2日</div>
+        <p class="booklet-kicker">MY TRAVEL BOOKLET ── 買収した駅を巡るリアル九州旅行モデルコース</p>
+        <h2 class="booklet-title">${esc(plan.title)}</h2>
+        <p class="booklet-route">${plan.visits
+          .map((id) => `<span class="${id === plan.overnight ? 'is-night' : ''}">${esc(D.byId[id].name)}${id === plan.overnight ? '<small>泊</small>' : ''}</span>`)
+          .join('<i>→</i>')}</p>
+        <dl class="booklet-stats">
+          <div><dt>巡る買収駅</dt><dd>${plan.visits.length}駅</dd></div>
+          <div><dt>移動時間（目安）</dt><dd>${plan.moved}</dd></div>
+          <div><dt>物件の評価額合計</dt><dd>${yen(plan.asset)}</dd></div>
+        </dl>
+        <div class="booklet-actions">
+          <label class="date-field">出発日 <input type="date" id="trip-date" value="${esc(trip.departDate)}"></label>
+          <button class="ghost-btn" data-show-course>🗾 地図でルートを見る</button>
+          <button class="ghost-btn gold-btn" data-save-trip>${saved ? '💾 保存済み（日付を更新）' : '💾 しおりに保存'}</button>
+          <a class="share-btn" href="${esc(shareUrl(tripShareText(plan)))}" target="_blank" rel="noopener"><span class="x-logo">𝕏</span>しおりをシェア</a>
+          <button class="ghost-btn" data-print>🖨 印刷する</button>
+        </div>
+
+        <div class="days">
+          ${plan.days
+            .map(
+              (d, i) => `<section class="day">
+                <h3 class="day-title"><span>${d.label}</span>${dayLabel(i) ? `<small>${dayLabel(i)}</small>` : ''}</h3>
+                <ol class="timeline">${d.items.map((it) => (it.kind === 'leg' ? legHtml(it) : stopHtml(it))).join('')}</ol>
+              </section>`
+            )
+            .join('')}
+        </div>
+        ${left.length ? `<p class="booklet-left">🧭 今回のコースに入りきらなかった買収駅：<b>${left.map((id) => esc(D.byId[id].name)).join('・')}</b>（2泊以上の旅や、別のプランでどうぞ）</p>` : ''}
+        <p class="booklet-notice">※${esc(cfg.notice)}</p>
+      </article>
+
+      <section class="stay-compare" id="trip-stays">
+        <h3 class="sec-title"><span>🏨</span>宿をまとめて比較する <em>楽天トラベル・じゃらん</em></h3>
+        <p class="text-xs text-slate-500 mb-3">このプランの宿泊地と、ほかの候補プランの宿泊地を並べています。ボタンを押すと各サイトで同じ条件の宿を探せます。</p>
+        <div class="grid gap-3">${stayRows(plan, otherOvernights)}</div>
+        <p class="disclosure">${esc(D.meta.affiliate.disclosure)}</p>
+      </section>
+
+      <section class="saved-sec"><h3 class="sec-title"><span>📚</span>保存した旅しおり</h3>${savedListHtml()}</section>`;
+  }
+
+  function showCourseOnMap(plan) {
+    const legs = [];
+    plan.days.forEach((d) => d.items.forEach((it) => it.kind === 'leg' && legs.push(it.leg.path)));
+    showView('map');
+    Map.showCourse(legs, plan.visits, plan.overnight);
+    const chip = $('#course-chip');
+    chip.hidden = false;
+    $('#course-chip-title').textContent = plan.title;
+    toast('🗾 モデルコースを地図に表示しました（数字は巡る順番、泊は宿泊地）');
+  }
+
+  function clearCourse() {
+    Map.showCourse(null);
+    $('#course-chip').hidden = true;
+  }
+
+  function onTripClick(e) {
+    const t = e.target;
+    const planBtn = t.closest('[data-plan]');
+    if (planBtn) {
+      trip.index = Number(planBtn.dataset.plan);
+      Sound.click();
+      return renderTrip();
+    }
+    if (t.closest('[data-back-plans]')) {
+      trip.savedId = null;
+      return renderTrip();
+    }
+    if (t.closest('[data-tab-go]')) return showView(t.closest('[data-tab-go]').dataset.tabGo);
+    const st = t.closest('[data-open-station]');
+    if (st) return openModal(st.dataset.openStation);
+    const { plan, saved } = currentPlan();
+    if (t.closest('[data-show-course]') && plan) return showCourseOnMap(plan);
+    if (t.closest('[data-print]')) return window.print();
+    if (t.closest('[data-save-trip]') && plan) {
+      const { created } = Store.saveItinerary({ title: plan.title, seq: plan.seq, departDate: trip.departDate });
+      Sound.pip();
+      toast(created ? '💾 旅しおりを保存しました' : '💾 保存済みのしおりを更新しました', 'toast-gold');
+      if (saved) trip.savedId = saved.id;
+      return renderTrip();
+    }
+    const open = t.closest('[data-open-saved]');
+    if (open) {
+      const item = Store.getItineraries().find((i) => i.id === open.dataset.openSaved);
+      trip.savedId = item.id;
+      trip.departDate = item.departDate || '';
+      renderTrip();
+      return $('#booklet').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    const del = t.closest('[data-delete-saved]');
+    if (del) {
+      if (!confirm('この旅しおりを削除しますか？')) return;
+      Store.deleteItinerary(del.dataset.deleteSaved);
+      if (trip.savedId === del.dataset.deleteSaved) trip.savedId = null;
+      return renderTrip();
+    }
+    // 宿比較のボタン：リンクは新しいタブで開き、「訪れる（宿を予約）」の一歩として記録する
+    const a = t.closest('.aff-btn');
+    if (a && a.dataset.stationId) {
+      const id = a.dataset.stationId;
+      const first = Store.acquire(id, { via: 'stay', provider: a.dataset.label, item: a.dataset.item });
+      if (first) setTimeout(() => celebrate(id), 120);
+      else toast(`🏨 ${a.dataset.label}で${D.byId[id].name}の宿を探しています`);
+      setTimeout(renderAll, 0);
+    }
   }
 
   // ---------- ミュート ----------
@@ -602,6 +923,14 @@
     });
     document.querySelectorAll('[data-tab]').forEach((t) => t.addEventListener('click', () => showView(t.dataset.tab)));
     document.querySelectorAll('[data-tab-jump]').forEach((b) => b.addEventListener('click', () => showView(b.dataset.tabJump)));
+    $('#btn-trip-cta').addEventListener('click', openTrip);
+    $('#trip-root').addEventListener('click', onTripClick);
+    $('#trip-root').addEventListener('change', (e) => {
+      if (e.target.id !== 'trip-date') return;
+      trip.departDate = e.target.value;
+      renderTrip();
+    });
+    $('#btn-clear-course').addEventListener('click', clearCourse);
     $('#mini-grid').addEventListener('click', (e) => {
       const c = e.target.closest('[data-station]');
       if (c && !busy) openModal(c.dataset.station);
@@ -633,7 +962,7 @@
     } catch (e) {
       /* noop */
     }
-    showView(view === 'collection' ? 'collection' : 'map');
+    showView(['collection', 'trip'].includes(view) ? view : 'map');
   }
 
   document.addEventListener('DOMContentLoaded', boot);
