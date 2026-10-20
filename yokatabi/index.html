@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>よか旅すごろく九州</title>
+  <meta name="description" content="サイコロ片手に巡る、ローカル美食と秘湯の旅。九州の路線図すごろくで、駅ごとの現地情報・名産品・宿を発見しよう。">
+  <meta property="og:title" content="よか旅すごろく九州 〜サイコロ片手に巡る、ローカル美食と秘湯の旅〜">
+  <meta property="og:description" content="九州の路線図すごろくで、名産品物件・湯けむり物件を買収して王国を築こう。">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <meta name="theme-color" content="#14204a">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎲</text></svg>">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="min-h-screen">
+  <a href="#main" class="skip-link">本文へスキップ</a>
+
+  <!-- ヘッダー：ロゴ／九州踏破率／王国経営度／総資産額／ミュート -->
+  <header class="site-header sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-4 py-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+      <div class="flex items-center gap-2 mr-auto min-w-0">
+        <span class="logo-die" aria-hidden="true">🎲</span>
+        <div class="min-w-0">
+          <h1 class="logo-title">よか旅すごろく<span>九州</span></h1>
+          <p class="logo-sub">サイコロ片手に巡る、ローカル美食と秘湯の旅</p>
+        </div>
+      </div>
+
+      <dl class="stats flex items-stretch gap-2 order-3 w-full sm:order-none sm:w-auto">
+        <div class="stat">
+          <dt>九州踏破率</dt>
+          <dd><b id="stat-visited">0%</b><small id="stat-visited-sub"></small></dd>
+          <div class="stat-bar"><i id="stat-visited-bar"></i></div>
+        </div>
+        <div class="stat stat-gold">
+          <dt>王国経営度</dt>
+          <dd><b id="stat-kingdom">0%</b><small id="stat-kingdom-sub"></small></dd>
+          <div class="stat-bar"><i id="stat-kingdom-bar"></i></div>
+        </div>
+        <div class="stat stat-gold">
+          <dt>総資産額</dt>
+          <dd><b id="stat-assets">0</b><small>万円</small></dd>
+        </div>
+      </dl>
+
+      <button id="btn-mute" class="icon-btn" aria-pressed="false" aria-label="サウンドをミュートする">🔊</button>
+    </div>
+
+    <nav class="max-w-6xl mx-auto px-4 flex gap-1" role="tablist" aria-label="表示切替">
+      <button class="tab is-active" role="tab" data-tab="map" aria-selected="true">🗾 すごろくマップ</button>
+      <button class="tab" role="tab" data-tab="collection" aria-selected="false">📔 買収済みコレクション手帳</button>
+    </nav>
+  </header>
+
+  <main id="main" class="max-w-6xl mx-auto px-4 py-4">
+    <!-- マップビュー -->
+    <section data-view="map" class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div class="map-frame">
+        <svg id="map" class="map-svg" role="group" aria-label="九州すごろく路線図。駅を選ぶと列車が移動し物件カードが開きます"></svg>
+        <div class="map-legend" aria-hidden="true">
+          <span><i class="lg lg-rail"></i>鉄道</span>
+          <span><i class="lg lg-bus"></i>バス連絡</span>
+          <span><i class="lg lg-ferry"></i>特別航路</span>
+          <span><i class="lg lg-gold"></i>買収済み</span>
+        </div>
+      </div>
+
+      <aside class="side flex flex-col gap-4">
+        <div class="panel dice-panel">
+          <div class="flex items-center gap-4">
+            <div id="die" class="die" aria-hidden="true"></div>
+            <div class="flex-1">
+              <p class="text-xs text-slate-500 font-bold">出た目</p>
+              <p class="dice-result"><span id="dice-result">-</span></p>
+            </div>
+          </div>
+          <button id="btn-dice" class="dice-btn">🎲 サイコロを振る</button>
+          <p id="guide" class="guide" aria-live="polite">読み込み中…</p>
+        </div>
+
+        <div class="panel">
+          <p class="text-xs text-slate-500 font-bold">現在地</p>
+          <div class="flex items-baseline gap-2 flex-wrap">
+            <h2 id="current-name" class="current-name">-</h2>
+            <span id="current-pref" class="chip"></span>
+            <span id="current-status"></span>
+          </div>
+          <p id="current-tagline" class="text-sm text-slate-600 mt-1"></p>
+          <button id="btn-open-current" class="ghost-btn w-full mt-3">この駅の物件カードを開く</button>
+        </div>
+
+        <div class="panel how">
+          <h3 class="font-bold mb-2">あそびかた</h3>
+          <ol class="text-sm text-slate-600 space-y-1 list-decimal pl-5">
+            <li>サイコロを振るか、地図の駅をタップして🚂で移動。</li>
+            <li>到着すると<b>物件カード</b>が開き、現地調査メモ・名産品・宿がわかる。</li>
+            <li>カード内のボタンからお取り寄せ・予約に進むと<b class="text-amber-600">買収完了</b>！駅が金色に輝き、手帳にホログラムカードが加わる。</li>
+          </ol>
+        </div>
+      </aside>
+    </section>
+
+    <!-- コレクション手帳ビュー -->
+    <section data-view="collection" hidden>
+      <div class="collection-head">
+        <div>
+          <h2 class="collection-title">買収済みコレクション手帳</h2>
+          <p class="text-sm opacity-80">カード内のボタンから買収した物件が、プレミアムスタンプカードとして並びます。</p>
+        </div>
+        <dl class="grid grid-cols-3 gap-3 text-center">
+          <div><dt>王国経営度</dt><dd id="col-kingdom">0%</dd></div>
+          <div><dt>買収物件</dt><dd id="col-count">0 / 15</dd></div>
+          <div><dt>総資産額</dt><dd id="col-assets">0万円</dd></div>
+        </dl>
+        <div class="flex flex-wrap gap-2 items-center">
+          <a id="col-share" class="share-btn is-gold" target="_blank" rel="noopener"><span class="x-logo">𝕏</span>王国を自慢する</a>
+          <span class="text-xs opacity-70">全物件の評価額合計 <span id="col-max"></span></span>
+        </div>
+      </div>
+      <div id="collection-grid" class="collection-grid"></div>
+      <div class="mt-8 text-center">
+        <button id="btn-reset" class="ghost-btn text-xs">旅の記録をリセット</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="max-w-6xl mx-auto px-4 py-6 text-xs space-y-1">
+      <p>「よか旅すごろく九州」はオリジナルの企画・世界観で制作した非公式の旅メディアです。既存のゲーム作品・鉄道事業者とは関係ありません。</p>
+      <p>地図は路線のつながりを表すイメージで、実際の縮尺・線形とは異なります。黒川温泉・高千穂・屋久島は旅のマスとして「駅」としています。掲載情報はプロトタイプ用で、最新の営業・運行状況は各公式情報をご確認ください。</p>
+      <p>【PR】物件カード内の購入・予約ボタンはアフィリエイト（広告）リンクを含みます。<span id="data-source" class="opacity-60"></span></p>
+    </div>
+  </footer>
+
+  <!-- 物件カード（モーダル） -->
+  <div id="modal" class="modal" hidden>
+    <div id="modal-card" class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title"></div>
+  </div>
+
+  <!-- 買収完了演出 -->
+  <div id="celebrate" class="celebrate" hidden></div>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <!-- classic script で読み込む（ESモジュールは file:// で CORS ブロックされるため） -->
+  <script src="js/stations-fallback.js"></script>
+  <script src="js/sound.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

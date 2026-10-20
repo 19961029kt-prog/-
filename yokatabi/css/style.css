@@ -1,0 +1,465 @@
+/* よか旅すごろく九州 — カスタムスタイル（Tailwind CDN と併用） */
+:root {
+  --ink: #1b2440;
+  --paper: #f6efe1;
+  --paper-2: #fffaf0;
+  --navy: #14204a;
+  --navy-2: #1f2f66;
+  --gold: #f2b928;
+  --gold-2: #ffe18a;
+  --gold-deep: #a86b0c;
+  --sea: #1b4f86;
+  --red: #d9412e;
+  --line: #e7dcc4;
+}
+
+html { -webkit-text-size-adjust: 100%; }
+/* .modal 等の display 指定が hidden 属性に勝たないように */
+[hidden] { display: none !important; }
+body {
+  font-family: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 10% 0%, #fff6dc 0, transparent 40%),
+    repeating-linear-gradient(45deg, rgba(160, 120, 60, .035) 0 2px, transparent 2px 9px),
+    var(--paper);
+  overflow-x: hidden;
+}
+body.modal-open { overflow: hidden; }
+body.is-busy .station { cursor: progress; }
+
+.skip-link { position: absolute; left: -999px; top: 8px; z-index: 100; background: #fff; padding: 6px 12px; border-radius: 8px; }
+.skip-link:focus { left: 8px; }
+:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+/* ---------- ヘッダー ---------- */
+.site-header {
+  background: linear-gradient(180deg, var(--navy) 0%, #1a2a5e 100%);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(10, 18, 45, .25);
+  border-bottom: 3px solid var(--gold);
+}
+.logo-die { font-size: 28px; display: inline-block; animation: die-bob 3s ease-in-out infinite; }
+@keyframes die-bob { 50% { transform: rotate(-12deg) translateY(-2px); } }
+.logo-title { font-family: 'Dela Gothic One', sans-serif; font-size: 20px; line-height: 1.1; letter-spacing: .02em; white-space: nowrap; }
+.logo-title span { color: var(--gold); margin-left: 4px; }
+.logo-sub { font-size: 11px; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.stats .stat {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 12px;
+  padding: 4px 10px 6px;
+  min-width: 0;
+  flex: 1 1 0;
+}
+.stats dt { font-size: 10px; opacity: .8; font-weight: 700; letter-spacing: .05em; white-space: nowrap; }
+.stats dd { display: flex; align-items: baseline; gap: 4px; white-space: nowrap; }
+.stats dd b { font-family: 'Dela Gothic One', sans-serif; font-size: 18px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.stats dd small { font-size: 10px; opacity: .75; }
+.stat-gold dd b { color: var(--gold-2); text-shadow: 0 0 10px rgba(242, 185, 40, .5); }
+.stat-bar { height: 4px; border-radius: 99px; background: rgba(255, 255, 255, .15); overflow: hidden; margin-top: 2px; }
+.stat-bar i { display: block; height: 100%; width: 0; background: #7cc4ff; border-radius: inherit; transition: width .9s cubic-bezier(.2, .8, .2, 1); }
+.stat-gold .stat-bar i { background: linear-gradient(90deg, var(--gold-deep), var(--gold), var(--gold-2)); }
+.is-counting { animation: pop .25s ease-in-out infinite alternate; }
+@keyframes pop { to { transform: scale(1.08); } }
+
+.icon-btn {
+  width: 40px; height: 40px; border-radius: 12px; font-size: 18px;
+  background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .2);
+}
+.icon-btn:hover { background: rgba(255, 255, 255, .2); }
+
+.tab {
+  padding: 8px 14px; font-size: 13px; font-weight: 700; color: rgba(255, 255, 255, .75);
+  border-radius: 12px 12px 0 0; white-space: nowrap;
+}
+.tab:hover { color: #fff; }
+.tab.is-active { background: var(--paper); color: var(--navy); }
+
+/* ---------- 盤面 ---------- */
+.map-frame {
+  position: relative;
+  border-radius: 22px;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 30%, #1d5a96, #0e2f5a 80%);
+  box-shadow: 0 0 0 4px #fff, 0 0 0 7px var(--navy), 0 18px 40px rgba(20, 32, 74, .3);
+}
+.map-svg { display: block; overflow: visible; width: 100%; height: auto; max-height: calc(100vh - 150px); margin: 0 auto; touch-action: manipulation; user-select: none; }
+.map-legend {
+  position: absolute; left: 10px; top: 10px; display: flex; flex-wrap: wrap; gap: 4px 10px;
+  font-size: 10px; color: #fff; background: rgba(8, 24, 52, .55); padding: 5px 9px; border-radius: 10px; backdrop-filter: blur(4px);
+  max-width: calc(100% - 20px);
+}
+.map-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.lg { display: inline-block; width: 18px; height: 4px; border-radius: 2px; }
+.lg-rail { background: repeating-linear-gradient(90deg, #1b2440 0 5px, #fff 5px 9px); outline: 1px solid #1b2440; }
+.lg-bus { background: repeating-linear-gradient(90deg, #f39c12 0 3px, transparent 3px 6px); }
+.lg-ferry { background: repeating-linear-gradient(90deg, #8fd3ff 0 6px, transparent 6px 10px); }
+.lg-gold { width: 10px; height: 10px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff7c2, #f7c948 50%, #b7791f); box-shadow: 0 0 6px #f7c948; }
+
+.land { fill: url(#g-land); stroke: #c8b78e; stroke-width: 1.5; }
+.land-volcano { fill: #d9cdb0; stroke: #a8946a; }
+.inset-frame { fill: rgba(255, 255, 255, .04); stroke: #8fd3ff; stroke-width: 1.2; stroke-dasharray: 5 4; }
+.inset-label { fill: #bfe6ff; font-size: 9px; font-weight: 700; }
+.sea-label { fill: #fff; fill-opacity: .28; font-size: 13px; font-weight: 700; letter-spacing: .3em; writing-mode: vertical-rl; }
+.compass { fill: rgba(255, 255, 255, .08); stroke: rgba(255, 255, 255, .35); }
+.compass-needle { fill: var(--gold); }
+.compass-n { fill: #fff; font-size: 11px; font-weight: 900; }
+
+.rail-base { fill: none; stroke: #1b2440; stroke-width: 7; stroke-linecap: round; }
+.rail-dash { fill: none; stroke: #fff; stroke-width: 3.4; stroke-dasharray: 9 7; stroke-linecap: butt; }
+.bus-line { fill: none; stroke: #f39c12; stroke-width: 3.5; stroke-dasharray: 2 6; stroke-linecap: round; }
+.ferry-line { fill: none; stroke: #8fd3ff; stroke-width: 3; stroke-dasharray: 10 6; stroke-linecap: round; animation: ferry-flow 1.6s linear infinite; }
+@keyframes ferry-flow { to { stroke-dashoffset: -32; } }
+.trail-line { fill: none; stroke: var(--gold); stroke-width: 6; stroke-linecap: round; opacity: .85; filter: url(#f-glow); stroke-dasharray: 2 10; animation: trail .5s linear infinite; }
+@keyframes trail { to { stroke-dashoffset: -24; } }
+
+/* 駅ノード */
+.station { cursor: pointer; outline: none; }
+.station-hit { fill: transparent; }
+.station-aura { fill: var(--pref); opacity: 0; transition: opacity .2s; }
+.station-ring { fill: #fffaf0; stroke: var(--pref); stroke-width: 4; transition: transform .2s; }
+.station-core { fill: #d8ccb1; transition: fill .3s; }
+.station-candidate { fill: none; stroke: #ffe066; stroke-width: 4; opacity: 0; }
+.station-crown { font-size: 13px; fill: var(--gold); opacity: 0; stroke: #6b4300; stroke-width: .6; paint-order: stroke; }
+.station-label {
+  font-size: 13px; font-weight: 900; fill: var(--ink);
+  stroke: #fffaf0; stroke-width: 4; paint-order: stroke; stroke-linejoin: round;
+  pointer-events: none;
+}
+.station:hover .station-ring, .station:focus-visible .station-ring { transform: scale(1.18); }
+.station:hover .station-aura, .station:focus-visible .station-aura { opacity: .3; }
+.station:focus-visible .station-hit { stroke: var(--gold); stroke-width: 3; }
+
+.station.is-visited .station-core { fill: var(--pref); }
+.station.is-current .station-aura { opacity: .35; animation: aura 1.8s ease-in-out infinite; }
+@keyframes aura { 50% { transform: scale(1.35); opacity: .1; } }
+
+/* 買収済み＝ゴールド：金のリング＋回転する光輪＋脈打つオーラ＋王冠 */
+.station-gold-ring { fill: none; stroke: var(--gold-2); stroke-width: 2.5; stroke-dasharray: 3 4.2; opacity: 0; }
+.station.is-acquired .station-ring { fill: url(#g-gold); stroke: #8a5600; stroke-width: 2.5; transform: scale(1.3); filter: url(#f-glow); }
+.station.is-acquired:hover .station-ring { transform: scale(1.45); }
+.station.is-acquired .station-core { fill: #fffbe6; transform: scale(.7); transform-box: fill-box; transform-origin: center; }
+.station.is-acquired .station-aura { fill: #ffd34d; opacity: .7; animation: gold-pulse 2.2s ease-in-out infinite; }
+.station.is-acquired .station-gold-ring { opacity: 1; animation: spin 6s linear infinite; }
+.station.is-acquired .station-crown { opacity: 1; font-size: 16px; transform: translateY(-4px); }
+.station.is-acquired .station-label { fill: #5b3a00; stroke: #ffe08a; stroke-width: 5; }
+@keyframes gold-pulse { 50% { opacity: .2; transform: scale(1.7); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* サイコロ後の行き先候補 */
+.map-svg.is-choosing .station:not(.is-candidate) { opacity: .45; }
+.station.is-candidate .station-candidate { opacity: 1; animation: cand 1s ease-in-out infinite; }
+@keyframes cand { 50% { transform: scale(1.25); opacity: .35; } }
+
+.station-burst { fill: none; stroke: var(--gold); stroke-width: 4; animation: burst 1.3s ease-out forwards; }
+@keyframes burst { to { transform: scale(5); opacity: 0; stroke-width: .5; } }
+.station-aura, .station-ring, .station-candidate, .station-burst, .station-gold-ring { transform-box: fill-box; transform-origin: center; }
+
+/* 列車 */
+.train { pointer-events: none; }
+.train-bg { fill: #fff; stroke: var(--navy); stroke-width: 2.5; filter: url(#f-shadow); }
+.train-emoji { font-size: 19px; }
+.train.is-running .train-bg { stroke: var(--gold); stroke-width: 3.5; }
+.train.is-running { animation: chug .16s ease-in-out infinite alternate; }
+@keyframes chug { to { translate: 0 -1.5px; } }
+
+/* ---------- サイドパネル ---------- */
+.panel {
+  background: var(--paper-2);
+  border: 2px solid var(--line);
+  border-radius: 18px;
+  padding: 14px 16px;
+  box-shadow: 0 3px 0 var(--line);
+}
+.dice-panel { border-color: var(--navy); box-shadow: 0 4px 0 var(--navy); }
+.die {
+  width: 64px; height: 64px; flex: none; border-radius: 14px; padding: 9px;
+  background: linear-gradient(145deg, #fff, #ece4d2);
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .08), 0 4px 10px rgba(20, 32, 74, .2);
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px;
+}
+.die .pip { border-radius: 50%; background: var(--navy); margin: 2px; }
+.die[data-face="1"] .pip { background: var(--red); transform: scale(1.35); }
+.die .pip.is-off { visibility: hidden; }
+.die.is-rolling { animation: roll .3s linear infinite; }
+.die.is-landed { animation: land .45s cubic-bezier(.3, 1.8, .5, 1); }
+@keyframes roll { 0% { transform: rotate(0) translateY(0); } 50% { transform: rotate(180deg) translateY(-8px); } 100% { transform: rotate(360deg); } }
+@keyframes land { 0% { transform: scale(1.3); } 100% { transform: scale(1); } }
+.dice-result { font-family: 'Dela Gothic One', sans-serif; font-size: 40px; line-height: 1; color: var(--navy); }
+.dice-btn {
+  margin-top: 12px; width: 100%; padding: 14px; border-radius: 14px;
+  font-size: 18px; font-weight: 900; color: #3a2400;
+  background: linear-gradient(180deg, #ffd65a, var(--gold));
+  box-shadow: 0 5px 0 var(--gold-deep), 0 8px 16px rgba(168, 107, 12, .3);
+  transition: transform .08s, box-shadow .08s;
+}
+.dice-btn:hover { filter: brightness(1.05); }
+.dice-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--gold-deep); }
+.dice-btn:disabled { filter: grayscale(.6); opacity: .6; cursor: not-allowed; transform: none; }
+.guide { margin-top: 10px; font-size: 13px; min-height: 2.6em; color: #475569; }
+.link-btn { text-decoration: underline; color: var(--navy-2); font-weight: 700; margin-left: 4px; }
+.current-name { font-family: 'Dela Gothic One', sans-serif; font-size: 24px; color: var(--navy); }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 700;
+  padding: 2px 9px; border-radius: 99px; background: #ece4d2; color: #5b4b2b; white-space: nowrap;
+}
+.chip-pref { background: var(--pref, #888); color: #fff; }
+.chip-gold { background: linear-gradient(90deg, #fff1b8, var(--gold)); color: #5b3a00; box-shadow: 0 0 0 1px #e2a91a inset; }
+.chip-dim { background: #efe9dc; color: #7a6c50; }
+.chip-sea { background: #d6f0ff; color: #0c4a75; }
+
+.ghost-btn {
+  padding: 9px 14px; border-radius: 12px; font-weight: 700; font-size: 13px;
+  border: 2px solid var(--navy); color: var(--navy); background: #fff;
+}
+.ghost-btn:hover { background: #eef1fb; }
+.ghost-light { border-color: rgba(255, 255, 255, .6); color: #fff; background: rgba(255, 255, 255, .08); }
+.ghost-light:hover { background: rgba(255, 255, 255, .18); }
+
+/* ---------- 物件カード（モーダル） ---------- */
+.modal {
+  position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(8, 14, 36, .55); backdrop-filter: blur(3px);
+  opacity: 0; transition: opacity .2s;
+}
+.modal.is-open { opacity: 1; }
+@media (min-width: 640px) { .modal { align-items: center; padding: 24px; } }
+.modal-card {
+  position: relative; width: 100%; max-width: 620px; max-height: 92vh; overflow-y: auto; overscroll-behavior: contain;
+  background: var(--paper-2); border-radius: 24px 24px 0 0;
+  border-top: 8px solid var(--pref);
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, .3);
+  transform: translateY(30px); transition: transform .25s cubic-bezier(.2, .9, .3, 1.2);
+}
+@media (min-width: 640px) { .modal-card { border-radius: 24px; } }
+.modal.is-open .modal-card { transform: none; }
+.modal-card.is-acquired { border-top-color: var(--gold); box-shadow: 0 0 0 3px var(--gold), 0 0 40px rgba(242, 185, 40, .5); }
+
+.modal-head {
+  position: relative; padding: 18px 20px 14px;
+  background:
+    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--pref) 22%, transparent), transparent 60%),
+    linear-gradient(180deg, #fff, var(--paper-2));
+}
+.modal-title { font-family: 'Dela Gothic One', sans-serif; font-size: 34px; line-height: 1.15; margin-top: 6px; color: var(--navy); }
+.modal-title small { font-size: 18px; margin-left: 2px; }
+.modal-kana { font-size: 12px; color: #6b5d42; }
+.modal-value { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; font-size: 12px; font-weight: 700; color: #6b5d42; }
+.modal-value b { font-family: 'Dela Gothic One', sans-serif; font-size: 22px; font-weight: 400; color: var(--gold-deep); }
+.modal-note { font-size: 11px; color: #8a7a58; margin-top: 4px; }
+.modal-close {
+  position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; border-radius: 50%;
+  font-size: 22px; line-height: 1; background: #fff; border: 2px solid var(--line); color: #6b5d42;
+}
+.modal-close:hover { border-color: var(--navy); color: var(--navy); }
+
+.journey { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 0 20px; counter-reset: j; }
+.journey-step {
+  position: relative; display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 8px 2px; border-radius: 12px; background: #f1ebdd; color: #9a8b6c;
+}
+.journey-step:not(:last-child)::after {
+  content: '➔'; position: absolute; right: -9px; top: 14px; font-size: 11px; color: #c9b88f; z-index: 1;
+}
+.journey-icon { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: #fff; font-size: 13px; }
+.journey-label { font-size: 12px; font-weight: 900; margin-top: 3px; }
+.journey-sub { font-size: 9px; }
+.journey-step.is-done { background: color-mix(in srgb, var(--pref) 16%, #fff); color: var(--ink); }
+.journey-step.is-done .journey-icon { background: var(--pref); color: #fff; font-weight: 900; }
+
+.owner-banner {
+  margin: 12px 20px 0; padding: 10px 12px; border-radius: 12px; font-size: 13px; line-height: 1.6;
+  background: repeating-linear-gradient(-45deg, #fff8dd 0 10px, #fff3c6 10px 20px);
+  border: 2px dashed #e2a91a; color: #5b3a00;
+}
+.owner-banner small { display: block; font-size: 10px; color: #8a6a1e; }
+.owner-banner.is-owner { border-style: solid; background: linear-gradient(90deg, #fff1b8, #ffe08a); text-align: center; }
+
+.modal-sec { padding: 14px 20px 0; }
+.sec-title { display: flex; align-items: center; gap: 6px; font-weight: 900; font-size: 15px; color: var(--navy); margin-bottom: 8px; }
+.sec-title em { font-style: normal; font-size: 10px; font-weight: 700; color: var(--gold-deep); background: #fff3c6; padding: 1px 7px; border-radius: 99px; }
+.memo {
+  font-size: 14px; line-height: 1.9; padding: 12px 14px; border-radius: 12px;
+  background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--pref);
+}
+.item { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; }
+.item-name { font-weight: 900; font-size: 15px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.item-desc { font-size: 12px; color: #6b5d42; margin: 2px 0 8px; }
+.aff-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.aff-btn {
+  flex: 1 1 110px; display: inline-flex; justify-content: center; align-items: center; gap: 4px;
+  padding: 9px 10px; border-radius: 10px; font-size: 13px; font-weight: 900; color: #fff;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, .22); transition: transform .08s, filter .15s; white-space: nowrap;
+}
+.aff-btn:hover { filter: brightness(1.08); }
+.aff-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0, 0, 0, .22); }
+.aff-btn span { font-size: 11px; opacity: .8; }
+.btn-amazon { background: #232f3e; box-shadow: 0 3px 0 #ff9900; }
+.btn-rakuten { background: #bf0000; }
+.btn-yahoo { background: #ff0033; }
+.btn-rakuten-travel { background: #a50000; }
+.btn-jalan { background: #ea5532; }
+.disclosure { margin: 12px 20px 0; font-size: 10px; color: #8a7a58; line-height: 1.6; }
+.modal-foot {
+  position: sticky; bottom: 0; display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 20px 16px; margin-top: 12px;
+  background: linear-gradient(180deg, rgba(255, 250, 240, 0), var(--paper-2) 30%);
+}
+.share-btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; border-radius: 12px;
+  font-weight: 900; font-size: 13px; color: #fff; background: #0f1419;
+}
+.share-btn:hover { filter: brightness(1.2); }
+.share-btn.is-gold { background: linear-gradient(90deg, #1a1405, #3d2c05); color: var(--gold-2); box-shadow: 0 0 0 2px var(--gold) inset; }
+.x-logo { font-size: 15px; }
+.fav-btn { padding: 9px 14px; border-radius: 12px; font-weight: 700; font-size: 13px; background: #f1ebdd; color: #5b4b2b; }
+.fav-btn.is-on { background: #ffe9ef; color: #b0244b; }
+.modal-foot .ghost-btn { margin-left: auto; }
+
+/* ---------- 買収完了演出 ---------- */
+.celebrate {
+  position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 16px;
+  background: radial-gradient(circle at 50% 40%, rgba(80, 55, 0, .85), rgba(6, 10, 28, .94));
+  opacity: 0; transition: opacity .25s; overflow: hidden;
+}
+.celebrate.is-open { opacity: 1; }
+.celebrate-box { position: relative; text-align: center; color: #fff; max-width: 420px; width: 100%; animation: rise .6s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes rise { from { transform: translateY(40px) scale(.9); opacity: 0; } }
+.celebrate-kicker { font-size: 11px; letter-spacing: .4em; color: var(--gold-2); font-weight: 900; }
+.celebrate-title {
+  font-family: 'Dela Gothic One', sans-serif; font-size: 44px; line-height: 1.2; margin-bottom: 14px;
+  background: linear-gradient(180deg, #fff9d9, var(--gold) 60%, #c47f0b);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 4px 12px rgba(242, 185, 40, .6));
+}
+.celebrate-msg { font-size: 14px; margin: 14px 0; line-height: 1.8; }
+.celebrate-msg b { color: var(--gold-2); }
+.confetti i {
+  position: absolute; top: -20px; left: var(--x); width: 9px; height: 14px; border-radius: 2px;
+  background: hsl(var(--h) 90% 62%);
+  animation: fall 2.6s cubic-bezier(.3, .6, .5, 1) var(--d) forwards;
+}
+.confetti i:nth-child(3n) { background: var(--gold); width: 7px; height: 7px; border-radius: 50%; }
+@keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+
+/* ---------- ホログラム風プレミアムスタンプカード ---------- */
+.holo {
+  --rx: 0deg; --ry: 0deg; --mx: 50%; --my: 50%;
+  position: relative; aspect-ratio: 5 / 7; border-radius: 18px; overflow: hidden; cursor: pointer;
+  transform: perspective(800px) rotateX(var(--rx)) rotateY(var(--ry));
+  transition: transform .15s ease-out;
+  background:
+    radial-gradient(circle at 20% 0%, color-mix(in srgb, var(--pref) 70%, #fff) 0, transparent 55%),
+    linear-gradient(160deg, #1a2350, #0d1430 60%, #241a05);
+  box-shadow: 0 0 0 2px #f7d774, 0 0 0 5px #3d2c05, 0 14px 30px rgba(0, 0, 0, .35), 0 0 24px rgba(242, 185, 40, .35);
+  color: #fff; text-align: left;
+}
+.holo:hover { box-shadow: 0 0 0 2px #fff3bf, 0 0 0 5px #3d2c05, 0 20px 40px rgba(0, 0, 0, .4), 0 0 36px rgba(242, 185, 40, .6); }
+.holo-big { width: min(280px, 72vw); margin: 0 auto; }
+.holo-inner { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; padding: 14px; }
+.holo-top { display: flex; justify-content: space-between; font-size: 10px; font-weight: 900; letter-spacing: .08em; color: var(--gold-2); }
+.holo-top span:first-child { background: var(--pref); color: #fff; padding: 1px 8px; border-radius: 99px; }
+.holo-name { font-family: 'Dela Gothic One', sans-serif; font-weight: 400; font-size: clamp(20px, 5vw, 26px); line-height: 1.15; margin-top: auto; text-shadow: 0 2px 8px rgba(0, 0, 0, .5); }
+.holo-name small { font-size: .6em; }
+.holo-tagline { font-size: 10px; opacity: .85; }
+.holo-value { margin-top: 8px; padding: 6px 8px; border-radius: 10px; background: rgba(0, 0, 0, .35); border: 1px solid rgba(247, 215, 116, .5); display: flex; justify-content: space-between; align-items: baseline; gap: 4px; }
+.holo-value span { font-size: 9px; opacity: .8; }
+.holo-value b {
+  font-family: 'Dela Gothic One', sans-serif; font-weight: 400; font-size: clamp(14px, 3.6vw, 18px);
+  background: linear-gradient(180deg, #fff9d9, var(--gold)); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.holo-via { font-size: 9px; opacity: .75; margin-top: 6px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.holo-foot { display: flex; justify-content: space-between; font-size: 7px; letter-spacing: .12em; opacity: .55; margin-top: 6px; }
+
+.holo-stamp {
+  position: absolute; top: 34px; right: 12px; width: 82px; height: 82px; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border: 3px double rgba(255, 120, 100, .95); color: rgba(255, 140, 120, .98);
+  transform: rotate(-14deg); background: rgba(255, 90, 70, .08);
+  box-shadow: 0 0 0 4px rgba(255, 120, 100, .25) inset;
+  animation: stamp-in .5s cubic-bezier(.3, 1.6, .5, 1) both .15s;
+}
+.holo-stamp-ring { font-size: 10px; font-weight: 900; letter-spacing: .25em; border-bottom: 1px solid currentColor; padding-bottom: 1px; }
+.holo-stamp-name { font-family: 'Dela Gothic One', sans-serif; font-size: 14px; line-height: 1.3; max-width: 70px; text-align: center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.holo-stamp-date { font-size: 8px; font-weight: 700; border-top: 1px solid currentColor; padding-top: 1px; }
+@keyframes stamp-in { from { transform: rotate(-14deg) scale(2.2); opacity: 0; } }
+
+/* 虹色の箔：グラデーションを流し続け、ポインタ位置で強さが変わる */
+.holo-foil {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none; mix-blend-mode: color-dodge; opacity: .55;
+  background:
+    repeating-linear-gradient(115deg,
+      #ff4d6d 0%, #ffd166 7%, #06d6a0 14%, #4cc9f0 21%, #b388ff 28%, #ff4d6d 35%),
+    repeating-linear-gradient(25deg, rgba(255, 255, 255, .25) 0 2px, transparent 2px 6px);
+  background-size: 300% 300%, 100% 100%;
+  animation: foil 6s linear infinite;
+  -webkit-mask-image: radial-gradient(circle at var(--mx) var(--my), #000 0%, rgba(0, 0, 0, .35) 65%);
+          mask-image: radial-gradient(circle at var(--mx) var(--my), #000 0%, rgba(0, 0, 0, .35) 65%);
+}
+@keyframes foil { to { background-position: 300% 300%, 0 0; } }
+.holo-glare {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none; mix-blend-mode: overlay;
+  background: radial-gradient(circle at var(--mx) var(--my), rgba(255, 255, 255, .7), transparent 45%);
+}
+.holo::after {
+  content: ''; position: absolute; inset: -50%; z-index: 3; pointer-events: none;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, .55) 50%, transparent 60%);
+  animation: sweep 3.8s ease-in-out infinite;
+}
+@keyframes sweep { 0%, 60% { transform: translateX(-60%); } 100% { transform: translateX(60%); } }
+
+/* ---------- コレクション手帳 ---------- */
+.collection-head {
+  display: grid; gap: 14px; padding: 18px 20px; border-radius: 22px; color: #fff; margin-bottom: 18px;
+  background:
+    radial-gradient(circle at 90% 0, rgba(242, 185, 40, .35), transparent 50%),
+    linear-gradient(135deg, var(--navy), #2a1f05);
+  box-shadow: 0 0 0 3px var(--gold), 0 12px 30px rgba(20, 32, 74, .25);
+}
+@media (min-width: 900px) { .collection-head { grid-template-columns: 1fr auto auto; align-items: center; } }
+.collection-title { font-family: 'Dela Gothic One', sans-serif; font-size: 24px; color: var(--gold-2); }
+.collection-head dt { font-size: 10px; opacity: .75; font-weight: 700; }
+.collection-head dd { font-family: 'Dela Gothic One', sans-serif; font-size: 20px; color: var(--gold-2); white-space: nowrap; }
+.collection-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+@media (min-width: 640px) { .collection-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); } }
+.locked-card {
+  aspect-ratio: 5 / 7; border-radius: 18px; padding: 14px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 2px;
+  background: repeating-linear-gradient(45deg, #efe7d6 0 8px, #e9e0cc 8px 16px);
+  border: 2px dashed #c9b88f; color: #8a7a58; transition: transform .15s;
+}
+.locked-card:hover { transform: translateY(-3px); border-color: var(--gold-deep); }
+.locked-q { font-family: 'Dela Gothic One', sans-serif; font-size: 40px; color: #cbbd99; line-height: 1; }
+.locked-name { font-weight: 900; font-size: 16px; color: #5b4b2b; margin-top: 4px; }
+.locked-pref { font-size: 10px; }
+.locked-value { font-size: 12px; font-weight: 900; color: var(--gold-deep); margin-top: 6px; }
+.locked-state { font-size: 10px; margin-top: 4px; }
+
+/* ---------- その他 ---------- */
+.site-footer { color: #6b5d42; border-top: 2px solid var(--line); margin-top: 24px; }
+.toasts { position: fixed; left: 50%; top: 84px; transform: translateX(-50%); z-index: 70; display: grid; gap: 6px; width: min(92vw, 420px); pointer-events: none; }
+.toast {
+  background: var(--navy); color: #fff; font-size: 13px; font-weight: 700; padding: 10px 14px; border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .25); animation: toast-in .25s ease-out; transition: opacity .4s, transform .4s;
+}
+.toast-blue { background: #1d5fa8; }
+.toast.is-out { opacity: 0; transform: translateY(8px); }
+@keyframes toast-in { from { opacity: 0; transform: translateY(10px); } }
+
+@media (max-width: 639px) {
+  .station-label { font-size: 17px; stroke-width: 5; }
+  .station-hit { r: 28; }
+  .logo-title { font-size: 17px; }
+  .stats dd b { font-size: 15px; }
+  .modal-title { font-size: 28px; }
+  .modal-sec, .journey { padding-left: 14px; padding-right: 14px; }
+  .owner-banner, .disclosure { margin-left: 14px; margin-right: 14px; }
+  .modal-foot { padding-left: 14px; padding-right: 14px; }
+  .modal-foot .ghost-btn { margin-left: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
