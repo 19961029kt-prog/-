@@ -375,7 +375,7 @@
     pending = dests;
     Map.setCandidates(ids);
     setGuide(
-      `🎲 <b>${n}</b>！ ${reach}分かれ道です。光っている<span class="text-amber-600 font-bold">${ids.length}駅</span>から行き先を選んでね。` +
+      `🎲 <b>${n}</b>！ ${reach}分かれ道です。光っている<span class="t-gold font-bold">${ids.length}駅</span>から行き先を選んでね。` +
         ` <button class="link-btn" id="btn-cancel-choice">やめる</button>`
     );
     $('#btn-cancel-choice').addEventListener('click', () => {
@@ -653,8 +653,9 @@
         const r = card.getBoundingClientRect();
         const px = (e.clientX - r.left) / r.width;
         const py = (e.clientY - r.top) / r.height;
-        card.style.setProperty('--rx', `${(0.5 - py) * 14}deg`);
-        card.style.setProperty('--ry', `${(px - 0.5) * 18}deg`);
+        // 光の角度で色が変わるよう、傾きを大きめに取る
+        card.style.setProperty('--rx', `${(0.5 - py) * 24}deg`);
+        card.style.setProperty('--ry', `${(px - 0.5) * 30}deg`);
         card.style.setProperty('--mx', `${px * 100}%`);
         card.style.setProperty('--my', `${py * 100}%`);
       });
@@ -942,7 +943,7 @@
 
       <section class="stay-compare" id="trip-stays">
         <h3 class="sec-title"><span>🏨</span>宿をまとめて比較する <em>楽天トラベル・じゃらん</em></h3>
-        <p class="text-xs text-slate-500 mb-3">このプランの宿泊地と、ほかの候補プランの宿泊地を並べています。ボタンを押すと各サイトで同じ条件の宿を探せます。</p>
+        <p class="text-xs t-dim mb-3">このプランの宿泊地と、ほかの候補プランの宿泊地を並べています。ボタンを押すと各サイトで同じ条件の宿を探せます。</p>
         <div class="grid gap-3">${stayRows(plan, otherOvernights)}</div>
         <p class="disclosure">${esc(D.meta.affiliate.disclosure)}</p>
       </section>

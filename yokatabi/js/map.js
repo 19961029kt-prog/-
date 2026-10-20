@@ -111,29 +111,29 @@
     const defs = el('defs', {}, svg);
     defs.innerHTML = `
       <pattern id="p-wave" width="44" height="22" patternUnits="userSpaceOnUse">
-        <path d="M0 14 Q11 7 22 14 T44 14" fill="none" stroke="#ffffff" stroke-opacity=".08" stroke-width="1.6"/>
-        <path d="M-22 3 Q-11 -4 0 3 T22 3 T44 3" fill="none" stroke="#ffffff" stroke-opacity=".04" stroke-width="1.2"/>
+        <path d="M0 14 Q11 7 22 14 T44 14" fill="none" stroke="#67e8f9" stroke-opacity=".07" stroke-width="1.4"/>
+        <path d="M-22 3 Q-11 -4 0 3 T22 3 T44 3" fill="none" stroke="#f5c451" stroke-opacity=".035" stroke-width="1"/>
       </pattern>
       <linearGradient id="g-land" x1="0" y1="0" x2=".7" y2="1">
-        <stop offset="0" stop-color="#fbf1d8"/><stop offset=".5" stop-color="#f0e0bb"/><stop offset="1" stop-color="#e3cd9c"/>
+        <stop offset="0" stop-color="#1a4034"/><stop offset=".5" stop-color="#11302a"/><stop offset="1" stop-color="#0a1f1c"/>
       </linearGradient>
       <radialGradient id="g-highland">
-        <stop offset="0" stop-color="#a9c98a" stop-opacity=".95"/>
-        <stop offset=".6" stop-color="#c3d9a4" stop-opacity=".6"/>
-        <stop offset="1" stop-color="#d9e6bd" stop-opacity="0"/>
+        <stop offset="0" stop-color="#2f6b4f" stop-opacity=".95"/>
+        <stop offset=".6" stop-color="#1f5240" stop-opacity=".55"/>
+        <stop offset="1" stop-color="#143a30" stop-opacity="0"/>
       </radialGradient>
       <radialGradient id="g-forest" cx=".45" cy=".4" r=".7">
-        <stop offset="0" stop-color="#8fc27a"/><stop offset=".7" stop-color="#5e9a5f"/><stop offset="1" stop-color="#3f7a4b"/>
+        <stop offset="0" stop-color="#2f7a4f"/><stop offset=".7" stop-color="#1b5238"/><stop offset="1" stop-color="#0f3324"/>
       </radialGradient>
       <linearGradient id="g-peak" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#7fa66a"/><stop offset="1" stop-color="#4f7d4f"/>
+        <stop offset="0" stop-color="#3f7d5c"/><stop offset="1" stop-color="#173b2d"/>
       </linearGradient>
       <radialGradient id="g-gold" cx=".35" cy=".3" r=".8">
-        <stop offset="0" stop-color="#fff7c2"/><stop offset=".45" stop-color="#f7c948"/><stop offset="1" stop-color="#b7791f"/>
+        <stop offset="0" stop-color="#fffbe6"/><stop offset=".3" stop-color="#ffe08a"/><stop offset=".65" stop-color="#e0a526"/><stop offset="1" stop-color="#7a4b00"/>
       </radialGradient>
       <filter id="f-paper" x="0" y="0" width="100%" height="100%">
         <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="7" result="n"/>
-        <feColorMatrix in="n" type="matrix" values="0 0 0 0 .45  0 0 0 0 .36  0 0 0 0 .2  0 0 0 .5 0"/>
+        <feColorMatrix in="n" type="matrix" values="0 0 0 0 .02  0 0 0 0 .06  0 0 0 0 .05  0 0 0 .55 0"/>
       </filter>
       <filter id="f-soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6"/></filter>
       <filter id="f-railshadow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2.2"/></filter>
@@ -148,8 +148,31 @@
         <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
       </filter>
       <filter id="f-shadow" x="-20%" y="-20%" width="140%" height="140%">
-        <feDropShadow dx="2" dy="8" stdDeviation="6" flood-color="#023038" flood-opacity=".55"/>
-      </filter>`;
+        <feDropShadow dx="0" dy="10" stdDeviation="9" flood-color="#000" flood-opacity=".75"/>
+      </filter>
+      <filter id="f-neon" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="3.5" result="b1"/><feGaussianBlur stdDeviation="9" result="b2"/>
+        <feMerge><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <radialGradient id="g-tail">
+        <stop offset="0" stop-color="#fffbe6"/><stop offset=".4" stop-color="#ffd34d" stop-opacity=".9"/><stop offset="1" stop-color="#ff8a00" stop-opacity="0"/>
+      </radialGradient>`;
+    // 駅ごとの宝石：県の色から、光の当たる明るい面と沈む暗い面を作る
+    Object.entries(D.meta.prefectures).forEach(([, { color }], i) => {
+      el('radialGradient', { id: `gem-${i}`, cx: '.34', cy: '.28', r: '.85' }, defs).innerHTML = `
+        <stop offset="0" stop-color="#ffffff"/>
+        <stop offset=".16" stop-color="${mix(color, '#ffffff', 0.55)}"/>
+        <stop offset=".5" stop-color="${color}"/>
+        <stop offset=".85" stop-color="${mix(color, '#000000', 0.55)}"/>
+        <stop offset="1" stop-color="${mix(color, '#000000', 0.75)}"/>`;
+    });
+  }
+
+  // 16進カラーを割合 k で混ぜる（宝石の明暗用）
+  function mix(a, b, k) {
+    const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    const [x, y] = [p(a), p(b)];
+    return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * k).toString(16).padStart(2, '0')).join('');
   }
 
   // 盤面：海 → 浅瀬のにじみ → 島（影つき）→ 紙の質感 → 山地の等高線 → 山アイコン → 装飾
@@ -171,6 +194,7 @@
     [...islands, yaku].forEach((d) => {
       el('path', { d, class: 'shore-far' }, shore);
       el('path', { d, class: 'shore-near' }, shore);
+      el('path', { d, class: 'land-glow' }, shore); // 大地をふちどるゴールドの光
     });
 
     const land = el('g', { filter: 'url(#f-shadow)' }, layers.bg);
@@ -306,17 +330,22 @@
         'aria-label': `${s.name}駅（${s.prefecture}）`,
         style: `--pref:${color}`,
       }, layers.nodes);
+      const gem = `url(#gem-${Object.keys(D.meta.prefectures).indexOf(s.prefecture)})`;
       el('circle', { r: 22, class: 'station-hit' }, g);
       el('circle', { r: 19, class: 'station-candidate' }, g);
       el('circle', { r: 16, class: 'station-aura' }, g);
       el('path', { d: raysPath(36, 12), class: 'station-rays' }, g);
       el('circle', { r: 17, class: 'station-gold-ring' }, g);
-      // 立体トークン：下に厚み（側面）と接地影、上面に光沢。ホバーでトークンごと拡大する
+      // 買収済みの駅のまわりに広がる光の波紋（3重・時間差）
+      [0, 1, 2].forEach((i) => el('circle', { r: 13, class: 'station-ripple', style: `--i:${i}` }, g));
+      // 立体トークン（宝石・金貨）：接地影と厚み、カット面、光沢。ホバーでトークンごと拡大する
       const token = el('g', { class: 'station-token' }, g);
       el('ellipse', { cy: 5, rx: 12, ry: 10, class: 'station-ground' }, token);
       el('circle', { cy: 3, r: 11, class: 'station-side' }, token);
-      el('circle', { r: 11, class: 'station-ring' }, token);
-      el('circle', { r: 7, class: 'station-core' }, token);
+      el('circle', { r: 11, class: 'station-ring', fill: gem }, token);
+      // テーブルカット：中央の八角形の面と、そこから伸びるファセットの線
+      el('path', { d: octagon(5.2), class: 'station-core' }, token);
+      el('path', { d: facets(5.2, 10.4), class: 'station-facets' }, token);
       el('circle', { r: 10, class: 'station-gloss' }, token);
       const crown = el('text', { y: -15, 'text-anchor': 'middle', class: 'station-crown' }, g);
       crown.textContent = '♛';
@@ -336,6 +365,19 @@
     });
   }
 
+  function octagon(r) {
+    return Array.from({ length: 8 }, (_, i) => {
+      const a = Math.PI / 8 + (i * Math.PI) / 4;
+      return `${i ? 'L' : 'M'}${(Math.cos(a) * r).toFixed(2)},${(Math.sin(a) * r).toFixed(2)}`;
+    }).join(' ') + 'Z';
+  }
+  function facets(r1, r2) {
+    return Array.from({ length: 8 }, (_, i) => {
+      const a = Math.PI / 8 + (i * Math.PI) / 4;
+      return `M${(Math.cos(a) * r1).toFixed(2)},${(Math.sin(a) * r1).toFixed(2)} L${(Math.cos(a) * r2).toFixed(2)},${(Math.sin(a) * r2).toFixed(2)}`;
+    }).join(' ');
+  }
+
   // 後光：中心から放射状に伸びる細い三角形
   function raysPath(r, n) {
     let d = '';
@@ -347,8 +389,12 @@
     return d;
   }
 
-  let trainBody, trainShadow;
+  let trainBody, trainShadow, tail;
+  const TAIL = 14; // 光の尾の粒の数
   function buildTrain() {
+    // 光の尾（テールライト）：走った軌跡に、だんだん小さく薄くなる光の粒を並べる
+    tail = el('g', { class: 'train-tail', 'aria-hidden': 'true' }, layers.train);
+    for (let i = 0; i < TAIL; i++) el('circle', { r: 0, fill: 'url(#g-tail)' }, tail);
     train = el('g', { class: 'train', 'aria-hidden': 'true' }, layers.train);
     trainShadow = el('ellipse', { cy: 22, rx: 12, ry: 3.5, class: 'train-shadow' }, train);
     trainBody = el('g', { class: 'train-body' }, train);
@@ -360,7 +406,7 @@
   // hop：跳ねている高さ（0〜1）。影は高く跳ぶほど小さく薄くなる
   function setTrainPos(x, y, facingRight, hop = 0) {
     train.setAttribute('transform', `translate(${x} ${y - 26})`);
-    trainBody.setAttribute('transform', `translate(0 ${(-hop * 8).toFixed(2)})`);
+    trainBody.setAttribute('transform', `translate(0 ${(-hop * 11).toFixed(2)}) scale(${(1 - hop * 0.06).toFixed(3)} ${(1 + hop * 0.1).toFixed(3)})`);
     trainShadow.setAttribute('rx', (12 - hop * 4).toFixed(2));
     trainShadow.style.opacity = (0.45 - hop * 0.25).toFixed(2);
     // 🚂 は多くのフォントで左向きなので、右へ進むときだけ反転
@@ -422,6 +468,8 @@
         }
         const duration = 800 + 300 * (segs.length - 1);
         train.classList.add('is-running');
+        tail.classList.remove('is-fading');
+        const history = [];
         let t0 = null;
         const step = (now) => {
           if (t0 === null) t0 = now;
@@ -435,6 +483,17 @@
           // 1区間につき3回、ぴょんぴょん跳ねながら進む
           const hop = Math.abs(Math.sin(t * Math.PI * 3 * segs.length));
           setTrainPos(pt.x, pt.y, Math.abs(dx) > 0.01 ? dx > 0 : undefined, hop);
+          // 光の尾：直近の位置ほど大きく明るく
+          history.unshift([pt.x, pt.y - 26]);
+          history.length = Math.min(history.length, TAIL * 2);
+          [...tail.children].forEach((c, i) => {
+            const h = history[i * 2];
+            if (!h) return c.setAttribute('r', 0);
+            c.setAttribute('cx', h[0].toFixed(1));
+            c.setAttribute('cy', h[1].toFixed(1));
+            c.setAttribute('r', (13 * (1 - i / TAIL)).toFixed(1));
+            c.setAttribute('opacity', (0.9 * (1 - i / TAIL)).toFixed(2));
+          });
           if (t < 1) requestAnimationFrame(step);
           else {
             train.classList.remove('is-running');
@@ -443,6 +502,8 @@
             void train.getBBox();
             train.classList.add('is-landing');
             setTimeout(() => (layers.trail.innerHTML = ''), 600);
+            tail.classList.add('is-fading');
+            setTimeout(() => [...tail.children].forEach((c) => c.setAttribute('r', 0)), 500);
             resolve();
           }
         };

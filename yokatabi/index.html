@@ -9,7 +9,7 @@
   <meta property="og:description" content="九州の路線図すごろくで、名産品物件・湯けむり物件を買収して王国を築こう。">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary">
-  <meta name="theme-color" content="#14204a">
+  <meta name="theme-color" content="#090d16">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎲</text></svg>">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -93,10 +93,11 @@
 
       <aside class="side flex flex-col gap-4">
         <div class="panel dice-panel">
+          <p class="card-kicker"><span>DICE COMMAND</span></p>
           <div class="flex items-center gap-4">
             <div id="die" class="die" aria-hidden="true"></div>
             <div class="flex-1">
-              <p class="text-xs text-slate-500 font-bold">出た目</p>
+              <p class="text-xs t-dim font-bold">出た目</p>
               <p class="dice-result"><span id="dice-result">-</span></p>
             </div>
           </div>
@@ -104,34 +105,37 @@
           <p id="guide" class="guide" aria-live="polite">読み込み中…</p>
         </div>
 
-        <div class="panel">
-          <p class="text-xs text-slate-500 font-bold">現在地</p>
+        <div class="panel current-panel">
+          <p class="card-kicker"><span>CURRENT STATION</span></p>
+          <p class="text-xs t-dim font-bold">現在地</p>
           <div class="flex items-baseline gap-2 flex-wrap">
             <h2 id="current-name" class="current-name">-</h2>
             <span id="current-pref" class="chip"></span>
             <span id="current-status"></span>
           </div>
-          <p id="current-tagline" class="text-sm text-slate-600 mt-1"></p>
+          <p id="current-tagline" class="text-sm t-dim mt-1"></p>
           <button id="btn-open-current" class="ghost-btn w-full mt-3">この駅の物件カードを開く</button>
         </div>
 
         <div class="panel mini-collection">
+          <p class="card-kicker"><span>HOLO COLLECTION</span></p>
           <div class="flex items-center justify-between gap-2">
             <h3 class="font-bold">📔 コレクション手帳</h3>
             <span id="mini-count" class="chip chip-gold">0 / 15</span>
           </div>
-          <p class="text-xs text-slate-500 mt-1">総資産 <b id="mini-assets" class="text-amber-700">0万円</b></p>
+          <p class="text-xs t-dim mt-1">総資産 <b id="mini-assets" class="t-gold">0万円</b></p>
           <div id="mini-grid" class="mini-grid"></div>
           <button class="ghost-btn w-full mt-3" data-tab-jump="collection">手帳をひらく</button>
           <button id="btn-trip-cta" class="trip-cta w-full mt-2" disabled>🧳 旅しおり</button>
         </div>
 
         <div class="panel how">
+          <p class="card-kicker"><span>HOW TO PLAY</span></p>
           <h3 class="font-bold mb-2">あそびかた</h3>
-          <ol class="text-sm text-slate-600 space-y-1 list-decimal pl-5">
+          <ol class="text-sm t-dim space-y-1 list-decimal pl-5">
             <li>サイコロを振るか、地図の駅をタップして🚂で移動。</li>
             <li>到着すると<b>物件カード</b>が開き、現地調査メモ・名産品・宿がわかる。</li>
-            <li>カード内のボタンからお取り寄せ・予約に進むと<b class="text-amber-600">買収完了</b>！駅が金色に輝き、手帳にホログラムカードが加わる。</li>
+            <li>カード内のボタンからお取り寄せ・予約に進むと<b class="t-gold">買収完了</b>！駅が金色に輝き、手帳にホログラムカードが加わる。</li>
           </ol>
         </div>
       </aside>
