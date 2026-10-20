@@ -66,7 +66,7 @@ yokatabi/
 - **技術スタック**：HTML5 / Tailwind CSS（Play CDN、バージョン固定）/ Vanilla JS / インラインSVG。npm もビルドも不要。
 - **スクリプトは classic script（`<script src>`）で読み込む。** ES Modules は `file://` で開くと CORS で止まるため使わない。モジュール間は `window.YT` 名前空間で受け渡す。読み込み順は `index.html` の末尾にある順のまま。
 - **データ読み込み**：`fetch('stations.json')` を試し、`file://` や通信エラーのときは `window.YOKATABI_FALLBACK_DATA` を使う（`YT.Data.load()`）。フッターに「stations.json 読込済み／内蔵データで起動中」が出る。
-- **効果音**：外部の音声ファイルは使わない。サイコロ（コトン・コロコロ）、出目の確定音、発車・到着チャイム、買収ファンファーレをすべて OscillatorNode とノイズバッファで合成する。AudioContext は最初のユーザー操作で作る。ミュート状態は保存する。
+- **効果音**：外部の音声ファイルは使わない。サイコロ（コトン・コロコロ）、出目の確定音、発車・到着チャイム、買収ファンファーレをすべて OscillatorNode とノイズバッファで合成する。AudioContext は最初のユーザー操作（どこをタップしても）で作り、無音を一瞬鳴らして起こす。iPhone 対策として、`navigator.audioSession.type = 'playback'`（消音スイッチがオンでも鳴る）と、別タブから戻ったときの 'interrupted' からの復帰を入れている。ミュート状態は保存する。
 - **localStorage** のキーは `yokatabi.kyushu.v1`。読み書きはすべて try/catch で囲み、使えない環境ではメモリ上の状態で動かす。構造を変えるときは `version` を上げて移行処理を書く。
 
 ```jsonc

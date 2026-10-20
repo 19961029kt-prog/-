@@ -8,19 +8,56 @@
   let master = null;
   let muted = false;
 
+  // iPhone（Safari 17〜）：消音スイッチがオンでも鳴るよう、音声の種類を「再生」にする。
+  // 既定の種類だと、消音スイッチで Web Audio の音がすべて消える。
+  function preferPlayback() {
+    try {
+      if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback';
+    } catch (e) {
+      /* 未対応のブラウザでは何もしない */
+    }
+  }
+
   function ensure() {
     if (muted) return null;
     if (!ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return null;
+      preferPlayback();
       ctx = new AC();
+      // スマホの小さなスピーカーでも聞こえるよう、コンプレッサーで音量をそろえて持ち上げる
+      const comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -18;
+      comp.knee.value = 12;
+      comp.ratio.value = 4;
       master = ctx.createGain();
-      master.gain.value = 0.5;
-      master.connect(ctx.destination);
+      master.gain.value = 0.9;
+      master.connect(comp).connect(ctx.destination);
     }
-    if (ctx.state === 'suspended') ctx.resume();
+    // 'suspended'（自動再生の制限）と 'interrupted'（iPhone で別タブ・別アプリから戻ったとき）の両方から復帰させる
+    if (ctx.state !== 'running' && ctx.state !== 'closed') ctx.resume().catch(() => {});
     return ctx;
   }
+
+  // 無音を一瞬だけ鳴らして、iPhone の音声出力を確実に起こす（ユーザー操作の中で呼ぶ）
+  function warmUp() {
+    const c = ensure();
+    if (!c) return;
+    const src = c.createBufferSource();
+    src.buffer = c.createBuffer(1, 1, c.sampleRate);
+    src.connect(c.destination);
+    src.start(0);
+  }
+
+  // どこを触っても音が使えるようにする（タブやボタンが最初の操作でも鳴る）。
+  // touchstart は iPhone では音の許可にならないので、指を離したとき・クリック・キー操作で行う。
+  ['pointerup', 'touchend', 'click', 'keydown'].forEach((type) =>
+    window.addEventListener(type, () => !muted && (!ctx || ctx.state !== 'running') && warmUp(), { capture: true, passive: true })
+  );
+  // アフィリエイトのタブなどから戻ったとき
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && ctx && !muted && ctx.state !== 'running') ctx.resume().catch(() => {});
+  });
 
   // 単音：エンベロープ付きのオシレーター
   function tone(freq, start, dur, { type = 'sine', gain = 0.3, attack = 0.005, slideTo = null } = {}) {
@@ -68,8 +105,10 @@
     },
     isMuted: () => muted,
     unlock() {
-      ensure();
+      warmUp();
     },
+    // 動作確認用：いまの状態（'running' なら鳴る状態）
+    state: () => (ctx ? ctx.state : 'none'),
 
     // 「コトン、コロコロ…」
     dice() {
