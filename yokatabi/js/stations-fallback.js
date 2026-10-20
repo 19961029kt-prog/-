@@ -95,8 +95,11 @@ window.YOKATABI_FALLBACK_DATA = {
     "shinkansen": {
       "label": "新幹線"
     },
+    "trunk": {
+      "label": "特急幹線"
+    },
     "local": {
-      "label": "在来線"
+      "label": "ローカル線"
     },
     "scenic": {
       "label": "観光列車"
@@ -178,7 +181,7 @@ window.YOKATABI_FALLBACK_DATA = {
         "hakata",
         "mojiko"
       ],
-      "type": "local",
+      "type": "trunk",
       "name": "鹿児島本線"
     },
     {
@@ -202,7 +205,7 @@ window.YOKATABI_FALLBACK_DATA = {
         "hakata",
         "ureshino-onsen"
       ],
-      "type": "local",
+      "type": "trunk",
       "name": "長崎本線・佐世保線（リレー特急）"
     },
     {
@@ -226,7 +229,7 @@ window.YOKATABI_FALLBACK_DATA = {
         "mojiko",
         "beppu"
       ],
-      "type": "local",
+      "type": "trunk",
       "name": "日豊本線"
     },
     {
@@ -242,7 +245,7 @@ window.YOKATABI_FALLBACK_DATA = {
         "beppu",
         "miyazaki"
       ],
-      "type": "local",
+      "type": "trunk",
       "name": "日豊本線"
     },
     {
@@ -250,7 +253,7 @@ window.YOKATABI_FALLBACK_DATA = {
         "miyazaki",
         "kagoshima-chuo"
       ],
-      "type": "local",
+      "type": "trunk",
       "name": "日豊本線"
     },
     {

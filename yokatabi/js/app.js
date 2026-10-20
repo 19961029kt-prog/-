@@ -86,7 +86,25 @@
     Map.refresh(Store.get());
     renderHeader();
     renderCurrent();
+    renderMini();
     renderCollection();
+  }
+
+  // 右側のミニ手帳：買収した順に並べ、新しく加わったカードだけ裏返しから登場させる
+  let miniShown = null;
+  function renderMini() {
+    const st = Store.get();
+    const s = stats();
+    const owned = D.stations
+      .filter((stn) => st.acquired[stn.id])
+      .sort((a, b) => st.acquired[b.id].at.localeCompare(st.acquired[a.id].at));
+    $('#mini-count').textContent = `${s.acquiredCount} / ${s.n}`;
+    $('#mini-assets').textContent = yen(s.assets);
+    const grid = $('#mini-grid');
+    grid.innerHTML = owned.length
+      ? owned.map((stn) => holoCard(stn, st.acquired[stn.id], 'mini', miniShown && !miniShown.has(stn.id) ? 'is-new' : '')).join('')
+      : '<p class="mini-empty">カード内のボタンからお取り寄せ・予約すると、ここにホログラムカードが加わります。</p>';
+    miniShown = new Set(owned.map((stn) => stn.id));
   }
 
   // ---------- トースト ----------
@@ -256,7 +274,7 @@
   function stationShareText(s) {
     const st = stats();
     if (Store.isAcquired(s.id)) {
-      return `【${s.name}駅】の物件（評価額：${yen(s.assetValue)}）を完全買収しました！✨\n王国経営度 ${st.acquiredPct}%／総資産 ${yen(st.assets)}`;
+      return `【${s.name}駅】を評価額${yen(s.assetValue)}で完全買収しました！✨\n王国経営度 ${st.acquiredPct}%／総資産 ${yen(st.assets)}`;
     }
     return `${s.name}駅に到着！🚂 ${s.tagline}\n九州踏破率 ${st.visitedPct}% で旅の途中です。`;
   }
@@ -418,7 +436,7 @@
       <div class="celebrate-box" role="alertdialog" aria-labelledby="celebrate-title">
         <p class="celebrate-kicker">ACQUISITION COMPLETE</p>
         <h2 id="celebrate-title" class="celebrate-title">買収完了！</h2>
-        ${holoCard(s, Store.getAcquisition(id), true)}
+        ${holoCard(s, Store.getAcquisition(id), 'big')}
         <p class="celebrate-msg"><b>${esc(s.name)}駅</b>の正式オーナーになりました。<br>総資産に <b>${yen(s.assetValue)}</b> が加算されます。</p>
         <div class="flex flex-wrap gap-2 justify-center">
           <a class="share-btn is-gold" href="${esc(shareUrl(stationShareText(s)))}" target="_blank" rel="noopener"><span class="x-logo">𝕏</span>買収を自慢する</a>
@@ -446,11 +464,12 @@
   }
 
   // ---------- ホログラム風スタンプカード ----------
-  function holoCard(s, acq, big = false) {
+  // size: '' | 'big'（買収完了演出）| 'mini'（右側の手帳）
+  function holoCard(s, acq, size = '', extraClass = '') {
     const color = (D.meta.prefectures[s.prefecture] || {}).color;
     const via = acq.via === 'stay' ? `♨ ${acq.provider}で${acq.item}を予約` : `🎁 ${acq.provider}で${acq.item}をお取り寄せ`;
     return `
-      <article class="holo ${big ? 'holo-big' : ''}" style="--pref:${color}" data-station="${esc(s.id)}" tabindex="0">
+      <article class="holo ${size ? `holo-${size}` : ''} ${extraClass}" style="--pref:${color}" data-station="${esc(s.id)}" tabindex="0">
         <div class="holo-inner">
           <div class="holo-top"><span>${esc(s.prefecture)}</span><span>${esc(s.propertyType)}</span></div>
           <div class="holo-stamp" aria-hidden="true"><span class="holo-stamp-ring">買収済</span><span class="holo-stamp-name">${esc(s.name)}</span><span class="holo-stamp-date">${fmtDate(acq.at)}</span></div>
@@ -582,6 +601,11 @@
       if (pending) clearPending();
     });
     document.querySelectorAll('[data-tab]').forEach((t) => t.addEventListener('click', () => showView(t.dataset.tab)));
+    document.querySelectorAll('[data-tab-jump]').forEach((b) => b.addEventListener('click', () => showView(b.dataset.tabJump)));
+    $('#mini-grid').addEventListener('click', (e) => {
+      const c = e.target.closest('[data-station]');
+      if (c && !busy) openModal(c.dataset.station);
+    });
     $('#collection-grid').addEventListener('click', (e) => {
       const c = e.target.closest('[data-station]');
       if (c) openModal(c.dataset.station);

@@ -62,14 +62,17 @@
     <!-- マップビュー -->
     <section data-view="map" class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div class="map-frame">
+        <div class="map-board">
         <svg id="map" class="map-svg" role="group" aria-label="九州すごろく路線図。駅を選ぶと列車が移動し物件カードが開きます"></svg>
         <div class="map-legend" aria-hidden="true">
           <span><i class="lg lg-shin"></i>新幹線</span>
-          <span><i class="lg lg-local"></i>在来線</span>
+          <span><i class="lg lg-trunk"></i>特急幹線</span>
+          <span><i class="lg lg-local"></i>ローカル線</span>
           <span><i class="lg lg-scenic"></i>観光列車</span>
           <span><i class="lg lg-ferry"></i>航路</span>
           <span><i class="lg lg-bus"></i>バス</span>
           <span><i class="lg lg-gold"></i>買収済み</span>
+        </div>
         </div>
       </div>
 
@@ -95,6 +98,16 @@
           </div>
           <p id="current-tagline" class="text-sm text-slate-600 mt-1"></p>
           <button id="btn-open-current" class="ghost-btn w-full mt-3">この駅の物件カードを開く</button>
+        </div>
+
+        <div class="panel mini-collection">
+          <div class="flex items-center justify-between gap-2">
+            <h3 class="font-bold">📔 コレクション手帳</h3>
+            <span id="mini-count" class="chip chip-gold">0 / 15</span>
+          </div>
+          <p class="text-xs text-slate-500 mt-1">総資産 <b id="mini-assets" class="text-amber-700">0万円</b></p>
+          <div id="mini-grid" class="mini-grid"></div>
+          <button class="ghost-btn w-full mt-3" data-tab-jump="collection">手帳をひらく</button>
         </div>
 
         <div class="panel how">

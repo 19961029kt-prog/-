@@ -44,6 +44,36 @@
     [214, 766, 0.75, ''],
   ];
 
+  // 九州7県の県境（おおまかなイメージ線。海岸線の内側だけに描く）
+  const PREF_BORDERS = [
+    [[136, 150], [168, 178], [204, 204], [212, 228], [194, 250]],             // 福岡｜佐賀
+    [[72, 192], [92, 224], [112, 256], [142, 290]],                           // 佐賀｜長崎
+    [[356, 140], [330, 190], [318, 220], [324, 244]],                         // 福岡｜大分
+    [[324, 244], [282, 256], [242, 262], [206, 280]],                         // 福岡｜熊本
+    [[324, 244], [350, 232], [370, 242], [374, 274], [372, 308]],             // 大分｜熊本
+    [[372, 308], [420, 318], [474, 310]],                                     // 大分｜宮崎
+    [[372, 308], [346, 332], [330, 382], [306, 432], [300, 480]],             // 熊本｜宮崎
+    [[300, 480], [252, 478], [194, 466]],                                     // 熊本｜鹿児島
+    [[300, 480], [318, 526], [326, 572], [342, 630]],                         // 宮崎｜鹿児島
+  ];
+  // 県名ラベル [県名, x, y]（盤面の「エリア名」として大きく淡く置く）
+  const PREF_LABELS = [
+    ['福岡', 262, 206], ['佐賀', 150, 222], ['長崎', 112, 300], ['熊本', 270, 330],
+    ['大分', 452, 256], ['宮崎', 432, 392], ['鹿児島', 214, 520],
+  ];
+
+  // 点列を Catmull-Rom → 3次ベジェで開いた滑らかな線にする
+  function smoothOpen(pts) {
+    let d = `M${pts[0][0]},${pts[0][1]}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+      const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+      const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+      d += ` C${c1[0].toFixed(1)},${c1[1].toFixed(1)} ${c2[0].toFixed(1)},${c2[1].toFixed(1)} ${p2[0]},${p2[1]}`;
+    }
+    return d;
+  }
+
   // 点列を Catmull-Rom → 3次ベジェで閉じた滑らかなパスにする
   function smoothClosed(pts) {
     const n = pts.length;
@@ -85,7 +115,7 @@
         <path d="M-22 3 Q-11 -4 0 3 T22 3 T44 3" fill="none" stroke="#ffffff" stroke-opacity=".04" stroke-width="1.2"/>
       </pattern>
       <linearGradient id="g-land" x1="0" y1="0" x2=".7" y2="1">
-        <stop offset="0" stop-color="#fdf6e3"/><stop offset=".45" stop-color="#f1efd2"/><stop offset="1" stop-color="#e2ebc8"/>
+        <stop offset="0" stop-color="#fbf1d8"/><stop offset=".5" stop-color="#f0e0bb"/><stop offset="1" stop-color="#e3cd9c"/>
       </linearGradient>
       <radialGradient id="g-highland">
         <stop offset="0" stop-color="#a9c98a" stop-opacity=".95"/>
@@ -106,12 +136,19 @@
         <feColorMatrix in="n" type="matrix" values="0 0 0 0 .45  0 0 0 0 .36  0 0 0 0 .2  0 0 0 .5 0"/>
       </filter>
       <filter id="f-soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6"/></filter>
+      <filter id="f-railshadow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2.2"/></filter>
+      <radialGradient id="g-gloss" cx=".35" cy=".28" r=".75">
+        <stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".35" stop-color="#fff" stop-opacity=".25"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="g-rays">
+        <stop offset="0" stop-color="#fff6c4" stop-opacity=".95"/><stop offset=".55" stop-color="#ffd34d" stop-opacity=".5"/><stop offset="1" stop-color="#ffd34d" stop-opacity="0"/>
+      </radialGradient>
       <filter id="f-glow" x="-100%" y="-100%" width="300%" height="300%">
         <feGaussianBlur stdDeviation="4" result="b"/>
         <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
       </filter>
       <filter id="f-shadow" x="-20%" y="-20%" width="140%" height="140%">
-        <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#04142b" flood-opacity=".5"/>
+        <feDropShadow dx="2" dy="8" stdDeviation="6" flood-color="#023038" flood-opacity=".55"/>
       </filter>`;
   }
 
@@ -158,6 +195,13 @@
       el('ellipse', { cx: aso.x + 2, cy: aso.y - 4, rx: 34, ry: 28, class: 'caldera' }, inner);
       el('ellipse', { cx: aso.x + 2, cy: aso.y - 4, rx: 34, ry: 28, class: 'caldera-rim' }, inner);
     }
+    // 県境（点線）と県名（エリア名）
+    PREF_BORDERS.forEach((pts) => el('path', { d: smoothOpen(pts), class: 'pref-border' }, inner));
+    PREF_LABELS.forEach(([name, x, y]) => {
+      const color = (D.meta.prefectures[name] || {}).color || '#8a7a58';
+      const t = el('text', { x, y, 'text-anchor': 'middle', class: 'pref-label', style: `--pref:${color}` }, inner);
+      t.textContent = name;
+    });
     // 島のふち：内側に細い白のハイライト（紙の盤面を切り抜いたような立体感）
     [...islands, yaku].forEach((d) => el('path', { d, class: 'land-rim' }, inner));
 
@@ -196,10 +240,12 @@
 
   // 路線種別ごとの線のつくり。線は下から順に重ねる。
   const ROUTE_STYLES = {
-    // 新幹線：太い白の車体に青のライン。光の筋が高速で流れる
-    shinkansen: ['shin-outer', 'shin-body', 'shin-stripe', 'shin-streak'],
-    // 在来線：昔ながらの白黒の線路
-    local: ['rail-base', 'rail-dash'],
+    // 新幹線：いちばん太いダークグレーの複線。立体の影を落とし、青い光の筋が高速で流れる
+    shinkansen: ['track-shadow', 'shin-bed', 'shin-rails', 'shin-gap', 'shin-streak'],
+    // 特急幹線：ダークグレーの複線＋立体の影
+    trunk: ['track-shadow', 'trunk-bed', 'trunk-rails', 'trunk-gap'],
+    // ローカル線：細い二重線（2本のレール）
+    local: ['local-rails', 'local-gap'],
     // 観光列車：枕木の上を、えんじ色のレールと金の飾り線が走る
     scenic: ['scenic-ties', 'scenic-rail', 'scenic-gold'],
     // 航路：海の上にうっすら航跡を描き、点線が流れる
@@ -210,7 +256,7 @@
   const ROUTE_BADGE = { scenic: '✨', ferry: '⛴', bus: '🚌' };
 
   function buildRoutes() {
-    const order = ['ferry', 'bus', 'local', 'scenic', 'shinkansen']; // 新幹線が一番上に来るよう描画順をそろえる
+    const order = ['ferry', 'bus', 'local', 'scenic', 'trunk', 'shinkansen']; // 新幹線が一番上に来るよう描画順をそろえる
     const types = D.routeTypes || {};
     [...D.edges]
       .sort((x, y) => order.indexOf(routeType(x)) - order.indexOf(routeType(y)))
@@ -263,9 +309,15 @@
       el('circle', { r: 22, class: 'station-hit' }, g);
       el('circle', { r: 19, class: 'station-candidate' }, g);
       el('circle', { r: 16, class: 'station-aura' }, g);
+      el('path', { d: raysPath(36, 12), class: 'station-rays' }, g);
       el('circle', { r: 17, class: 'station-gold-ring' }, g);
-      el('circle', { r: 11, class: 'station-ring' }, g);
-      el('circle', { r: 7, class: 'station-core' }, g);
+      // 立体トークン：下に厚み（側面）と接地影、上面に光沢。ホバーでトークンごと拡大する
+      const token = el('g', { class: 'station-token' }, g);
+      el('ellipse', { cy: 5, rx: 12, ry: 10, class: 'station-ground' }, token);
+      el('circle', { cy: 3, r: 11, class: 'station-side' }, token);
+      el('circle', { r: 11, class: 'station-ring' }, token);
+      el('circle', { r: 7, class: 'station-core' }, token);
+      el('circle', { r: 10, class: 'station-gloss' }, token);
       const crown = el('text', { y: -15, 'text-anchor': 'middle', class: 'station-crown' }, g);
       crown.textContent = '♛';
       const [dx, dy, anchor] = LABEL_OFFSET[s.labelDir] || LABEL_OFFSET.right;
@@ -284,15 +336,33 @@
     });
   }
 
+  // 後光：中心から放射状に伸びる細い三角形
+  function raysPath(r, n) {
+    let d = '';
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2, w = Math.PI / n / 2.2;
+      const p = (ang, rr) => `${(Math.cos(ang) * rr).toFixed(1)},${(Math.sin(ang) * rr).toFixed(1)}`;
+      d += `M${p(a - w, 9)} L${p(a, r)} L${p(a + w, 9)} Z `;
+    }
+    return d;
+  }
+
+  let trainBody, trainShadow;
   function buildTrain() {
     train = el('g', { class: 'train', 'aria-hidden': 'true' }, layers.train);
-    el('circle', { r: 15, class: 'train-bg' }, train);
-    trainEmoji = el('text', { 'text-anchor': 'middle', y: 7, class: 'train-emoji' }, train);
+    trainShadow = el('ellipse', { cy: 22, rx: 12, ry: 3.5, class: 'train-shadow' }, train);
+    trainBody = el('g', { class: 'train-body' }, train);
+    el('circle', { r: 15, class: 'train-bg' }, trainBody);
+    trainEmoji = el('text', { 'text-anchor': 'middle', y: 7, class: 'train-emoji' }, trainBody);
     trainEmoji.textContent = '🚂';
   }
 
-  function setTrainPos(x, y, facingRight) {
+  // hop：跳ねている高さ（0〜1）。影は高く跳ぶほど小さく薄くなる
+  function setTrainPos(x, y, facingRight, hop = 0) {
     train.setAttribute('transform', `translate(${x} ${y - 26})`);
+    trainBody.setAttribute('transform', `translate(0 ${(-hop * 8).toFixed(2)})`);
+    trainShadow.setAttribute('rx', (12 - hop * 4).toFixed(2));
+    trainShadow.style.opacity = (0.45 - hop * 0.25).toFixed(2);
     // 🚂 は多くのフォントで左向きなので、右へ進むときだけ反転
     if (facingRight !== undefined) trainEmoji.setAttribute('transform', facingRight ? 'scale(-1 1)' : '');
   }
@@ -362,10 +432,16 @@
           const pt = seg.p.getPointAtLength(local);
           const ahead = seg.p.getPointAtLength(Math.min(seg.len, local + 1));
           const dx = ahead.x - pt.x;
-          setTrainPos(pt.x, pt.y, Math.abs(dx) > 0.01 ? dx > 0 : undefined);
+          // 1区間につき3回、ぴょんぴょん跳ねながら進む
+          const hop = Math.abs(Math.sin(t * Math.PI * 3 * segs.length));
+          setTrainPos(pt.x, pt.y, Math.abs(dx) > 0.01 ? dx > 0 : undefined, hop);
           if (t < 1) requestAnimationFrame(step);
           else {
             train.classList.remove('is-running');
+            // 到着時に「むぎゅっ」とつぶれて着地
+            train.classList.remove('is-landing');
+            void train.getBBox();
+            train.classList.add('is-landing');
             setTimeout(() => (layers.trail.innerHTML = ''), 600);
             resolve();
           }
