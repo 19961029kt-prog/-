@@ -18,6 +18,40 @@ window.YOKATABI_FALLBACK_DATA = {
       "よか旅すごろく九州",
       "九州旅"
     ],
+    "ranks": [
+      {
+        "id": "traveler",
+        "title": "九州旅人",
+        "min": 0,
+        "icon": "🎒",
+        "metal": "bronze",
+        "flavor": "サイコロ片手に、九州の旅が始まった。"
+      },
+      {
+        "id": "pioneer",
+        "title": "九州開拓使",
+        "min": 10000,
+        "icon": "🧭",
+        "metal": "silver",
+        "flavor": "まだ見ぬ駅へ。あなたの足跡が、九州の地図を塗り替えていく。"
+      },
+      {
+        "id": "daimyo",
+        "title": "九州大名",
+        "min": 30000,
+        "icon": "🏯",
+        "metal": "gold",
+        "flavor": "城下に湯けむり、領地に名産。九州じゅうにあなたの名がとどろく。"
+      },
+      {
+        "id": "railking",
+        "title": "九州鉄道王",
+        "min": 55000,
+        "icon": "🚂",
+        "metal": "platinum",
+        "flavor": "九州のレールは、すべてあなたの王国へ通じている。"
+      }
+    ],
     "trip": {
       "minAcquired": 2,
       "day1Start": "09:00",

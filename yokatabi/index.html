@@ -21,7 +21,7 @@
 <body class="min-h-screen">
   <a href="#main" class="skip-link">本文へスキップ</a>
 
-  <!-- ヘッダー：ロゴ／九州踏破率／王国経営度／総資産額／ミュート -->
+  <!-- ヘッダー：ロゴ／称号／九州踏破率／王国経営度／総資産額／ミュート -->
   <header class="site-header sticky top-0 z-30">
     <div class="max-w-6xl mx-auto px-4 py-2 flex flex-wrap items-center gap-x-4 gap-y-2">
       <div class="flex items-center gap-2 mr-auto min-w-0">
@@ -31,6 +31,15 @@
           <p class="logo-sub">サイコロ片手に巡る、ローカル美食と秘湯の旅</p>
         </div>
       </div>
+
+      <button id="rank-chip" class="rank-chip" data-tab-jump="collection" aria-label="称号">
+        <span id="rank-chip-emblem"></span>
+        <span class="rank-chip-text">
+          <small>称号</small>
+          <b id="rank-chip-title">九州旅人</b>
+          <span class="rank-chip-bar"><i id="rank-chip-bar"></i></span>
+        </span>
+      </button>
 
       <dl class="stats flex items-stretch gap-2 order-3 w-full sm:order-none sm:w-auto">
         <div class="stat">
@@ -150,6 +159,7 @@
           <span class="text-xs opacity-70">全物件の評価額合計 <span id="col-max"></span></span>
         </div>
       </div>
+      <section id="rank-ladder" class="rank-ladder" aria-label="称号の道"></section>
       <div id="collection-grid" class="collection-grid"></div>
       <div class="mt-8 text-center">
         <button id="btn-reset" class="ghost-btn text-xs">旅の記録をリセット</button>
@@ -172,6 +182,9 @@
 
   <!-- 買収完了演出 -->
   <div id="celebrate" class="celebrate" hidden></div>
+
+  <!-- 称号ランクアップのカットイン -->
+  <div id="cutin" class="cutin" hidden></div>
 
   <div id="toasts" class="toasts" aria-live="polite"></div>
 

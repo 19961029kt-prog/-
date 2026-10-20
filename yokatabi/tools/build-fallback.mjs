@@ -48,6 +48,15 @@ for (const s of data.stations) {
     errors.push(`${s.id}: plan（minutes・day・evening・morning）がそろっていません`);
   }
 }
+// 称号：0万円から始まり、しきい値が昇順で、全駅買収で最上位に届くこと
+const ranks = data.meta.ranks ?? [];
+const total = data.stations.reduce((n, s) => n + s.assetValue, 0);
+if (!ranks.length || ranks[0].min !== 0) errors.push('meta.ranks の最初の称号は min: 0 にしてください');
+ranks.forEach((r, i) => {
+  if (!r.id || !r.title || !r.metal) errors.push(`meta.ranks[${i}]: id・title・metal がそろっていません`);
+  if (i && !(r.min > ranks[i - 1].min)) errors.push(`meta.ranks[${i}] ${r.title}: min が昇順になっていません`);
+});
+if (ranks.length && ranks[ranks.length - 1].min > total) errors.push(`最上位の称号（${ranks[ranks.length - 1].min}万円）に全駅買収（${total}万円）でも届きません`);
 if (!data.stations.some((s) => s.gateway)) errors.push('gateway（旅の出発・到着地）を持つ駅がありません');
 if (errors.length) {
   console.error('stations.json の検証に失敗しました:\n  ' + errors.join('\n  '));

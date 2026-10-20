@@ -89,6 +89,149 @@
     renderMini();
     renderCollection();
     renderTripCta();
+    renderRank();
+  }
+
+  // ---------- 称号（買収総額でランクアップ） ----------
+  // meta.ranks：九州旅人 ➔ 九州開拓使 ➔ 九州大名 ➔ 九州鉄道王。min は総資産額（万円）のしきい値
+  const ranks = () => D.meta.ranks;
+  function rankInfo(assets) {
+    const list = ranks();
+    let index = 0;
+    list.forEach((r, i) => assets >= r.min && (index = i));
+    const rank = list[index];
+    const next = list[index + 1] || null;
+    const progress = next ? (assets - rank.min) / (next.min - rank.min) : 1;
+    return { index, rank, next, toNext: next ? next.min - assets : 0, progress };
+  }
+  // 1億以上は「1億2,000万円」と読みやすく
+  const yenBig = (man) => {
+    if (man < 10000) return yen(man);
+    const oku = Math.floor(man / 10000), rest = man % 10000;
+    return `${oku}億${rest ? rest.toLocaleString('ja-JP') + '万' : ''}円`;
+  };
+
+  function emblemHtml(rank, size = '') {
+    const i = ranks().indexOf(rank);
+    return `<span class="emblem emblem-${esc(rank.metal)} ${size ? `emblem-${size}` : ''}" aria-hidden="true">
+        <span class="emblem-ribbon"></span>
+        <span class="emblem-face"><span class="emblem-icon">${esc(rank.icon)}</span></span>
+        <span class="emblem-stars">${'★'.repeat(i + 1)}</span>
+      </span>`;
+  }
+
+  function renderRank() {
+    const { assets } = stats();
+    const info = rankInfo(assets);
+    $('#rank-chip-emblem').innerHTML = emblemHtml(info.rank, 'sm');
+    $('#rank-chip-title').textContent = info.rank.title;
+    $('#rank-chip-bar').style.width = `${Math.round(info.progress * 100)}%`;
+    $('#rank-chip').className = `rank-chip rank-${info.rank.metal}`;
+    $('#rank-chip').setAttribute(
+      'aria-label',
+      `称号 ${info.rank.title}${info.next ? `。次の「${info.next.title}」まであと${yenBig(info.toNext)}` : '。最高位です'}`
+    );
+    $('#rank-ladder').innerHTML = `
+      <div class="ladder-head">
+        <h3 class="ladder-title">🎖 称号の道</h3>
+        <p class="ladder-next">${
+          info.next
+            ? `次の称号「<b>${esc(info.next.title)}</b>」まで、買収総額あと <b>${yenBig(info.toNext)}</b>`
+            : '👑 最高位「九州鉄道王」に到達！ 九州のレールはあなたのものです'
+        }</p>
+      </div>
+      <ol class="ladder">
+        ${ranks()
+          .map((r, i) => {
+            const state = i < info.index ? 'is-done' : i === info.index ? 'is-current' : 'is-locked';
+            const note = i < info.index ? '達成' : i === info.index ? 'いまの称号' : `あと${yenBig(r.min - assets)}`;
+            return `<li class="ladder-step ${state}">
+                ${emblemHtml(r, 'md')}
+                <p class="ladder-name">${esc(r.title)}</p>
+                <p class="ladder-min">${r.min ? `買収総額 ${yenBig(r.min)}〜` : 'スタート'}</p>
+                <p class="ladder-note">${note}</p>
+              </li>`;
+          })
+          .join('')}
+      </ol>
+      <div class="ladder-bar"><i style="width:${Math.min(100, (assets / D.totalAsset) * 100)}%"></i>
+        ${ranks()
+          .slice(1)
+          .map((r) => `<span class="ladder-mark" style="left:${(r.min / D.totalAsset) * 100}%"></span>`)
+          .join('')}
+      </div>`;
+  }
+
+  // 既存データ（rankSeen 未設定）は、いまの称号を「見せ済み」としてそろえる（読み込み直後に演出を出さない）
+  function syncRankSeen() {
+    if (Store.get().rankSeen === null) Store.setRankSeen(rankInfo(stats().assets).index);
+  }
+
+  // 買収のたびに呼ぶ：称号が上がっていたらカットインを出す
+  function checkRankUp(delay) {
+    const before = Store.get().rankSeen ?? 0;
+    const now = rankInfo(stats().assets).index;
+    if (now <= before) return;
+    Store.setRankSeen(now);
+    setTimeout(() => cutIn(before, now), delay);
+  }
+
+  let cutinTimer = null;
+  function cutIn(fromIndex, toIndex) {
+    const from = ranks()[fromIndex], rank = ranks()[toIndex];
+    const { assets } = stats();
+    const layer = $('#cutin');
+    const chars = [...rank.title].map((c, i) => `<span style="--c:${i}">${esc(c)}</span>`).join('');
+    const share = shareUrl(`【称号ランクアップ】九州の物件を買収し続けて、称号「${rank.title}」に昇格しました！👑\n総資産 ${yen(assets)}`);
+    layer.className = `cutin rank-${rank.metal}`;
+    layer.innerHTML = `
+      <div class="cutin-flash" aria-hidden="true"></div>
+      <div class="cutin-band" role="alertdialog" aria-labelledby="cutin-title" aria-describedby="cutin-flavor">
+        <div class="cutin-speed" aria-hidden="true"></div>
+        <div class="cutin-inner">
+          <div class="cutin-emblem"><div class="cutin-rays" aria-hidden="true"></div>${emblemHtml(rank, 'xl')}</div>
+          <div class="cutin-text">
+            <p class="cutin-kicker">RANK UP!!　称号ランクアップ</p>
+            <p class="cutin-from">${esc(from.title)} <i>➔</i></p>
+            <h2 id="cutin-title" class="cutin-title" aria-label="${esc(rank.title)}">${chars}</h2>
+            <p id="cutin-flavor" class="cutin-flavor">${esc(rank.flavor)}</p>
+          </div>
+        </div>
+      </div>
+      <div class="cutin-sparks" aria-hidden="true">${Array.from({ length: 24 }, (_, i) =>
+        `<i style="--x:${(Math.random() * 100).toFixed(1)}%;--y:${(20 + Math.random() * 60).toFixed(1)}%;--d:${(0.4 + Math.random() * 1.2).toFixed(2)}s;--s:${(0.6 + Math.random()).toFixed(2)}"></i>`
+      ).join('')}</div>
+      <div class="cutin-actions">
+        <a class="share-btn is-gold" href="${esc(share)}" target="_blank" rel="noopener" data-cutin-share><span class="x-logo">𝕏</span>称号を自慢する</a>
+        <button class="ghost-btn ghost-light" data-cutin-close>閉じる</button>
+      </div>`;
+    layer.hidden = false;
+    Sound.rankUp();
+    requestAnimationFrame(() => layer.classList.add('is-open'));
+    $('[data-cutin-close]', layer).focus({ preventScroll: true });
+    // 7秒で自動的に閉じる（シェアを押したら閉じない）
+    clearTimeout(cutinTimer);
+    cutinTimer = setTimeout(closeCutIn, 7000);
+    $('[data-cutin-share]', layer).addEventListener('click', () => clearTimeout(cutinTimer));
+    layer.onclick = (e) => {
+      if (!e.target.closest('[data-cutin-share]')) closeCutIn();
+    };
+    renderRank();
+    const chip = $('#rank-chip');
+    chip.classList.remove('is-ranked-up');
+    void chip.offsetWidth;
+    chip.classList.add('is-ranked-up');
+  }
+
+  function closeCutIn() {
+    const layer = $('#cutin');
+    if (layer.hidden) return;
+    clearTimeout(cutinTimer);
+    layer.classList.remove('is-open');
+    setTimeout(() => {
+      layer.hidden = true;
+      layer.innerHTML = '';
+    }, 300);
   }
 
   // 右側のミニ手帳：買収した順に並べ、新しく加わったカードだけ裏返しから登場させる
@@ -275,7 +418,7 @@
   function stationShareText(s) {
     const st = stats();
     if (Store.isAcquired(s.id)) {
-      return `【${s.name}駅】を評価額${yen(s.assetValue)}で完全買収しました！✨\n王国経営度 ${st.acquiredPct}%／総資産 ${yen(st.assets)}`;
+      return `【${s.name}駅】を評価額${yen(s.assetValue)}で完全買収しました！✨\n称号「${rankInfo(st.assets).rank.title}」／王国経営度 ${st.acquiredPct}%／総資産 ${yen(st.assets)}`;
     }
     return `${s.name}駅に到着！🚂 ${s.tagline}\n九州踏破率 ${st.visitedPct}% で旅の途中です。`;
   }
@@ -429,6 +572,8 @@
     const s = D.byId[id];
     Sound.fanfare();
     Map.burst(id);
+    // 買収ファンファーレが鳴り終わるころに、称号のカットインを重ねる
+    checkRankUp(2300);
     const layer = $('#celebrate');
     layer.innerHTML = `
       <div class="confetti" aria-hidden="true">${Array.from({ length: 40 }, (_, i) =>
@@ -529,7 +674,7 @@
     $('#col-max').textContent = yen(D.totalAsset);
     $('#col-share').href = shareUrl(
       s.acquiredCount
-        ? `九州の${s.acquiredCount}物件を買収し、王国経営度 ${s.acquiredPct}%・総資産 ${yen(s.assets)} に到達しました！👑`
+        ? `称号「${rankInfo(s.assets).rank.title}」として九州の${s.acquiredCount}物件を買収し、王国経営度 ${s.acquiredPct}%・総資産 ${yen(s.assets)} に到達しました！👑`
         : `サイコロ片手に九州の旅をはじめました🎲 九州踏破率 ${s.visitedPct}%`
     );
     const grid = $('#collection-grid');
@@ -895,6 +1040,7 @@
 
     Sound.setMuted(Store.get().muted);
     renderMute();
+    syncRankSeen();
 
     const st = Store.get();
     if (!D.byId[st.currentStationId]) {
@@ -917,6 +1063,7 @@
     $('#modal').addEventListener('click', onModalClick);
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
+      if (!$('#cutin').hidden) return closeCutIn();
       if (!$('#celebrate').hidden) return $('#celebrate [data-dismiss]').click();
       if (!$('#modal').hidden) return closeModal();
       if (pending) clearPending();
@@ -950,6 +1097,7 @@
       if (!confirm('旅の記録（訪問・買収・推し駅）をすべてリセットします。よろしいですか？')) return;
       Store.reset();
       Store.visit(D.meta.startStationId);
+      syncRankSeen();
       clearPending();
       Map.placeTrain(D.meta.startStationId);
       renderAll();

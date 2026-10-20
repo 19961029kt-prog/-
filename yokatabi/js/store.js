@@ -15,6 +15,7 @@
       favorites: {}, // { stationId: true }  … 「つづく」：推し駅登録
       itineraries: [], // マイ旅しおり：[{ id, savedAt, departDate, title, seq: { g1, day1, day2, g2 } }]
       tripPrompted: false, // 「旅しおりが作れます」の提案を一度出したか
+      rankSeen: null, // カットインを出し終えた称号の段階（0〜）。null は未初期化（既存データの移行用）
       rolls: 0,
       muted: false,
     };
@@ -107,6 +108,10 @@
       save();
     },
     getItineraries: () => state.itineraries,
+    setRankSeen(i) {
+      state.rankSeen = i;
+      save();
+    },
     markTripPrompted() {
       state.tripPrompted = true;
       save();

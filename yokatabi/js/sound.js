@@ -131,6 +131,60 @@
       }
     },
 
+    // 称号ランクアップ：小太鼓のロール → 金管の和音とシンバル → きらめきの上昇音
+    rankUp() {
+      if (!ensure()) return;
+      let t = 0;
+      let gap = 0.07;
+      for (let i = 0; i < 16; i++) {
+        knock(t, { freq: 1800 + (i % 2) * 300, gain: 0.25 + i * 0.03, dur: 0.05 });
+        t += gap;
+        gap = Math.max(0.025, gap * 0.9);
+      }
+      const hit = t + 0.05;
+      // 金管風：のこぎり波を重ね、ローパスで角を落とす
+      const brass = (f, start, dur, gain) => {
+        const c = ctx;
+        const t0 = c.currentTime + start;
+        const osc = c.createOscillator();
+        const lp = c.createBiquadFilter();
+        const g = c.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(f * 0.98, t0);
+        osc.frequency.linearRampToValueAtTime(f, t0 + 0.06);
+        lp.type = 'lowpass';
+        lp.frequency.setValueAtTime(900, t0);
+        lp.frequency.linearRampToValueAtTime(3200, t0 + 0.12);
+        lp.frequency.exponentialRampToValueAtTime(1200, t0 + dur);
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(gain, t0 + 0.04);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        osc.connect(lp).connect(g).connect(master);
+        osc.start(t0);
+        osc.stop(t0 + dur + 0.05);
+      };
+      [[392, 0], [523.25, 0.16], [659.25, 0.32]].forEach(([f, d]) => brass(f, hit + d, 0.3, 0.12));
+      [261.63, 392, 523.25, 659.25, 783.99].forEach((f) => brass(f, hit + 0.5, 1.8, 0.09));
+      tone(65.41, hit + 0.5, 1.6, { type: 'triangle', gain: 0.35 });
+      // シンバル：高域のノイズを長めに減衰
+      const c = ctx;
+      const t0 = c.currentTime + hit + 0.5;
+      const len = Math.floor(c.sampleRate * 1.6);
+      const buf = c.createBuffer(1, len, c.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.5);
+      const src = c.createBufferSource();
+      src.buffer = buf;
+      const hp = c.createBiquadFilter();
+      hp.type = 'highpass';
+      hp.frequency.value = 5000;
+      const g = c.createGain();
+      g.gain.value = 0.22;
+      src.connect(hp).connect(g).connect(master);
+      src.start(t0);
+      for (let i = 0; i < 12; i++) tone(1046.5 * Math.pow(2, i / 12), hit + 0.7 + i * 0.06, 0.2, { type: 'sine', gain: 0.05 });
+    },
+
     click() {
       if (!ensure()) return;
       tone(880, 0, 0.05, { type: 'triangle', gain: 0.08 });
