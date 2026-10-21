@@ -176,7 +176,7 @@
     // 島の内側だけに描くもの（和紙の質感・山地・県境）
     const inner = el('g', { 'clip-path': 'url(#c-land)' }, layers.bg);
     // 県ごとに、県の色をほんのり重ねる（どこの県かが色でわかるように）
-    GEO.land.forEach((l) => {
+    (GEO.tint || []).forEach((l) => {
       const color = (D.meta.prefectures[l.pref] || {}).color;
       if (color) el('path', { d: l.d, class: 'land-tint', style: `--pref:${color}` }, inner);
     });

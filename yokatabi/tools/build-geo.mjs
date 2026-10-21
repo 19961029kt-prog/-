@@ -2,16 +2,24 @@
 // 実在の地理データから、盤面の地図（海岸線・県境・線路網・区間の線形）と駅の座標を作る。
 // 手描きの近似ではなく、九州の形と線路の位置を実際の地図に合わせるためのツール。
 //
+//   bash tools/fetch-geo-data.sh <データのフォルダ>   … 元データをダウンロード（初回だけ）
 //   node tools/build-geo.mjs <データのフォルダ>
 //
-// データのフォルダには次の2つを置く（どちらも公開データ。リポジトリには入れない）。
-//   japan.geojson … 都道府県の形（dataofjapan/land。国土数値情報 行政区域データを加工したもの）
-//                   https://raw.githubusercontent.com/dataofjapan/land/master/japan.geojson
-//   sd/json/      … 駅と路線の線形（Seo-4d696b75/station_database、CC BY 4.0）
-//                   https://raw.githubusercontent.com/Seo-4d696b75/station_database/main/out/extra/json.zip を展開
+// データのフォルダの中身（どれも公開データ。大きいのでリポジトリには入れない）
+//   n03/*.json     … 国土数値情報「行政区域（N03）」の都道府県ごとの GeoJSON（九州7県＋山口県・愛媛県）。
+//                    国土交通省の配布元（nlftp.mlit.go.jp）の GeoJSON か、それを都道府県ごとに分けた
+//                    niiyz/JapanCityGeoJson の geojson/prefectures/XX.json（2020年版・間引きなし）を置く。
+//                    属性 N03_001（都道府県名）で県を見分けるので、どちらの形でも読める。
+//   sd/json/       … Seo-4d696b75/station_database（CC BY 4.0）。駅の緯度経度（駅データ.jp 由来）と、
+//                    路線の線形（国土数値情報「鉄道（N02）」を加工したもの）を使う。
+//   n02/*.geojson  … （任意）国土数値情報「鉄道（N02）」の RailroadSection。置いてあれば、下地の線路網を
+//                    これから作る（九州旅客鉄道の区間だけ）。無ければ station_database の線形を使う。
+//
+// 投影：正距円筒図法（中央緯度 32.5° で経度を縮める）。海岸線・県境・線路・駅を、すべて同じ式 proj() で
+//       盤面の座標にする（駅が線路から浮かないように）。屋久島だけは縮尺そのままで位置をずらす。
 //
 // 出力：
-//   js/geo.js       … window.YOKATABI_GEO（投影の定数・陸地・県境・線路網・区間ごとの線形）
+//   js/geo.js       … window.YOKATABI_GEO（投影の定数・陸地・県の塗り・県境・線路網・区間ごとの線形・出典）
 //   stations.json   … 各駅の x / y を実際の位置に書き換える（ほかの項目には触れない）
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { dirname, resolve, join } from 'node:path';
@@ -19,8 +27,8 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const dataDir = resolve(process.argv[2] || '');
-if (!process.argv[2] || !existsSync(join(dataDir, 'japan.geojson'))) {
-  console.error('使い方: node tools/build-geo.mjs <japan.geojson と sd/json を置いたフォルダ>');
+if (!process.argv[2] || !existsSync(join(dataDir, 'n03')) || !existsSync(join(dataDir, 'sd/json'))) {
+  console.error('使い方: node tools/build-geo.mjs <n03/ と sd/json/ を置いたフォルダ>（tools/fetch-geo-data.sh でそろえられます）');
   process.exit(1);
 }
 const sdDir = join(dataDir, 'sd/json');
@@ -126,60 +134,125 @@ function chain(segments) {
   // 分岐点・端点から歩き始め、最後に残った輪を拾う
   for (const [k, list] of adj) if (list.length !== 2) list.forEach((s) => !used[s.i] && lines.push(walk(k, s)));
   segments.forEach((s) => !used[s.i] && lines.push(walk(s.a, s)));
-  return lines.map((keys) => keys.map((k) => k.split(',').map(Number)));
+  return lines.map((keys) => keys.map(unkey));
 }
 
-// ---------- 陸地と県境 ----------
-const japan = JSON.parse(readFileSync(join(dataDir, 'japan.geojson'), 'utf8'));
-const ringsOf = (f) => (f.geometry.type === 'MultiPolygon' ? f.geometry.coordinates.flat() : f.geometry.coordinates);
-const KYUSHU = new Set([40, 41, 42, 43, 44, 45, 46]);
-const NEIGHBOR = new Set([35, 38]); // 山口県・愛媛県（盤面のふちに見える対岸）
+// ---------- 陸地と県境（国土数値情報 行政区域 N03） ----------
+// 県ごとの輪を線分に分け、同じ県の中で2回出てくる線分（市町村どうしの境・穴）を消すと県の外周が残る。
+// さらに2県の外周に共通する線分が県境、残りが海岸線になる。座標は 1e-5 度（約1m）にそろえてから比べる。
+const PREF_IDS = { 福岡県: 40, 佐賀県: 41, 長崎県: 42, 熊本県: 43, 大分県: 44, 宮崎県: 45, 鹿児島県: 46, 山口県: 35, 愛媛県: 38 };
+const KYUSHU = [40, 41, 42, 43, 44, 45, 46];
+const NEIGHBOR = [35, 38]; // 山口県・愛媛県（盤面のふちに見える対岸）
+const PREF_NAME = { 40: '福岡', 41: '佐賀', 42: '長崎', 43: '熊本', 44: '大分', 45: '宮崎', 46: '鹿児島' };
+const Q = 1e5;
+const qkey = ([lon, lat]) => `${Math.round(lon * Q)},${Math.round(lat * Q)}`;
+const unkey = (k) => k.split(',').map((v) => v / Q);
 
-// 九州7県の輪を線分に分け、2県が共有する線分を県境とする
-const segCount = new Map();
-for (const f of japan.features) {
-  if (!KYUSHU.has(f.properties.id)) continue;
-  for (const ring of ringsOf(f)) {
-    for (let i = 0; i < ring.length - 1; i++) {
-      const a = ring[i].join(','), b = ring[i + 1].join(',');
+const n03Dir = join(dataDir, 'n03');
+if (!existsSync(n03Dir)) throw new Error(`${n03Dir} がありません（tools/fetch-geo-data.sh でダウンロードできます）`);
+const prefRings = {};
+const n03Files = readdirSync(n03Dir).filter((f) => /\.(geo)?json$/.test(f));
+for (const file of n03Files) {
+  const fc = JSON.parse(readFileSync(join(n03Dir, file), 'utf8'));
+  for (const f of fc.features || []) {
+    const id = PREF_IDS[f.properties && f.properties.N03_001];
+    if (!id || !f.geometry) continue;
+    const polys = f.geometry.type === 'MultiPolygon' ? f.geometry.coordinates : [f.geometry.coordinates];
+    (prefRings[id] ||= []).push(...polys.flat());
+  }
+}
+for (const id of [...KYUSHU, ...NEIGHBOR]) if (!prefRings[id]) throw new Error(`N03 のデータに県コード ${id} が見つかりません`);
+
+// 輪の集まり → 外周の線分（奇数回出てくる線分）
+function outline(rings) {
+  const segs = new Map();
+  for (const r of rings) {
+    for (let i = 0; i < r.length - 1; i++) {
+      const a = qkey(r[i]), b = qkey(r[i + 1]);
       if (a === b) continue;
-      const key = a < b ? `${a}|${b}` : `${b}|${a}`;
-      const s = segCount.get(key) || { a, b, n: 0 };
-      s.n++;
-      segCount.set(key, s);
+      const k = a < b ? `${a}|${b}` : `${b}|${a}`;
+      const s = segs.get(k);
+      if (s) s.n++;
+      else segs.set(k, { a, b, n: 1 });
     }
   }
+  for (const [k, s] of segs) if (s.n % 2 === 0) segs.delete(k);
+  return segs;
 }
-const borderSegs = [];
-for (const s of segCount.values()) if (s.n === 2) borderSegs.push({ a: s.a, b: s.b });
+// 線分の集まり → 閉じた輪（使っていない線分をたどって、出発点に戻るまで歩く）
+function ringsFrom(segList) {
+  const adj = new Map();
+  segList.forEach((s, i) => {
+    s.i = i;
+    (adj.get(s.a) || adj.set(s.a, []).get(s.a)).push(s);
+    (adj.get(s.b) || adj.set(s.b, []).get(s.b)).push(s);
+  });
+  const used = new Uint8Array(segList.length);
+  const rings = [];
+  for (const s0 of segList) {
+    if (used[s0.i]) continue;
+    used[s0.i] = 1;
+    const ring = [s0.a, s0.b];
+    let cur = s0.b;
+    while (cur !== s0.a) {
+      const next = adj.get(cur).find((s) => !used[s.i]);
+      if (!next) break;
+      used[next.i] = 1;
+      cur = next.a === cur ? next.b : next.a;
+      ring.push(cur);
+    }
+    rings.push(ring.map(unkey));
+  }
+  return rings;
+}
 
-// 陸地は県ごとの輪をそのまま塗る（隣り合う県の輪を重ねて塗れば、全体で九州の形になる）。
-// 海岸線は、輪のふちを太く描いた上に塗りを重ね、外側にはみ出した半分だけを見せる（CSS 側）。
-const PREF_NAME = { 40: '福岡', 41: '佐賀', 42: '長崎', 43: '熊本', 44: '大分', 45: '宮崎', 46: '鹿児島' };
-const land = [];
-for (const f of japan.features) {
-  const id = f.properties.id;
-  if (!KYUSHU.has(id)) continue;
-  for (const ring of ringsOf(f)) {
-    const pts = simplifyRing(ring.map(projAny), 0.3);
-    if (pts.length < 3 || area(pts) < 1.2 || !visible(pts)) continue;
-    land.push({ d: pathClosed(pts), pref: PREF_NAME[id], yaku: inYaku(ring[0]) || undefined, area: Math.round(area(pts)) });
+const prefOutline = {};
+for (const id of [...KYUSHU, ...NEIGHBOR]) prefOutline[id] = outline(prefRings[id]);
+// 2県の外周に共通する線分 = 県境
+const seen = new Map();
+for (const id of KYUSHU) for (const k of prefOutline[id].keys()) seen.set(k, (seen.get(k) || 0) + 1);
+const borderSegs = [];
+const coastSegs = [];
+for (const id of KYUSHU) {
+  for (const [k, s] of prefOutline[id]) {
+    if (seen.get(k) > 1) borderSegs.push({ a: s.a, b: s.b, k });
+    else coastSegs.push({ a: s.a, b: s.b });
   }
 }
-land.sort((a, b) => b.area - a.area);
-land.forEach((l) => delete l.area);
+// 県境は両側の県で2回入るので、1本にする
+const borderUniq = [...new Map(borderSegs.map((s) => [s.k, s])).values()];
 
-const borders = chain(borderSegs)
+// 盤面に入る島だけを描く（重心が盤面の外にある島＝五島・対馬・種子島などは描かない）。屋久島はずらして置く。
+const centroid = (pts) => pts.reduce((c, p) => [c[0] + p[0] / pts.length, c[1] + p[1] / pts.length], [0, 0]);
+const onBoard = ([x, y], m = 6) => x > VX - m && x < VX + VW + m && y > VY - m && y < VY + VH + m;
+function shapes(rings, tol, minArea) {
+  const out = [];
+  for (const ring of rings) {
+    if (ring.length < 4) continue;
+    const yaku = inYaku(ring[0]);
+    const pts = simplifyRing(ring.map(projAny), tol);
+    if (pts.length < 3 || area(pts) < minArea || !onBoard(centroid(pts))) continue;
+    out.push({ pts, yaku, area: area(pts) });
+  }
+  return out.sort((a, b) => b.area - a.area);
+}
+
+// 陸地（九州全体の海岸線）：塗りと海岸線の太線・浅瀬のにじみに使う
+const land = shapes(ringsFrom(coastSegs), 0.3, 0.8).map((l) => ({ d: pathClosed(l.pts), yaku: l.yaku || undefined }));
+// 県ごとの塗り（県の色をほんのり重ねる）。陸地の内側だけに描くので、少し粗くてよい
+const tint = [];
+for (const id of KYUSHU) {
+  for (const l of shapes(ringsFrom([...prefOutline[id].values()]), 1.2, 6)) tint.push({ d: pathClosed(l.pts), pref: PREF_NAME[id] });
+}
+const borders = chain(borderUniq)
   .map((lonlat) => simplify(lonlat.map(proj), 0.5))
   .filter((pts) => pts.length > 1 && visible(pts, 0))
   .map(pathOpen);
-
 const neighbor = [];
-for (const f of japan.features) {
-  if (!NEIGHBOR.has(f.properties.id)) continue;
-  for (const ring of ringsOf(f)) {
-    const pts = simplifyRing(ring.map(proj), 0.5);
-    if (pts.length < 3 || area(pts) < 2 || !visible(pts, 40)) continue;
+for (const id of NEIGHBOR) {
+  for (const ring of ringsFrom([...prefOutline[id].values()])) {
+    const pts = simplifyRing(ring.map(proj), 0.9);
+    if (pts.length < 3 || area(pts) < 4 || !visible(pts, 40)) continue;
     neighbor.push(pathClosed(pts));
   }
 }
@@ -323,6 +396,7 @@ const ids = Object.keys(PLACES);
 const XY = Object.fromEntries(ids.map((id) => [id, projAny(PLACES[id])]));
 const edgeKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 const routes = {};
+const routeTracks = {};
 for (const s of data.stations) {
   for (const c of s.connections) {
     const k = edgeKey(s.id, c);
@@ -342,6 +416,8 @@ for (const s of data.stations) {
         const [codes, from, to] = leg;
         const lonlat = railBetween(codes, station(from, codes[0]), station(to, codes[codes.length - 1]));
         pts.push(...lonlat.map(proj));
+        // 検証用：駅の点を除いた、線路そのものの点列
+        (routeTracks[k] ||= []).push(lonlat.slice(1, -1).map(proj));
       } else {
         const endXY = leg.to ? proj(station(leg.to)) : XY[end];
         const ctrl = [pts[pts.length - 1], ...leg.via.map(proj), endXY];
@@ -356,26 +432,74 @@ for (const s of data.stations) {
   }
 }
 
-// 線路網（盤面の下地）：九州の鉄道をすべて薄く描き、本物の地図らしさを出す。路面電車・地下鉄は省く。
-const SKIP = /地下鉄|電軌|市電|七隈|箱崎|空港線|北九州高速/;
+// 線路網（盤面の下地）：JR九州の路線をそのまま細く描き、すごろくの路線はその上に重ねる。
+// n02/ に国土数値情報「鉄道（N02）」の RailroadSection があればそれを、無ければ station_database の線形
+// （N02 を加工したもの）を使う。どちらも運営会社が JR九州の区間だけ。
 const network = [];
-for (const l of lines) {
-  if (l.closed || SKIP.test(l.name)) continue;
-  const file = join(sdDir, 'line', `${l.code}.json`);
-  if (!existsSync(file)) continue;
-  const st = JSON.parse(readFileSync(file, 'utf8')).station_list || [];
-  if (!st.some((s) => s.prefecture >= 40 && s.prefecture <= 46)) continue;
-  for (const ls of polylines(l.code)) {
-    const pts = simplify(ls.map(proj), 0.4);
-    if (pts.length > 1 && visible(pts, 0)) network.push({ d: pathOpen(pts), shin: l.code < 2000 || undefined });
+const n02Dir = join(dataDir, 'n02');
+const n02Files = existsSync(n02Dir) ? readdirSync(n02Dir).filter((f) => /RailroadSection.*\.geojson$/i.test(f)) : [];
+let networkSource;
+if (n02Files.length) {
+  // N02 の属性：N02_002 事業者種別（1=JR新幹線, 2=JR在来線）、N02_003 路線名、N02_004 運営会社
+  for (const file of n02Files) {
+    const fc = JSON.parse(readFileSync(join(n02Dir, file), 'utf8'));
+    for (const f of fc.features) {
+      const pr = f.properties || {};
+      if (pr.N02_004 !== '九州旅客鉄道' || !f.geometry) continue;
+      const parts = f.geometry.type === 'MultiLineString' ? f.geometry.coordinates : [f.geometry.coordinates];
+      for (const ls of parts) {
+        const pts = simplify(ls.map(proj), 0.4);
+        if (pts.length > 1 && visible(pts, 0)) network.push({ d: pathOpen(pts), shin: String(pr.N02_002) === '1' || undefined, pts });
+      }
+    }
   }
+  networkSource = '国土数値情報「鉄道（N02）」';
+} else {
+  const JR_KYUSHU = 6; // station_database の company_code
+  for (const l of lines) {
+    if (l.closed || l.company_code !== JR_KYUSHU) continue;
+    for (const ls of polylines(l.code)) {
+      const pts = simplify(ls.map(proj), 0.4);
+      if (pts.length > 1 && visible(pts, 0)) network.push({ d: pathOpen(pts), shin: l.code < 2000 || undefined, pts });
+    }
+  }
+  networkSource = 'station_database の線形（国土数値情報「鉄道（N02）」を加工したもの）';
 }
 
+// ---------- 検証：駅が線路の上にあるか ----------
+// 鉄道の駅は、(1) 下地の JR 線路網からの距離、(2) その駅から出る区間の線路（駅の点そのものを除く）からの距離 を測る。
+// 盤面1単位 ≒ 0.45km。1単位を超えると、画面で駅が線路から浮いて見えはじめる。
+const segDist = ([px, py], [ax, ay], [bx, by]) => {
+  const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1e-9;
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2));
+  return Math.hypot(ax + t * dx - px, ay + t * dy - py);
+};
+const nearestOn = (p, polys) => {
+  let best = Infinity;
+  for (const pts of polys) for (let i = 0; i < pts.length - 1; i++) best = Math.min(best, segDist(p, pts[i], pts[i + 1]));
+  return best;
+};
+const NOT_RAIL = new Set(['kurokawa-onsen', 'takachiho', 'yakushima']); // バス停・旧駅・港（旅のマス）
+const check = [];
+for (const s of data.stations) {
+  if (NOT_RAIL.has(s.id)) continue;
+  const p = XY[s.id];
+  const toNet = nearestOn(p, network.map((n) => n.pts));
+  // この駅から出る鉄道の区間の線路のうち、いちばん近いもの（駅は線路の上にあるはず）
+  const tracks = s.connections.flatMap((c) => routeTracks[edgeKey(s.id, c)] || []);
+  const toLeg = tracks.length ? nearestOn(p, tracks) : 0;
+  check.push({ name: s.name, toNet, toLeg });
+}
+network.forEach((n) => delete n.pts);
+const LIMIT = 1.0;
+const bad = check.filter((c) => c.toNet > LIMIT || c.toLeg > LIMIT);
+
 const geo = {
-  source: '地形：国土数値情報（行政区域）を加工した dataofjapan/land／線路・駅：station_database（CC BY 4.0）',
+  source: `海岸線・県境：国土数値情報「行政区域（N03）」（国土交通省）を加工／線路：${networkSource}／駅の位置：station_database（CC BY 4.0、駅データ.jp 由来）`,
   proj: { lat0: LAT0, cos: +COS.toFixed(6), k: +K.toFixed(4), ox: +OX.toFixed(3), oy: +OY.toFixed(3) },
   yaku: { box: YAKU_BOX, shift: YAKU_SHIFT.map(r1) },
   land,
+  tint,
   borders,
   neighbor,
   network,
@@ -404,4 +528,10 @@ writeFileSync(stationsPath, text);
 
 console.log(`js/geo.js: 陸地 ${land.length}・県境 ${borders.length}・線路網 ${network.length}・区間 ${Object.keys(routes).length}（${(js.length / 1024).toFixed(0)}KB）`);
 console.log('倍率', K.toFixed(2), '（盤面1単位 ≒', (111.32 / K).toFixed(2), 'km）');
-for (const s of data.stations) console.log(`  ${s.name}\t${s.x}\t${s.y}`);
+console.log('出典:', geo.source);
+console.log('駅と線路の距離（盤面単位・1≒0.45km）：駅\t線路網まで\t区間の線路まで');
+for (const c of check) console.log(`  ${c.name}\t${c.toNet.toFixed(2)}\t${c.toLeg.toFixed(2)}`);
+if (bad.length) {
+  console.error(`線路から ${LIMIT} 単位以上離れている駅があります: ${bad.map((c) => c.name).join('、')}`);
+  process.exit(1);
+}
