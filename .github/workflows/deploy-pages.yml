@@ -40,7 +40,7 @@ jobs:
               *) cp "$f" dist/ ;;
             esac
           done
-      - name: Copy よか旅すごろく九州 (standalone static site)
+      - name: Copy Q-TRIP 九州よりみちダイス (yokatabi/, standalone static site)
         # yokatabi/ はビルド不要の静的サイト。開発用の tools/ と CLAUDE.md は公開しない
         run: |
           node yokatabi/tools/build-fallback.mjs --check

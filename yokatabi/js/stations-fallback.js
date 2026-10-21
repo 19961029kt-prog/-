@@ -4,7 +4,7 @@
 window.YOKATABI_FALLBACK_DATA = {
   "schemaVersion": 1,
   "meta": {
-    "title": "よか旅すごろく九州",
+    "title": "Q-TRIP 九州よりみちダイス",
     "subtitle": "サイコロ片手に巡る、ローカル美食と秘湯の旅",
     "viewBox": [
       0,
@@ -15,7 +15,8 @@ window.YOKATABI_FALLBACK_DATA = {
     "startStationId": "hakata",
     "currencyUnit": "万円",
     "shareHashtags": [
-      "よか旅すごろく九州",
+      "九州よりみちダイス",
+      "QTRIP",
       "九州旅"
     ],
     "ranks": [

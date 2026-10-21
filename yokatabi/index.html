@@ -3,14 +3,54 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>よか旅すごろく九州</title>
-  <meta name="description" content="サイコロ片手に巡る、ローカル美食と秘湯の旅。九州の路線図すごろくで、駅ごとの現地情報・名産品・宿を発見しよう。">
-  <meta property="og:title" content="よか旅すごろく九州 〜サイコロ片手に巡る、ローカル美食と秘湯の旅〜">
+  <!-- 検索・共有用の情報。公開URLを変えるときは、このブロックの URL（canonical・og:url・og:image・JSON-LD）をまとめて書き換える -->
+  <title>Q-TRIP 九州よりみちダイス｜サイコロで巡る九州のローカル美食と秘湯の旅</title>
+  <meta name="description" content="Q-TRIP（九州よりみちダイス）は、九州の路線図をすごろく盤にした無料のブラウザ旅ゲーム。サイコロを振って駅をめぐり、各駅の現地調査メモ・名産品・温泉宿を見つけよう。スマホでもPCでも遊べます。">
+  <link rel="canonical" href="https://19961029kt-prog.github.io/-/yokatabi/">
+  <meta name="application-name" content="Q-TRIP 九州よりみちダイス">
+  <meta name="apple-mobile-web-app-title" content="Q-TRIP">
+  <meta property="og:site_name" content="Q-TRIP 九州よりみちダイス">
+  <meta property="og:title" content="Q-TRIP 九州よりみちダイス 〜サイコロ片手に巡る、ローカル美食と秘湯の旅〜">
   <meta property="og:description" content="九州の路線図すごろくで、名産品物件・湯けむり物件を買収して王国を築こう。">
   <meta property="og:type" content="website">
-  <meta name="twitter:card" content="summary">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:url" content="https://19961029kt-prog.github.io/-/yokatabi/">
+  <meta property="og:image" content="https://19961029kt-prog.github.io/-/yokatabi/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Q-TRIP 九州よりみちダイス：九州の絵地図のすごろく盤">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="theme-color" content="#fbf6ec">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎲</text></svg>">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <!-- サイト名と表記ゆれ（検索で「Q-TRIP」「九州よりみちダイス」などの部分一致でも同じサイトだとわかるように） -->
+  <script type="application/ld+json">
+  [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Q-TRIP 九州よりみちダイス",
+      "alternateName": ["Q-TRIP", "QTRIP", "九州よりみちダイス", "よりみちダイス", "キュートリップ"],
+      "url": "https://19961029kt-prog.github.io/-/yokatabi/",
+      "inLanguage": "ja"
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Q-TRIP 九州よりみちダイス",
+      "alternateName": ["Q-TRIP", "九州よりみちダイス"],
+      "url": "https://19961029kt-prog.github.io/-/yokatabi/",
+      "image": "https://19961029kt-prog.github.io/-/yokatabi/og.jpg",
+      "description": "九州の路線図をすごろく盤にした無料のブラウザ旅ゲーム。サイコロを振って駅をめぐり、現地調査メモ・名産品・温泉宿を見つける。",
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Web",
+      "inLanguage": "ja",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" }
+    }
+  ]
+  </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,7 +67,7 @@
       <div class="flex items-center gap-2 mr-auto min-w-0">
         <span class="logo-die" aria-hidden="true">🎲</span>
         <div class="min-w-0">
-          <h1 class="logo-title">よか旅すごろく<span>九州</span></h1>
+          <h1 class="logo-title"><span class="logo-brand">Q-TRIP</span> <span><b>九州</b>よりみちダイス</span></h1>
           <p class="logo-sub">サイコロ片手に巡る、ローカル美食と秘湯の旅</p>
         </div>
       </div>
@@ -132,6 +172,7 @@
         <div class="panel how">
           <p class="card-kicker"><span>あそびかた</span></p>
           <h3 class="font-bold mb-2">あそびかた</h3>
+          <p class="text-sm t-dim mb-2"><b>Q-TRIP 九州よりみちダイス</b>は、九州の路線図をすごろく盤にした旅のゲーム。よりみちしながら、駅ごとの名物と秘湯に出会えます。</p>
           <ol class="text-sm t-dim space-y-1 list-decimal pl-5">
             <li>サイコロを振るか、地図の駅をタップして🚂で移動。</li>
             <li>到着すると<b>物件カード</b>が開き、現地調査メモ・名産品・宿がわかる。</li>
@@ -173,7 +214,7 @@
 
   <footer class="site-footer">
     <div class="max-w-6xl mx-auto px-4 py-6 text-xs space-y-1">
-      <p>「よか旅すごろく九州」はオリジナルの企画・世界観で制作した非公式の旅メディアです。既存のゲーム作品・鉄道事業者とは関係ありません。</p>
+      <p>「Q-TRIP 九州よりみちダイス」はオリジナルの企画・世界観で制作した非公式の旅メディアです。既存のゲーム作品・鉄道事業者とは関係ありません。</p>
       <p>地図の海岸線・県境・線路・駅の位置は、実際の地理データから作っています（屋久島は縮尺そのままで位置をずらして表示。バス・航路の線は経路のイメージ）。黒川温泉・高千穂・屋久島は旅のマスとして「駅」としています。掲載情報はプロトタイプ用で、最新の営業・運行状況は各公式情報をご確認ください。</p>
       <p>地図の出典：<span id="geo-source">国土数値情報「行政区域（N03）」（国土交通省）を加工／線路：国土数値情報「鉄道（N02）」を加工した station_database／駅の位置：station_database（CC BY 4.0、駅データ.jp 由来）</span></p>
       <p>【PR】物件カード内の購入・予約ボタンはアフィリエイト（広告）リンクを含みます。<span id="data-source" class="opacity-60"></span></p>

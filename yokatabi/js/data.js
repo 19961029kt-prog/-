@@ -45,7 +45,7 @@
       return index(await res.json(), 'stations.json');
     } catch (e) {
       if (window.YOKATABI_FALLBACK_DATA) {
-        console.info('[よか旅] stations.json を読めなかったため内蔵データで起動します:', e.message);
+        console.info('[Q-TRIP] stations.json を読めなかったため内蔵データで起動します:', e.message);
         return index(window.YOKATABI_FALLBACK_DATA, 'fallback');
       }
       throw e;

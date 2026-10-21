@@ -1,4 +1,4 @@
-/* よか旅すごろく九州 — デザインシステム「ほっこり旅の絵地図」（Tailwind CDN と併用）
+/* Q-TRIP 九州よりみちダイス — デザインシステム「ほっこり旅の絵地図」（Tailwind CDN と併用）
  *
  *  - 生成りの和紙の上に、水彩の海と、実際の形どおりの九州を貼った絵地図
  *  - 色は「お日さまの温かさ」でそろえる：柿色＝押せる・進む、山吹＝買収・資産、浅葱＝海・新幹線・航路、県の色＝駅
@@ -100,8 +100,14 @@ body.is-busy .station { cursor: progress; }
   animation: die-bob 3.4s ease-in-out infinite;
 }
 @keyframes die-bob { 50% { transform: rotate(-10deg) translateY(-2px); } }
-.logo-title { font-family: var(--font-display); font-weight: 500; font-size: 21px; line-height: 1.15; letter-spacing: .04em; white-space: nowrap; color: var(--ink); }
-.logo-title span { margin-left: 4px; color: var(--kaki); }
+.logo-title { display: flex; align-items: center; gap: 8px; font-family: var(--font-display); font-weight: 500; font-size: 21px; line-height: 1.15; letter-spacing: .04em; white-space: nowrap; color: var(--ink); }
+.logo-title b { font-weight: inherit; color: var(--kaki); }
+/* 「Q-TRIP」は荷札のような柿色の札。英字はこの名前だけなので、見出しの書体ではなく丸ゴシックの小さな札にする */
+.logo-brand {
+  flex: none; padding: .2em .55em .16em; border-radius: .42em; transform: rotate(-3deg);
+  font-family: 'Zen Maru Gothic', sans-serif; font-weight: 900; font-size: .6em; letter-spacing: .1em; color: #fffdf8;
+  background: var(--kaki); box-shadow: inset 0 -2px 0 rgba(120, 50, 20, .22), 0 1px 2px rgba(120, 70, 30, .2);
+}
 .logo-sub { font-size: 11px; color: var(--ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: .06em; }
 
 .stats .stat {
@@ -682,7 +688,8 @@ body.is-busy .station { cursor: progress; }
   .station-hit { r: 26; }
   .sea-label { font-size: 14px; }
   .sea-label-sm { font-size: 11px; }
-  .logo-title { font-size: 16px; }
+  .logo-title { font-size: 16px; flex-direction: column; align-items: flex-start; gap: 2px; }
+  .logo-brand { font-size: 10px; padding: 2px 7px 1px; border-radius: 6px; transform: rotate(-2deg); }
   .stats dd b { font-size: 15px; }
   .modal-title { font-size: 30px; }
   .modal-sec, .journey { padding-left: 14px; padding-right: 14px; }
@@ -1048,6 +1055,7 @@ body.is-busy .station { cursor: progress; }
   /* ヘッダー：ロゴ・称号・音のボタンを1行に収める */
   .site-header > div:first-child { padding-left: 12px; padding-right: 12px; column-gap: 6px; }
   .logo-title { font-size: 14px; }
+  .logo-brand { font-size: 9px; padding: 2px 6px 1px; border-radius: 5px; }
   .logo-die { font-size: 18px; width: 30px; height: 30px; border-radius: 10px; }
   .rank-chip { padding: 2px 7px 2px 2px; }
   .rank-chip-bar { display: none; }
