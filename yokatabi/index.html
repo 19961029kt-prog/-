@@ -122,6 +122,7 @@
           <h2 class="atlas-title">九州よりみち路線図</h2>
           <p class="atlas-sub">海岸線・山地・線路・駅は、実際の地図データから描いています</p>
         </div>
+        <div id="spotlight-bar" class="spotlight-bar" aria-live="polite"></div>
         <div id="scenery" class="scenery" aria-label="ご当地の車窓"></div>
         <div class="map-board">
           <svg id="map" class="map-svg" role="group" aria-label="九州すごろく路線図。よりみちダイスを振ると列車が線路を1駅ずつ走ります。駅をタップすると望遠鏡でのぞけます"></svg>
@@ -151,12 +152,13 @@
         <div class="panel dice-panel">
           <p class="card-kicker"><span>よりみちダイス</span></p>
           <div class="dice-row">
-            <div id="die" class="die3d" aria-hidden="true"></div>
+            <div id="die" class="dice-tray" aria-hidden="true"></div>
             <div class="dice-out">
               <p class="dice-out-label">出た目</p>
               <p class="dice-result"><span id="dice-result">–</span></p>
             </div>
           </div>
+          <div id="ticket-deck" class="ticket-deck" aria-label="特別切符の手札"></div>
           <button id="btn-dice" class="dice-btn"><span aria-hidden="true">🎲</span> よりみちダイスを振る</button>
           <div id="ticket-bar" class="ticket-bar"></div>
           <p id="guide" class="guide" aria-live="polite">読み込み中…</p>
@@ -195,6 +197,7 @@
             <li>止まった駅で<b>寄り道手帖</b>と現地スナップが解放され、車窓とまちの寄り道ノート・名産品・宿がわかります。</li>
             <li>手帖のボタンからお取り寄せ・宿の予約をしたら、その日のうちに<b>注文完了画面のスクショ</b>でオーナー権に立候補。ショップ・注文日・金額の3点を読み取って確かめます。</li>
             <li>駅ごとの<b>累計購入金額の1位がトップオーナー</b>。追う側は<b>下克上ボーナス×1.3</b>、上位3名は<b>共同株主</b>として配当を受け取れます。</li>
+            <li>いつも1駅が<b>🎯 スポットライト駅</b>。ピタリと止まると一番乗りのご祝儀とレア切符。<b>特別切符</b>でダイスを2〜4個同時に振ったり、出目を選んだりできます。ダイス7回ごとに<b>週末の大精算まつり</b>、ラインの全駅で株主になると<b>ライン制覇</b>で配当2倍。</li>
             <li>配当や<b>旅の便り</b>（写真のポストカード）・いいね・手帖カードのシェアで貯まった<b>クラフト資金</b>（ゲームの中だけのもの）で、列車の改造やアバターの着せ替えができます。</li>
           </ol>
         </div>
@@ -237,6 +240,7 @@
     <!-- 車両クラフト＆アバター -->
     <section data-view="garage" hidden>
       <div id="garage-root" class="garage"></div>
+      <div id="ticket-shop" class="ticket-shop"></div>
     </section>
 
     <!-- 旅の便り＆マイフォト地図 -->
@@ -272,6 +276,9 @@
   <!-- 旅の軌跡・手帖シェアカード -->
   <div id="sharecard" class="sharecard" hidden></div>
 
+  <!-- 旅のゲームの演出（ピタ止め・ルーレット・精算・サプライズ・ライン制覇・王座奪還） -->
+  <div id="game-layer" class="game-layer" hidden></div>
+
   <!-- 称号ランクアップのカットイン -->
   <div id="cutin" class="cutin" hidden></div>
 
@@ -294,6 +301,7 @@
   <script src="js/scenery.js"></script>
   <script src="js/postcards.js"></script>
   <script src="js/sharecard.js"></script>
+  <script src="js/game.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

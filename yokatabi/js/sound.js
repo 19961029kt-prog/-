@@ -181,7 +181,7 @@
     g.connect(sendGain(0.25));
   }
 
-  const play = (fn) => () => ensure() && fn();
+  const play = (fn) => (...args) => ensure() && fn(...args); // 強さ・高さなどの引数もそのまま渡す
 
   const Sound = {
     setMuted(v) {
@@ -288,6 +288,61 @@
       [48, 55, 60, 64, 67, 72].forEach((m, i) => pluck(m, 0.66 + i * 0.02, { gain: 0.13, dur: 2 }));
       [60, 64, 67, 72].forEach((m) => warmPad(m, 0.66, 2.2, 0.06));
       [79, 84, 88, 91].forEach((m, i) => bell(m, 1.1 + i * 0.1, { gain: 0.1, dur: 1.6 }));
+    }),
+
+    // ---- 旅のゲーム（スポットライト駅・精算・サプライズ・王座奪還） ----
+    // ピタ止めのご祝儀：小太鼓のロール → 金管風の和音を2回 → オルゴールの上昇と、ちりんの鈴
+    jackpot: play(() => {
+      for (let i = 0; i < 18; i++) hit(i * 0.04, { freq: 1700, q: 1.2, gain: 0.05 + i * 0.007, dur: 0.04 });
+      hit(0.74, { type: 'lowpass', freq: 150, q: 1, gain: 0.7, dur: 0.35 });
+      [[48, 55, 60, 64, 67], [53, 57, 60, 65, 69], [55, 59, 62, 67, 71], [60, 64, 67, 72, 76]].forEach((ch, k) => {
+        const at = 0.74 + k * 0.32;
+        ch.forEach((m) => warmPad(m, at, k === 3 ? 2.4 : 0.5, 0.075));
+        ch.forEach((m, i) => pluck(m, at + i * 0.018, { gain: 0.1, dur: 1.4 }));
+      });
+      [84, 88, 91, 96, 100].forEach((m, i) => bell(m, 1.8 + i * 0.08, { gain: 0.1, dur: 1.6 }));
+    }),
+    // 精算のドラムロール（だんだん強く）
+    drumroll: play(() => {
+      for (let i = 0; i < 26; i++) hit(i * 0.038, { freq: 1600 + (i % 2) * 200, q: 1.1, gain: 0.035 + i * 0.004, dur: 0.04 });
+    }),
+    // 「チャリン！」：金の鈴を2つ重ねる。pitch で少しずつ高く
+    charin: play((pitch = 0) => {
+      bell(91 + pitch, 0, { gain: 0.09, dur: 0.5, send: 0.3 });
+      bell(98 + pitch, 0.04, { gain: 0.07, dur: 0.6, send: 0.3 });
+      hit(0, { freq: 6000, q: 6, gain: 0.05, dur: 0.02 });
+    }),
+    // 振り込みの「ドカン」：低い太鼓と和音
+    dokan: play(() => {
+      note(90, 0, 0.5, { type: 'sine', gain: 0.65, attack: 0.002, release: 0.14, slideTo: 40 });
+      hit(0, { type: 'lowpass', freq: 400, q: 0.8, gain: 0.55, dur: 0.2 });
+      [60, 64, 67, 72].forEach((m, i) => pluck(m, 0.05 + i * 0.02, { gain: 0.12, dur: 1.6 }));
+      [84, 88, 91].forEach((m, i) => bell(m, 0.2 + i * 0.07, { gain: 0.1, dur: 1.2 }));
+    }),
+    // ルーレットの「カチ」
+    tick: play(() => {
+      hit(0, { freq: 2600, q: 5, gain: 0.12, dur: 0.02 });
+    }),
+    // サプライズ：明るい3音
+    surprise: play(() => {
+      [76, 79, 84].forEach((m, i) => bell(m, i * 0.09, { gain: 0.12, dur: 1 }));
+      [64, 67, 72].forEach((m, i) => pluck(m, i * 0.05, { gain: 0.09, dur: 1 }));
+    }),
+    // ハプニング：とぼけた下がる2音
+    oops: play(() => {
+      pluck(67, 0, { gain: 0.13, dur: 0.6 });
+      pluck(62, 0.18, { gain: 0.13, dur: 0.9 });
+    }),
+    // 王冠が砕ける「パリン」と稲妻：高いノイズのきらめき＋ガラスの破片
+    shatter: play(() => {
+      hit(0, { type: 'highpass', freq: 3000, q: 0.7, gain: 0.35, dur: 0.25 });
+      for (let i = 0; i < 7; i++) note(2400 + Math.random() * 2400, 0.02 + i * 0.035, 0.18, { type: 'triangle', gain: 0.04, attack: 0.001, release: 0.04 });
+      hit(0, { type: 'lowpass', freq: 220, q: 1, gain: 0.45, dur: 0.4 });
+    }),
+    // 自分の王冠が駅に刺さる「ドスン」
+    thud: play(() => {
+      note(70, 0, 0.45, { type: 'sine', gain: 0.7, attack: 0.002, release: 0.12, slideTo: 34 });
+      hit(0, { type: 'lowpass', freq: 300, q: 0.8, gain: 0.6, dur: 0.22 });
     }),
   };
 

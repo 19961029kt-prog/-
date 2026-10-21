@@ -4,7 +4,8 @@
 //   ・わたしの九州フォトマップ：投函した駅の上に、写真の小さなポラロイドのピンが浮かぶ。タップで駅に金の波紋と拡大ポストカード
 //   ・旅人たちのポストカード：ゲームの中の架空の旅人の便り（stations.json の postcards。絵はイラスト）。
 //     ダイスでその駅に止まったことがあるときだけ見られて、「素敵ね」を押すと応援ボーナス +10万円
-//   ・自分のポストカードには、旅人たちから時間とともに「いいね」が届く（1つ +50万円、1枚につき最大20）
+//   ・自分のポストカードには、旅人たちから時間とともに「いいね」が届く（1つ +50万円、1枚につき最大20）。
+//     振り込みは、ダイス7回ごとの「週末の大精算まつり」（js/game.js）でまとめて
 // 写真は端末の中だけ（IndexedDB。js/receipts.js の保存を使う）。どこにも送らない。
 (function () {
   'use strict';
@@ -41,9 +42,11 @@
     return {
       post: own.length * C().postBonus,
       given: Object.keys(YT.Store.get().liked || {}).filter((id) => seedIds.has(id)).length * C().likeGivenBonus,
-      received: own.reduce((n, c) => n + likesOf(c), 0) * C().likeReceivedBonus,
+      received: Math.min(totalLikes(), YT.Store.get().likesBanked || 0) * C().likeReceivedBonus,
     };
   }
+  // 届いたいいねの合計（まだ振り込まれていないものも含む）
+  const totalLikes = () => Object.values(mine()).reduce((n, c) => n + likesOf(c), 0);
 
   // ---------- 絵：ポストカードのイラスト（架空の旅人の便り用）と風景印 ----------
   function illust(scene, color, seed) {
@@ -270,6 +273,7 @@
         ${polaroid(mineCard(id, c), 'big')}
         <div class="pcv-stats">
           <p><b>❤️ ${n}</b> いいね <span class="pcv-earn">クリエイター評価配当 ${api.yen(n * C().likeReceivedBonus)}</span></p>
+          <p class="pcv-likers">配当は、ダイス7回ごとの「週末の大精算まつり」でまとめて振り込まれます</p>
           <p class="pcv-likers">${likersOf(c, Math.min(n, 5)).map((r) => `${esc(r.icon)} ${esc(r.name)}`).join('・')}${n > 5 ? ` ほか${n - 5}人` : ''}がいいねしました</p>
           <p class="pcv-actions"><button class="ghost-btn" data-letters-post="${esc(id)}">🔁 写真を差し替える</button><button class="ghost-btn" data-pcv-close>閉じる</button></p>
         </div>
@@ -382,7 +386,7 @@
         YT.Store.markPostcardSeen(id, n);
       }
     }
-    if (fresh) setTimeout(() => api.toast(`❤️ あなたのポストカードに、旅人たちから${fresh}つのいいね！ クリエイター評価配当 +${api.yen(fresh * C().likeReceivedBonus)}`, 'toast-gold'), 900);
+    if (fresh) setTimeout(() => api.toast(`❤️ あなたのポストカードに、旅人たちから${fresh}つのいいね！ クリエイター評価配当 ${api.yen(fresh * C().likeReceivedBonus)}は、次の週末の大精算で振り込まれます`, 'toast-gold'), 900);
   }
 
   function onClick(e) {
@@ -473,6 +477,7 @@
     render,
     earnings,
     likesOf,
+    totalLikes,
     stationSnapsHtml,
     loadImages,
     closeViewer,

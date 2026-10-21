@@ -1432,3 +1432,186 @@ body.modal-open { overflow: hidden; }
 .lt-map-body .lt-mine { margin-top: 0; align-content: start; }
 @media (max-width: 760px) { .lt-map-body { grid-template-columns: minmax(0, 1fr); } }
 .check { text-align: left; }
+
+/* =====================================================================
+ * 旅のゲーム：スポットライト駅・特別切符・ライン制覇・週末の大精算・サプライズ・王座奪還（js/game.js）
+ * ===================================================================== */
+
+/* ---------- ダイスのトレイ（1〜4個） ---------- */
+.dice-tray { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0 4px; flex: none; max-width: 210px; }
+.dice-tray[data-count="2"] .die3d { --size: 58px; --half: 29px; }
+.dice-tray[data-count="3"] .die3d, .dice-tray[data-count="4"] .die3d { --size: 46px; --half: 23px; }
+.dice-tray[data-count="3"] .die3d .die-bounce, .dice-tray[data-count="4"] .die3d .die-bounce { left: 4px; }
+.dice-badge.is-multi { padding: 6px 18px; border-radius: 18px; text-align: center; line-height: 1.3; }
+.dice-badge small { display: block; font-family: var(--font-ui); font-size: 11px; font-weight: 700; letter-spacing: .04em; opacity: .9; }
+.db-sum { font-size: 17px; }
+.dice-badge.is-multi b { font-size: 40px; color: #fff3cf; text-shadow: 0 2px 0 var(--terracotta-deep); }
+.db-go { display: block; font-size: 13px; letter-spacing: .1em; }
+
+/* ---------- 特別切符の手札 ---------- */
+.ticket-deck { margin: -4px 0 10px; }
+.td-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; font-weight: 700; color: var(--ink-2); }
+.td-head small { color: var(--ink-3); font-weight: 500; }
+.td-cards { display: flex; gap: 6px; overflow-x: auto; padding: 4px 2px 6px; scrollbar-width: thin; }
+.td-empty { font-size: 11.5px; color: var(--ink-3); line-height: 1.6; }
+.td-armed, .td-cruise { font-size: 11.5px; font-weight: 700; color: var(--terracotta-deep); }
+.td-cruise { color: var(--mustard-deep); }
+.tk-card {
+  position: relative; display: grid; justify-items: center; align-content: center; gap: 0; flex: none; width: 96px; min-height: 82px; padding: 8px 6px 7px;
+  border-radius: 10px; text-align: center; cursor: default; color: var(--ink);
+  background: linear-gradient(160deg, #fffdf6, #f5ead2); box-shadow: inset 0 0 0 1.5px #d8c39a, 0 2px 4px rgba(90, 64, 40, .14);
+}
+.tk-card::before { content: ''; position: absolute; left: 6px; right: 6px; top: 50%; border-top: 1px dashed rgba(168, 119, 42, .35); }
+.tk-card[data-deck] { cursor: pointer; transition: transform .15s, box-shadow .15s; }
+.tk-card[data-deck]:hover { transform: translateY(-2px); }
+.tk-card.is-armed { transform: translateY(-4px); box-shadow: inset 0 0 0 2px var(--terracotta), 0 0 0 3px rgba(217, 107, 67, .25), 0 6px 12px rgba(185, 84, 47, .25); }
+.tk-icon { position: relative; font-size: 22px; line-height: 1.2; }
+.tk-name { position: relative; font-family: var(--font-mincho); font-weight: 800; font-size: 11px; line-height: 1.35; }
+.tk-dice { position: relative; font-size: 10px; font-weight: 700; color: var(--mustard-deep); }
+.tk-cruise4, .tk-pinpoint { background: linear-gradient(160deg, #fff8df, #f1d891); box-shadow: inset 0 0 0 1.5px #c99a3a, 0 2px 6px rgba(168, 119, 42, .3); }
+.tk-card.is-small { width: 88px; min-height: 76px; }
+
+/* 切符売り場（工房） */
+.ticket-shop { margin-top: 20px; }
+.shop-title { font-family: var(--font-mincho); font-size: 20px; }
+.shop-lead { font-size: 13px; color: var(--ink-2); }
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; margin-top: 12px; }
+.shop-item { display: grid; justify-items: center; gap: 6px; padding: 12px; border-radius: 14px; background: var(--paper-2); text-align: center; }
+.shop-desc { font-size: 12px; color: var(--ink-2); line-height: 1.6; }
+
+/* ---------- スポットライト駅 ---------- */
+.spotlight-bar {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; margin-bottom: 8px; padding: 8px 14px; border-radius: 14px;
+  background: linear-gradient(90deg, #fff6df, #fdf0d8); box-shadow: inset 0 0 0 1.5px #e7c983, var(--sh-1);
+}
+.sb-target { font-family: var(--font-mincho); font-weight: 700; font-size: 15px; }
+.sb-target b { color: var(--mustard-deep); }
+.sb-n { font-size: 22px; margin: 0 2px; color: var(--terracotta-deep) !important; }
+.sb-theme { font-size: 11.5px; font-weight: 700; color: var(--sage-deep); }
+.sb-hint { flex-basis: 100%; font-size: 11px; color: var(--ink-3); }
+.spot-beacon { fill: none; stroke: #e8b84a; stroke-width: 3; opacity: 0; animation: spot-beacon 2.4s ease-out infinite; animation-delay: calc(var(--i) * .8s); pointer-events: none; }
+@keyframes spot-beacon { 0% { r: 12; opacity: .95; } 100% { r: 40; opacity: 0; } }
+.spot-pennant { animation: spot-wave 2.2s ease-in-out infinite; transform-origin: 0 -24px; pointer-events: none; }
+@keyframes spot-wave { 50% { transform: skewY(-5deg); } }
+.spot-pole { stroke: #6e5d4f; stroke-width: 1.6; }
+.spot-cloth { fill: #d49a35; stroke: #8a5a14; stroke-width: .8; }
+.spot-text { font-family: var(--font-ui); font-weight: 900; font-size: 5.5px; fill: #fff; }
+.station.is-spotlight .station-ring { stroke: #e8b84a; stroke-width: 3; }
+
+/* ライン制覇の金の路線 */
+.gold-glow { fill: none; stroke: #f2c044; stroke-width: 13; stroke-linecap: round; opacity: .8; filter: drop-shadow(0 0 3px rgba(240, 193, 75, .8)); animation: gold-pulse 2.6s ease-in-out infinite; }
+.route:not(.is-gold) .gold-glow { display: none; }
+@keyframes gold-pulse { 50% { opacity: .5; } }
+
+/* 王座奪還：自分の王冠とアバターが駅にドスン */
+.crown-drop-body { animation: crown-drop .75s cubic-bezier(.55, 0, .9, .4) both; }
+@keyframes crown-drop { from { transform: translateY(-220px); opacity: 0; } 70% { opacity: 1; } to { transform: translateY(0); } }
+.crown-drop.is-landed .crown-drop-body { animation: crown-bounce .4s ease-out; }
+@keyframes crown-bounce { 30% { transform: translateY(4px) scale(1.08, .9); } }
+.crown-drop-disc { fill: #fffdf9; stroke: #d49a35; stroke-width: 3; }
+.crown-drop-av { width: 30px; height: 30px; border-radius: 50%; overflow: hidden; }
+.crown-drop-av svg { width: 100%; height: 100%; }
+.crown-drop-crown { fill: #f3d58c; stroke: #8a5a14; stroke-width: 1.4; stroke-linejoin: round; }
+.crown-drop-dust { fill: rgba(180, 150, 110, .4); opacity: 0; }
+.crown-drop.is-landed .crown-drop-dust { animation: dust 0.9s ease-out; }
+@keyframes dust { 0% { opacity: .8; transform: scale(.4); } 100% { opacity: 0; transform: scale(2); } }
+
+/* ---------- 演出のレイヤー ---------- */
+.game-layer { position: fixed; inset: 0; z-index: 85; display: grid; place-items: center; padding: 16px; background: rgba(35, 30, 25, .58); opacity: 0; transition: opacity .22s; overflow: hidden; }
+.game-layer.is-open { opacity: 1; }
+.gm-box {
+  position: relative; width: min(460px, 100%); max-height: calc(100vh - 32px); overflow: auto; padding: 24px 22px 20px; border-radius: 22px; text-align: center;
+  background: var(--ivory); box-shadow: 0 0 0 1px var(--line), var(--sh-3); animation: gm-in .45s cubic-bezier(.3, 1.5, .5, 1);
+}
+@keyframes gm-in { from { transform: scale(.7) translateY(20px); opacity: 0; } }
+.gm-small { width: min(400px, 100%); }
+.gm-gold { background: radial-gradient(circle at 50% 0%, #fff6d6, var(--ivory) 60%); box-shadow: 0 0 0 3px #e7c983, 0 0 0 6px rgba(255, 246, 214, .5), var(--sh-3); }
+.gm-oops { background: radial-gradient(circle at 50% 0%, #eef4ea, var(--ivory) 60%); }
+.gm-kicker { font-size: 12px; font-weight: 900; letter-spacing: .12em; color: var(--terracotta-deep); }
+.gm-title { font-family: var(--font-mincho); font-size: 24px; line-height: 1.45; margin: 6px 0 8px; }
+.gm-title small { display: block; font-size: 13px; color: var(--ink-3); }
+.gm-jackpot { font-size: 30px; color: #8a5a14; text-shadow: 0 2px 0 #fff3cf; animation: jackpot-zoom .9s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes jackpot-zoom { from { transform: scale(.3) rotate(-6deg); opacity: 0; } }
+.gm-msg { font-size: 13.5px; color: var(--ink-2); line-height: 1.85; }
+.gm-amount { font-family: var(--font-mincho); font-weight: 800; font-size: 38px; color: var(--mustard-deep); margin: 8px 0; font-variant-numeric: tabular-nums; }
+.gm-amount.is-minus { color: var(--ink-3); font-size: 26px; }
+.gm-ticket { display: grid; justify-items: center; gap: 4px; margin: 6px 0 12px; font-size: 12.5px; font-weight: 700; color: var(--sage-deep); }
+.gm-ticket .tk-card { animation: tk-flip .7s .5s cubic-bezier(.3, 1.5, .5, 1) both; }
+@keyframes tk-flip { from { transform: rotateY(90deg) scale(.6); opacity: 0; } }
+.gm-ticket.is-full { opacity: .5; }
+.gm-box .primary-btn { margin-top: 10px; }
+.gm-rain { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.gm-rain i { position: absolute; top: -20px; width: 9px; height: 14px; border-radius: 2px; animation: gm-fall 2.6s ease-in forwards; animation-delay: var(--d); opacity: 0; }
+@keyframes gm-fall { 0% { opacity: 1; transform: translate(0, 0) rotate(0); } 100% { opacity: .9; transform: translate(var(--x), 105vh) rotate(var(--r)); } }
+
+/* ルーレット */
+.gm-roulette { margin: 14px auto; width: min(300px, 100%); padding: 14px 10px; border-radius: 16px; background: var(--forest); box-shadow: inset 0 0 0 3px #d49a35, inset 0 0 0 6px rgba(250, 246, 240, .2); }
+.gm-roulette span { display: block; font-family: var(--font-mincho); font-weight: 800; font-size: 28px; color: var(--cream); }
+.gm-roulette span.is-tick { animation: roul-tick .12s ease-out; }
+@keyframes roul-tick { from { transform: translateY(-30%); opacity: .3; } }
+.gm-roulette span.is-final { color: #f3d58c; animation: jackpot-zoom .6s cubic-bezier(.3, 1.6, .5, 1); }
+
+/* ピタリ指定切符・ワープ先 */
+.gm-picks { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin: 14px 0 8px; }
+.gm-pick { aspect-ratio: 1; border-radius: 12px; font-family: var(--font-mincho); font-weight: 800; font-size: 24px; background: linear-gradient(160deg, #f7e7c7, #e9c99a); box-shadow: inset 0 0 0 1.5px #c9a06a, 0 3px 0 #b5893f; }
+.gm-pick:hover { filter: brightness(1.05); transform: translateY(-1px); }
+.gm-pick.is-hint { box-shadow: inset 0 0 0 2px var(--terracotta), 0 0 0 3px rgba(217, 107, 67, .3), 0 3px 0 #b5893f; }
+.gm-warps { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 12px 0; }
+.gm-warp { padding: 8px 14px; border-radius: 999px; font-weight: 700; font-size: 13.5px; background: var(--terracotta-soft); color: var(--terracotta-deep); box-shadow: inset 0 0 0 1px #efc2b0; }
+
+/* 週末の大精算まつり */
+.gm-settle { width: min(500px, 100%); }
+.gm-ledger { display: grid; gap: 4px; margin: 12px 0 6px; text-align: left; }
+.gl-sec { font-size: 11.5px; font-weight: 900; color: var(--sage-deep); margin-top: 6px; }
+.gl-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 10px; background: var(--paper-2); opacity: .45; transition: opacity .3s, background .3s; }
+.gl-row.is-on, .gl-empty { opacity: 1; }
+.gl-row.is-on { background: var(--mustard-soft); }
+.gl-row span { display: grid; font-family: var(--font-mincho); font-weight: 700; font-size: 14px; line-height: 1.4; }
+.gl-row small { font-family: var(--font-ui); font-size: 10.5px; font-weight: 500; color: var(--ink-3); }
+.gl-row b { font-family: var(--font-mincho); font-size: 17px; color: var(--mustard-deep); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.gm-total { font-size: 14px; font-weight: 700; margin-top: 10px; }
+.gm-total b { font-family: var(--font-mincho); font-size: 32px; color: var(--mustard-deep); font-variant-numeric: tabular-nums; }
+.gm-total b.is-paid { animation: paid .5s cubic-bezier(.3, 1.8, .5, 1); color: #8a5a14; }
+@keyframes paid { 40% { transform: scale(1.25); } }
+
+/* ライン制覇のスタンプ */
+.gm-stamp { width: 170px; margin: 6px auto 0; animation: ls-slam .5s cubic-bezier(.5, 0, .7, 1.5) both; }
+@keyframes ls-slam { from { transform: scale(2.4) rotate(-18deg); opacity: 0; } 70% { opacity: 1; } to { transform: scale(1) rotate(-8deg); } }
+.ls-ring { fill: rgba(255, 246, 214, .6); stroke: #b8862f; stroke-width: 6; }
+.ls-thin { fill: none; stroke-width: 2; }
+.ls-crown { font-size: 40px; }
+.ls-big { font-family: var(--font-mincho); font-weight: 800; font-size: 30px; fill: #8a5a14; letter-spacing: .1em; }
+.ls-small { font-family: var(--font-ui); font-weight: 900; font-size: 15px; fill: var(--vermilion); }
+
+/* 王座奪還：前のオーナーの王冠が稲妻でパリン */
+.gm-steal { background: radial-gradient(circle at 50% 30%, #fff3d8, var(--ivory) 65%); }
+.ts-stage { position: relative; height: 150px; margin: 8px 0; }
+.ts-prev { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); display: grid; justify-items: center; gap: 2px; font-size: 12px; font-weight: 700; color: var(--ink-2); }
+.ts-av { width: 64px; height: 64px; border-radius: 50%; overflow: hidden; background: var(--paper-2); box-shadow: 0 0 0 3px #d49a35; }
+.ts-av svg { width: 100%; height: 100%; }
+.ts-crown { position: absolute; left: 50%; top: 6px; width: 84px; height: 56px; transform: translateX(-50%); }
+.ts-half { position: absolute; inset: 0; overflow: hidden; transition: transform .7s cubic-bezier(.3, .6, .4, 1), opacity .7s; }
+.ts-half svg { width: 84px; height: 56px; }
+.ts-l { clip-path: polygon(0 0, 54% 0, 44% 40%, 56% 60%, 46% 100%, 0 100%); }
+.ts-r { clip-path: polygon(54% 0, 100% 0, 100% 100%, 46% 100%, 56% 60%, 44% 40%); }
+.ts-bolt { position: absolute; left: 50%; top: -10px; width: 44px; height: 110px; transform: translateX(-50%) scale(.4); opacity: 0; fill: #f6d04d; stroke: #b8862f; stroke-width: 2; filter: drop-shadow(0 0 8px rgba(246, 208, 77, .9)); }
+.is-break .ts-bolt { animation: bolt .5s ease-out forwards; }
+@keyframes bolt { 0% { opacity: 0; transform: translateX(-50%) scale(.4); } 30% { opacity: 1; transform: translateX(-50%) scale(1.1); } 100% { opacity: 0; transform: translateX(-50%) scale(1); } }
+.is-break .ts-l { transform: translate(-46px, 70px) rotate(-38deg); opacity: 0; transition-delay: .15s; }
+.is-break .ts-r { transform: translate(46px, 76px) rotate(42deg); opacity: 0; transition-delay: .15s; }
+.is-break .ts-av { filter: grayscale(.8); transition: filter .6s .2s; }
+
+@media (max-width: 639px) {
+  .spotlight-bar { padding: 7px 12px; }
+  .sb-target { font-size: 13.5px; }
+  .sb-n { font-size: 19px; }
+  .gm-title { font-size: 21px; }
+  .gm-jackpot { font-size: 25px; }
+  .gm-amount { font-size: 32px; }
+  .gm-picks { gap: 6px; }
+  .dice-tray { max-width: 160px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spot-beacon, .spot-pennant, .gold-glow, .gm-rain { animation: none !important; }
+  .gm-rain { display: none; }
+}

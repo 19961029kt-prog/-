@@ -3,7 +3,7 @@
 // 立候補（スクショの読み取り）は owner.js、順位の計算は ownership.js、工房は garage.js。
 (function () {
   'use strict';
-  const { Data, Store, Sound, Map, Trip, Craft, Dice, Owner, Garage, Ownership, Receipts, Scenery, Postcards, ShareCard } = window.YT;
+  const { Data, Store, Sound, Map, Trip, Craft, Dice, Owner, Garage, Ownership, Receipts, Scenery, Postcards, ShareCard, Game } = window.YT;
 
   let D = null;
   let busy = false; // 列車走行中・ダイス回転中
@@ -100,6 +100,17 @@
     if (!$('[data-view="collection"]').hidden) renderCollection();
     if (!$('[data-view="garage"]').hidden) Garage.render();
     if (!$('[data-view="letters"]').hidden) Postcards.render();
+    Game.render();
+    renderDiceHint();
+  }
+  // ダイスのボタンの字：特別切符を使うときは、何個振るかを書く
+  function renderDiceHint() {
+    const plan = Game.nextRoll();
+    $('#btn-dice').innerHTML = plan.pick
+      ? '<span aria-hidden="true">🎯</span> ピタリ指定切符で出目を選ぶ'
+      : plan.count > 1
+        ? `<span aria-hidden="true">🎲</span> ダイス${plan.count}個を同時に振る`
+        : '<span aria-hidden="true">🎲</span> よりみちダイスを振る';
   }
 
   // ---------- 称号（トップオーナーの駅の評価額の合計でランクアップ） ----------
@@ -423,7 +434,7 @@
     arrive(at, n - left, left > 0);
   }
 
-  function arrive(id, hops, deadEnd) {
+  function landAt(id) {
     const s = D.byId[id];
     const first = Store.visit(id);
     Sound.arrive();
@@ -435,8 +446,25 @@
         toast(`🧭 ${s.name}駅に初めて到着！ よりみち発見ボーナス ＋${yen(D.meta.craft.discoveryBonus)}（クラフト資金）`, 'toast-gold');
       }, 500);
     }
+  }
+  // 止まった駅：スポットライト駅のピタ止め・切符・サプライズ・週末の精算・ライン制覇（js/game.js）を順に見せてから、寄り道手帖をひらく
+  async function arrive(id, hops, deadEnd) {
+    const s = D.byId[id];
+    setBusy(true);
+    landAt(id);
     setGuide(`<b>${esc(s.name)}駅</b>に到着（${hops}マス${deadEnd ? '・線路の果てで止まりました' : ''}）。寄り道手帖と現地スナップが解放されました。`);
-    setTimeout(() => openModal(id), 500);
+    await new Promise((r) => setTimeout(r, 500));
+    const at = await Game.afterArrival(id);
+    setBusy(false);
+    renderAll();
+    openModal(at);
+  }
+  // サプライズのワープ：列車を別の駅へ（その駅に止まったことにする）
+  async function warpTo(id) {
+    Map.placeTrain(id);
+    landAt(id);
+    setGuide(`🌋 上昇気流に乗って、<b>${esc(D.byId[id].name)}駅</b>へひとっ飛び！`);
+    await new Promise((r) => setTimeout(r, 900));
   }
 
   // 駅をタップ：分かれ道ならその方面へ。いまいる駅なら手帖、それ以外は望遠鏡でのぞくだけ（移動しない）
@@ -491,28 +519,46 @@
   }
 
   // ---------- よりみちダイス ----------
+  // 特別切符（js/game.js）を使うと、2〜4個を同時に振る。ピタリ指定切符は出目を選ぶ
   async function rollDice() {
     if (busy || choice) return;
     Sound.unlock();
     hideScope();
+    const plan = Game.nextRoll();
+    let values;
+    if (plan.pick) {
+      const v = await Game.pickNumber();
+      if (!v) return; // やめた：切符は使わない
+      plan.consume();
+      values = [v];
+    } else {
+      plan.consume();
+      values = Array.from({ length: plan.count }, () => 1 + Math.floor(Math.random() * 6));
+    }
     busy = true;
     $('#btn-dice').disabled = true;
     $('#dice-result').textContent = '…';
     Sound.diceShake();
-    const n = 1 + Math.floor(Math.random() * 6);
-    await Dice.roll(n, (s) => Sound.diceHit(s));
+    if (values.length > 1) {
+      Sound.diceShake();
+      await Dice.rollMany(values, (s) => Sound.diceHit(s));
+    } else await Dice.roll(values[0], (s) => Sound.diceHit(s));
     Sound.diceSettle();
     Store.countRoll();
     busy = false;
-    confetti($('#dice-confetti'), 24);
-    showResult(n);
+    confetti($('#dice-confetti'), 24 + values.length * 10);
+    Game.render();
+    showResult(values.reduce((a, b) => a + b, 0), values, plan.label);
   }
 
   // 出目 n を見せる。よりみち切符が残っていれば、すぐには出発せず ±1 を選べるようにする
-  function showResult(n) {
+  function showResult(n, values = [n], label = '') {
     $('#dice-result').textContent = `${n}`;
     const badge = $('#dice-badge');
-    badge.innerHTML = `<b>${n}</b>マスすすむ！`;
+    badge.classList.toggle('is-multi', values.length > 1);
+    badge.innerHTML = values.length > 1
+      ? `${label ? `<small>${esc(label)}</small>` : ''}<span class="db-sum">${values.join('＋')}＝</span><b>${n}</b>！！<span class="db-go">${n}マスすすむ！</span>`
+      : `${label ? `<small>${esc(label)}</small>` : ''}<b>${n}</b>マスすすむ！`;
     badge.hidden = false;
     badge.classList.remove('is-pop');
     void badge.offsetWidth;
@@ -522,7 +568,7 @@
       setTimeout(() => startMove(n), 800);
       return;
     }
-    choice = { n };
+    choice = { n, values };
     $('#btn-dice').disabled = true;
     renderTickets();
     setGuide(`<b>${n}</b>の目！ よりみち切符で出目を±1できます。 <button class="primary-btn btn-sm" id="btn-depart">🚃 ${n}マス進む</button>`);
@@ -555,10 +601,11 @@
     if (n === choice.n) return;
     Craft.useTicket();
     Sound.ticket();
+    const values = choice.values || [choice.n];
     choice = null;
-    Dice.show(Math.min(6, n));
+    if (values.length === 1) Dice.show(Math.min(6, n));
     toast(`🎫 よりみち切符を使って、出目を${n}にしました`, 'toast-green');
-    showResult(n);
+    showResult(n, values.length > 1 ? [...values.slice(0, -1), values[values.length - 1] + (n - values.reduce((a, b) => a + b, 0))] : [n]);
   }
 
   // ---------- アフィリエイトURL ----------
@@ -837,9 +884,18 @@
 
   // ---------- 立候補のあと ----------
   // 1位を取ったら王座交代の演出。それ以外は、何位になったかと配当をお知らせする
-  function afterCandidacy(id, result, amount) {
+  async function afterCandidacy(id, result, amount) {
     const s = D.byId[id];
-    if (result.tookThrone) return celebrate(id, result);
+    if (result.tookThrone) {
+      // 王冠が駅に刺さるところが見えるよう、手帖を閉じて地図をその駅まで送ってから
+      closeModal();
+      if ($('[data-view="map"]').hidden) showView('map');
+      $('.map-board').scrollIntoView({ block: 'center', behavior: 'smooth' });
+      await Game.throneSteal(id, Ownership.ranking(id)[1]);
+      await Game.celebrateLines();
+      return celebrate(id, result);
+    }
+    setTimeout(() => Game.celebrateLines(), 2600);
     const me = Ownership.you(id);
     if (result.after <= D.meta.owner.shareholders) Sound.coin();
     else Sound.gentle();
@@ -1373,6 +1429,7 @@
     Scenery.init(D, $('#scenery'));
     Scenery.show(Store.get().currentStationId);
     ShareCard.init(D, api, $('#sharecard'));
+    Game.init(D, { ...api, isBusy: () => busy || !!choice || !!move, renderDiceHint, warpTo });
     renderAll();
     setGuide(IDLE_GUIDE);
 
@@ -1420,6 +1477,7 @@
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
       if (!$('#cutin').hidden) return closeCutIn();
+      if (Game.close()) return;
       if (ShareCard.close()) return;
       if (Postcards.closeViewer()) return;
       if (!$('#owner-sheet').hidden) return Owner.closeSheet();
@@ -1460,6 +1518,7 @@
       Map.refreshTrain();
       Map.placeTrain(D.meta.startStationId);
       Scenery.show(D.meta.startStationId);
+      Game.ensureSpotlight();
       renderAll();
       toast('旅の記録をリセットしました。博多から再出発です');
     });

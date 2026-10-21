@@ -90,6 +90,31 @@
         "avatar": { "hat": "kinghat", "outfit": "tuxedo", "buddy": "cat", "livery": "royal" }
       }
     ],
+    "game": {
+      "spotlight": { "minHops": 3, "rewardMin": 5000, "rewardMax": 10000 },
+      "deckMax": 5,
+      "arrivalTicketChance": 0.2,
+      "tickets": [
+        { "id": "express2", "name": "二連ダイス急行切符", "icon": "🚃", "dice": 2, "price": 800, "weight": 6, "desc": "木のダイスを2個いっしょに振れる（2〜12マス）。" },
+        { "id": "super3", "name": "三連ダイス超特急切符", "icon": "🚄", "dice": 3, "price": 1800, "weight": 3, "desc": "木のダイスを3個いっしょに振れる（3〜18マス）。九州を一気に縦断。" },
+        { "id": "cruise4", "name": "四連ダイス・クルーズ周遊切符", "icon": "✨", "dice": 4, "turns": 3, "price": 5000, "weight": 1, "rare": true, "desc": "4個のダイスを、使ってから3回のあいだ毎回振れる（4〜24マス）。" },
+        { "id": "pinpoint", "name": "ピタリ指定切符", "icon": "🎯", "pick": true, "price": 3000, "weight": 1, "rare": true, "desc": "1〜6の好きな出目を選べる。スポットライト駅にピタッと止まる切り札。" }
+      ],
+      "settleEvery": 7,
+      "tourismRate": 0.2,
+      "lineBonus": 2,
+      "surpriseChance": 0.25,
+      "lines": [
+        { "id": "hakata", "name": "北九州・博多ライン", "stations": ["hakata", "mojiko", "dazaifu"] },
+        { "id": "saga", "name": "佐賀・やきものライン", "stations": ["saga", "karatsu", "arita", "ureshino-onsen"] },
+        { "id": "nagasaki", "name": "西九州・長崎みなとライン", "stations": ["nagasaki", "huis-ten-bosch", "shimabara"] },
+        { "id": "aso", "name": "阿蘇カルデラライン", "stations": ["kumamoto", "aso", "kurokawa-onsen", "misumi"] },
+        { "id": "yufu", "name": "ゆふ高原・別府温泉ライン", "stations": ["hita", "yufuin", "beppu"] },
+        { "id": "hyuga", "name": "日向・神話の南国ライン", "stations": ["miyazaki", "takachiho", "aoshima"] },
+        { "id": "kuma", "name": "球磨川・霧島ライン", "stations": ["hitoyoshi", "kirishima-onsen"] },
+        { "id": "satsuma", "name": "薩摩・指宿ライン", "stations": ["kagoshima-chuo", "sakurajima", "ibusuki", "yakushima"] }
+      ]
+    },
     "craft": {
       "discoveryBonus": 200,
       "postBonus": 1000,

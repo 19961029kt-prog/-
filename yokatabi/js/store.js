@@ -24,6 +24,15 @@
       postcards: {}, // { stationId: { id, at, memo, imageId, postedAt（最初に投函した日時。いいねの数はここから数える） } }
       liked: {},     // { 旅人のポストカードID: ISO日時 } … 自分が押した「素敵ね」
       shareDays: [], // シェアカードの発信ボーナスを受け取った日（YYYY-MM-DD）。1日1回
+      // ---- 旅のゲーム（js/game.js） ----
+      spotlight: null, // いまのスポットライト駅 { id, theme, setAt }
+      deck: [],        // 特別切符の手札（最大 meta.game.deckMax 枚）[{ uid, kind }]
+      armed: null,     // 次に振るときに使う切符の uid
+      cruiseLeft: 0,   // クルーズ周遊切符：4個のダイスをあと何回振れるか
+      ledger: [],      // 臨時の入出金（ご祝儀・サプライズ・ハプニング・精算の観光収益）[{ at, kind, label, amount（万円） }]
+      likesBanked: 0,  // 精算で振り込み済みの「届いたいいね」の数
+      settled: 0,      // 週末の大精算を何回したか（ダイス7回ごとに1回）
+      linesSeen: {},   // 制覇の演出を出し終えたライン { lineId: ISO }
       actions: {},   // { stationId: { product?: ISO, stay?: ISO } } … ジャーニー「購入する」「訪れる」
       favorites: {}, // { stationId: true }  … 「つづく」：推し駅登録
       itineraries: [], // マイ旅しおり：[{ id, savedAt, departDate, title, seq: { g1, day1, day2, g2 } }]
@@ -231,6 +240,50 @@
       save();
       return true;
     },
+    // ---- 旅のゲーム ----
+    setSpotlight(v) {
+      state.spotlight = v;
+      save();
+    },
+    addTicket(kind, max) {
+      if (state.deck.length >= max) return null;
+      const t = { uid: `tk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`, kind };
+      state.deck.push(t);
+      save();
+      return t;
+    },
+    useTicket(uid) {
+      const t = state.deck.find((x) => x.uid === uid);
+      state.deck = state.deck.filter((x) => x.uid !== uid);
+      if (state.armed === uid) state.armed = null;
+      save();
+      return t || null;
+    },
+    arm(uid) {
+      state.armed = uid;
+      save();
+    },
+    setCruise(n) {
+      state.cruiseLeft = Math.max(0, n);
+      save();
+    },
+    addLedger(kind, label, amount) {
+      state.ledger.push({ at: new Date().toISOString(), kind, label, amount });
+      save();
+    },
+    spend(amount) {
+      state.spent += amount;
+      save();
+    },
+    settle(likesBanked) {
+      state.settled += 1;
+      state.likesBanked = likesBanked;
+      save();
+    },
+    markLine(id) {
+      state.linesSeen[id] = new Date().toISOString();
+      save();
+    },
     setProfileName(name) {
       state.profile.name = String(name || '').trim().slice(0, 12);
       save();
@@ -291,7 +344,7 @@
     ticketsUsed(today) {
       return state.tickets.date === today ? state.tickets.used : 0;
     },
-    useTicket(today) {
+    useDayTicket(today) {
       if (state.tickets.date !== today) state.tickets = { date: today, used: 0 };
       state.tickets.used += 1;
       save();

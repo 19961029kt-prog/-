@@ -535,6 +535,51 @@
     // 地域の演出を置く層（js/scenery.js が使う）
     regionLayer: () => layers.region,
 
+    // スポットライト駅：金のビーコン（ゆっくり広がる輪）と「🎯 ゴール」の旗
+    setSpotlight(id) {
+      D.stations.forEach((s) => nodes[s.id].classList.toggle('is-spotlight', s.id === id));
+      svg.querySelectorAll('.spot-flag').forEach((f) => f.remove());
+      if (!id || !nodes[id]) return;
+      const g = el('g', { class: 'spot-flag', 'aria-hidden': 'true' }, nodes[id]);
+      [0, 1, 2].forEach((i) => el('circle', { r: 14, class: 'spot-beacon', style: `--i:${i}` }, g));
+      // 盤面の上のふちに近い駅（門司港など）は、旗が切れないよう駅の下に立てる
+      const pos = el('g', { transform: D.byId[id].y < 70 ? 'translate(-30 50)' : 'translate(8 -16)' }, g);
+      const f = el('g', { class: 'spot-pennant' }, pos); // はためく動きは内側だけ（位置の transform を上書きしないように）
+      el('line', { x1: 0, y1: 0, x2: 0, y2: -30, class: 'spot-pole' }, f);
+      el('path', { d: 'M0,-30 L34,-24 L0,-17 Z', class: 'spot-cloth' }, f);
+      el('text', { x: 4, y: -21.5, class: 'spot-text' }, f).textContent = '🎯 ゴール';
+      nodes[id].parentNode.appendChild(nodes[id]); // ほかの駅の名前の上に出す
+    },
+
+    // ライン制覇：そのラインの区間（両端がラインの駅）を金色に光らせる
+    setGoldLines(stationSets) {
+      svg.querySelectorAll('.route.is-gold').forEach((r) => r.classList.remove('is-gold'));
+      stationSets.forEach((set) => {
+        D.edges.forEach((e) => {
+          if (set.has(e.a) && set.has(e.b)) {
+            const r = svg.querySelector(`.route[data-edge="${e.key}"]`);
+            if (!r) return;
+            r.classList.add('is-gold');
+            if (!r.querySelector('.gold-glow')) r.insertBefore(el('path', { d: segmentD(e.a, e.b), class: 'gold-glow' }), r.querySelector('path')); // 線路の下に敷く
+          }
+        });
+      });
+    },
+
+    // 王座奪還：自分の金の王冠とアバターが、上から駅にドスン！と刺さる
+    dropCrown(id, avatarMarkup) {
+      const g = nodes[id];
+      if (!g) return;
+      const pin = el('g', { class: 'crown-drop', 'aria-hidden': 'true' }, g);
+      pin.innerHTML = `<g class="crown-drop-body"><circle r="17" cy="-30" class="crown-drop-disc"/>
+          <foreignObject x="-15" y="-45" width="30" height="30"><div xmlns="http://www.w3.org/1999/xhtml" class="crown-drop-av">${avatarMarkup}</div></foreignObject>
+          <path d="M-11,-48 L-11,-56 L-5.5,-51 L0,-60 L5.5,-51 L11,-56 L11,-48 Z" class="crown-drop-crown"/></g>
+        <ellipse rx="22" ry="6" class="crown-drop-dust"/>`;
+      g.parentNode.appendChild(g);
+      setTimeout(() => pin.classList.add('is-landed'), 700);
+      setTimeout(() => pin.remove(), 5200);
+    },
+
     // オーナー刻印の瞬間：駅のしるしに、印を押したときの輪が広がる
     burst(id) {
       const g = nodes[id];

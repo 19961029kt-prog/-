@@ -119,6 +119,15 @@ const SCENES = new Set(['steam', 'sea', 'mountain', 'volcano', 'forest', 'city',
   if (!SCENES.has(p.scene)) errors.push(`postcards[${i}]: scene ${p.scene} は絵がありません`);
   if (!(p.likes >= 0)) errors.push(`postcards[${i}]: likes がありません`);
 });
+// 旅のゲーム（js/game.js）：切符・ライン・スポットライト駅のご祝儀
+const game = data.meta.game ?? {};
+if (!(game.deckMax > 0 && game.settleEvery > 0)) errors.push('meta.game の deckMax・settleEvery がありません');
+if (!(game.spotlight && game.spotlight.rewardMax >= game.spotlight.rewardMin && game.spotlight.minHops >= 1)) errors.push('meta.game.spotlight（minHops・rewardMin・rewardMax）がそろっていません');
+for (const t of game.tickets ?? []) if (!t.id || !t.name || !(t.price > 0) || !(t.weight > 0) || !(t.pick || t.dice >= 2)) errors.push(`meta.game.tickets ${t.id}: id・name・price・weight・dice（2以上）か pick がそろっていません`);
+if (!(game.tickets ?? []).some((t) => t.rare)) errors.push('meta.game.tickets にレア切符（rare: true）がありません（ご祝儀で配る）');
+const inLines = (game.lines ?? []).flatMap((l) => l.stations);
+for (const id of inLines) if (!ids.has(id)) errors.push(`meta.game.lines: 駅 ${id} がありません`);
+if (new Set(inLines).size !== inLines.length) errors.push('meta.game.lines: 同じ駅が2つのラインに入っています');
 if (errors.length) {
   console.error('stations.json の検証に失敗しました:\n  ' + errors.join('\n  '));
   process.exit(1);

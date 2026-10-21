@@ -27,6 +27,9 @@
       likesGiven: pc.given,
       likesReceived: pc.received,
       share: (st.shareDays || []).length * D.meta.craft.shareBonus,
+      // 旅のゲーム：スポットライト駅のご祝儀・サプライズ／ハプニング・週末の大精算の観光収益（js/game.js）
+      rewards: (st.ledger || []).filter((e) => e.kind !== 'settle').reduce((n, e) => n + e.amount, 0),
+      settle: (st.ledger || []).filter((e) => e.kind === 'settle').reduce((n, e) => n + e.amount, 0),
     };
   }
   const earned = () => Object.values(breakdown()).reduce((a, b) => a + b, 0);
@@ -412,7 +415,7 @@
     ticketsPerDay,
     ticketsLeft,
     today,
-    useTicket: () => YT.Store.useTicket(today()),
+    useTicket: () => YT.Store.useDayTicket(today()),
     trainSvg,
     carriageSvg,
     chimney,
