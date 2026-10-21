@@ -570,7 +570,7 @@
     dropCrown(id, avatarMarkup) {
       const g = nodes[id];
       if (!g) return;
-      const pin = el('g', { class: 'crown-drop', 'aria-hidden': 'true' }, g);
+      const pin = el('g', { class: 'crown-drop', 'aria-hidden': 'true', transform: 'scale(1.6)' }, g); // スマホでも見えるよう大きめに
       pin.innerHTML = `<g class="crown-drop-body"><circle r="17" cy="-30" class="crown-drop-disc"/>
           <foreignObject x="-15" y="-45" width="30" height="30"><div xmlns="http://www.w3.org/1999/xhtml" class="crown-drop-av">${avatarMarkup}</div></foreignObject>
           <path d="M-11,-48 L-11,-56 L-5.5,-51 L0,-60 L5.5,-51 L11,-56 L11,-48 Z" class="crown-drop-crown"/></g>
