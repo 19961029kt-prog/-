@@ -1039,6 +1039,8 @@
       return;
     }
     $('#data-source').textContent = D.source === 'fallback' ? '内蔵データで起動中' : 'stations.json 読込済み';
+    // 地図の出典は、地図データ（js/geo.js）に書かれたものをそのまま出す（元データを変えても表記がずれないように）
+    if (window.YOKATABI_GEO && window.YOKATABI_GEO.source) $('#geo-source').textContent = window.YOKATABI_GEO.source;
 
     Sound.setMuted(Store.get().muted);
     renderMute();
