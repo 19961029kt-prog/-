@@ -764,9 +764,9 @@ window.YOKATABI_FALLBACK_DATA = {
         "kumamoto",
         "hitoyoshi"
       ],
-      "type": "bus",
-      "name": "高速バス（九州自動車道経由・熊本市内〜人吉）",
-      "minutes": 100
+      "type": "scenic",
+      "name": "鹿児島本線・肥薩線（八代から球磨川沿いを走る観光列車のルート）",
+      "minutes": 90
     },
     {
       "between": [
@@ -812,6 +812,15 @@ window.YOKATABI_FALLBACK_DATA = {
       "type": "local",
       "name": "日豊本線・肥薩線（隼人で乗り換え）",
       "minutes": 80
+    },
+    {
+      "between": [
+        "hitoyoshi",
+        "kirishima-onsen"
+      ],
+      "type": "scenic",
+      "name": "肥薩線（ループ線とスイッチバックで矢岳を越える山の区間・吉松で乗り換え）",
+      "minutes": 110
     },
     {
       "between": [
@@ -1581,7 +1590,8 @@ window.YOKATABI_FALLBACK_DATA = {
       "y": 451.4,
       "labelDir": "right",
       "connections": [
-        "kumamoto"
+        "kumamoto",
+        "kirishima-onsen"
       ],
       "assetValue": 3000,
       "rivals": [
@@ -1601,7 +1611,6 @@ window.YOKATABI_FALLBACK_DATA = {
       "propertyType": "湯けむり物件",
       "tagline": "球磨川の瀬音と、国宝の社",
       "memo": "山あいの盆地に、球磨川の瀬音と湯の香りが満ちている。駅から歩けば、茅葺きの楼門が迎える青井阿蘇神社。国宝の社殿の華やかな彫りと彩りが、緑の境内に静かに浮かぶ。夕暮れ、川沿いの温泉宿で湯につかったあとは、米から造る球磨焼酎をちびりと。ふくよかな米の香りが、谷の夜をやわらかくほどいていく。",
-      "note": "JR肥薩線の八代〜人吉〜吉松は2020年7月の豪雨から不通（八代〜人吉は2033年度の鉄道復旧をめざして工事準備中）。熊本からは高速バスで連絡。人吉温泉駅のくま川鉄道は2026年9月に全線再開",
       "products": [
         {
           "name": "球磨焼酎",
@@ -2097,7 +2106,8 @@ window.YOKATABI_FALLBACK_DATA = {
       "labelDir": "top",
       "connections": [
         "kagoshima-chuo",
-        "miyazaki"
+        "miyazaki",
+        "hitoyoshi"
       ],
       "assetValue": 4000,
       "rivals": [
@@ -2117,7 +2127,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "propertyType": "湯けむり物件",
       "tagline": "硫黄の香る、山あいの湯けむり郷",
       "memo": "山あいの小さな駅から、バスで温泉郷へ登っていく。窓を開ければ、ほのかな硫黄の匂い。霧島の山すそでは湯けむりがあちこちで立ちのぼり、乳白色の湯、透きとおった湯と、宿ごとに違う泉質がそろう。湯上がりには、山の冷たい空気が火照った頬に心地いい。足を延ばせば、杉の巨木に囲まれて霧島神宮の朱の社殿が浮かぶ。",
-      "note": "JR肥薩線の駅（温泉郷へは駅から路線バスで。肥薩線の吉松〜隼人は2026年7月に運転再開）",
+      "note": "JR肥薩線の駅（温泉郷へは駅から路線バスで）",
       "products": [
         {
           "name": "壺造りの黒酢",
