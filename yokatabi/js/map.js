@@ -5,87 +5,55 @@
   const YT = (window.YT = window.YT || {});
   const NS = 'http://www.w3.org/2000/svg';
 
-  // 九州本土の海岸線（おおまかな手描きトレース。緯度経度を簡易投影した点列を滑らかにつなぐ）
-  const MAINLAND = [
-    [308, 60], [332, 92], [352, 138], [400, 130], [448, 140], [460, 176], [446, 198], [442, 214],
-    [452, 226], [490, 220], [494, 262], [480, 302], [464, 340], [448, 372], [440, 412], [422, 470],
-    [412, 524], [394, 590], [382, 643], [352, 630], [332, 630], [316, 668], [290, 702], [256, 730],
-    [266, 690], [272, 650], [264, 612], [250, 578], [240, 566], [234, 590], [236, 630], [246, 652],
-    [260, 670], [246, 692], [222, 690], [182, 670], [164, 620], [158, 560], [162, 502], [190, 462],
-    [214, 430], [240, 392], [232, 350], [224, 305], [206, 282], [178, 252], [152, 262], [148, 286],
-    [152, 306], [192, 322], [192, 364], [160, 374], [134, 354], [114, 362], [88, 388], [70, 352],
-    [80, 322], [60, 290], [52, 266], [62, 238], [40, 216], [28, 200], [60, 190], [82, 182],
-    [112, 166], [150, 140], [188, 134], [206, 118], [222, 90], [250, 76], [280, 64],
-  ];
-  const AMAKUSA = [[176, 392], [204, 384], [216, 410], [198, 442], [170, 430]];
-  const SAKURAJIMA = [[246, 584], [256, 581], [262, 590], [252, 599], [244, 594]];
-  // 屋久島は縮尺外の枠内に、丸みのある「森の島」として大きめに置く
-  const YAKUSHIMA = [[174, 768], [184, 752], [202, 748], [220, 756], [226, 774], [216, 792], [196, 798], [178, 790]];
-  const TANEGASHIMA = [[262, 752], [270, 744], [276, 770], [266, 800], [258, 788]];
+  // 地図の形（海岸線・県境・線路網・区間の線形）は、実在の地理データから tools/build-geo.mjs で作った js/geo.js を使う。
+  const GEO = window.YOKATABI_GEO || null;
+  // 経度・緯度 → 盤面の座標（geo.js と同じ投影）。屋久島まわりは、縮尺はそのままで左下の枠へずらす。
+  function project(lon, lat) {
+    const p = GEO.proj;
+    let x = lon * p.cos * p.k + p.ox, y = p.oy - lat * p.k;
+    const b = GEO.yaku.box;
+    if (lon > b.west && lon < b.east && lat > b.south && lat < b.north) (x += GEO.yaku.shift[0]), (y += GEO.yaku.shift[1]);
+    return [x, y];
+  }
+  // 1km あたりの盤面の長さ（山や外輪山の大きさを実寸で決めるため）
+  const km = () => GEO.proj.k / 111.32;
 
-  // 山地・高原：本島シルエットの内側に、等高線つきのやわらかい起伏として描く
-  // [中心x, 中心y, 半径x, 半径y, 回転, 名前]
+  // 山地・高原：実際の位置に、等高線つきのやわらかい起伏として描く
+  // [経度, 緯度, 東西の半径km, 南北の半径km, 回転, 名前]
   const HIGHLANDS = [
-    [368, 440, 50, 84, -18, ''],
-    [348, 262, 52, 40, -10, ''],
-    [302, 548, 30, 22, 10, '霧島'],
-    [172, 346, 18, 14, 0, ''],
-    [178, 194, 36, 14, -12, ''],
-    [300, 642, 22, 18, 0, ''],
-    [446, 318, 26, 30, 0, ''],
+    [131.18, 32.48, 30, 52, -28, '九州山地'],
+    [131.25, 33.09, 14, 9, -8, ''],
+    [130.88, 31.92, 14, 10, -30, '霧島'],
+    [130.29, 32.76, 8, 7, 0, ''],
+    [130.93, 33.47, 11, 7, 0, ''],
+    [131.36, 32.82, 12, 9, -20, ''],
+    [130.5, 30.34, 10, 8, 0, ''],
   ];
-  // 山のアイコン [x, y, 大きさ, 名前]
+  // 山のアイコン [経度, 緯度, 大きさ, 名前]
   const PEAKS = [
-    [296, 214, 1.0, 'くじゅう'],
-    [302, 540, 1.1, ''],
-    [172, 342, 0.85, '雲仙'],
-    [338, 424, 1.0, ''],
-    [360, 446, 0.85, '九州山地'],
-    [214, 766, 0.75, ''],
+    [131.24, 33.09, 1.0, 'くじゅう'],
+    [130.87, 31.93, 1.0, ''],
+    [130.29, 32.76, 0.85, '雲仙'],
+    [131.36, 32.83, 0.85, '祖母山'],
+    [131.08, 32.42, 0.95, ''],
+    [130.93, 33.48, 0.8, '英彦山'],
+    [130.53, 31.18, 0.8, '開聞岳'],
+    [130.5, 30.34, 0.8, '宮之浦岳'],
   ];
-
-  // 九州7県の県境（おおまかなイメージ線。海岸線の内側だけに描く）
-  const PREF_BORDERS = [
-    [[136, 150], [168, 178], [204, 204], [212, 228], [194, 250]],             // 福岡｜佐賀
-    [[72, 192], [92, 224], [112, 256], [142, 290]],                           // 佐賀｜長崎
-    [[356, 140], [330, 190], [318, 220], [324, 244]],                         // 福岡｜大分
-    [[324, 244], [282, 256], [242, 262], [206, 280]],                         // 福岡｜熊本
-    [[324, 244], [350, 232], [370, 242], [374, 274], [372, 308]],             // 大分｜熊本
-    [[372, 308], [420, 318], [474, 310]],                                     // 大分｜宮崎
-    [[372, 308], [346, 332], [330, 382], [306, 432], [300, 480]],             // 熊本｜宮崎
-    [[300, 480], [252, 478], [194, 466]],                                     // 熊本｜鹿児島
-    [[300, 480], [318, 526], [326, 572], [342, 630]],                         // 宮崎｜鹿児島
-  ];
-  // 県名ラベル [県名, x, y]（盤面の「エリア名」として大きく淡く置く）
+  // 阿蘇のカルデラ（東西約18km・南北約25km）
+  const ASO_CALDERA = [131.06, 32.93, 9, 12.5];
+  // 桜島の噴煙を出す位置（南岳付近）
+  const SAKURAJIMA_TOP = [130.66, 31.58];
+  // 県名ラベル [県名, 経度, 緯度]（盤面の「エリア名」として大きく淡く置く）
   const PREF_LABELS = [
-    ['福岡', 262, 206], ['佐賀', 150, 222], ['長崎', 112, 300], ['熊本', 270, 330],
-    ['大分', 452, 256], ['宮崎', 432, 392], ['鹿児島', 214, 520],
+    ['福岡', 130.66, 33.62], ['佐賀', 130.2, 33.33], ['長崎', 129.93, 32.82], ['熊本', 130.82, 32.62],
+    ['大分', 131.45, 33.12], ['宮崎', 131.2, 32.2], ['鹿児島', 130.48, 31.82],
   ];
-
-  // 点列を Catmull-Rom → 3次ベジェで開いた滑らかな線にする
-  function smoothOpen(pts) {
-    let d = `M${pts[0][0]},${pts[0][1]}`;
-    for (let i = 0; i < pts.length - 1; i++) {
-      const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
-      const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
-      const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
-      d += ` C${c1[0].toFixed(1)},${c1[1].toFixed(1)} ${c2[0].toFixed(1)},${c2[1].toFixed(1)} ${p2[0]},${p2[1]}`;
-    }
-    return d;
-  }
-
-  // 点列を Catmull-Rom → 3次ベジェで閉じた滑らかなパスにする
-  function smoothClosed(pts) {
-    const n = pts.length;
-    let d = `M${pts[0][0]},${pts[0][1]}`;
-    for (let i = 0; i < n; i++) {
-      const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
-      const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
-      const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
-      d += ` C${c1[0].toFixed(1)},${c1[1].toFixed(1)} ${c2[0].toFixed(1)},${c2[1].toFixed(1)} ${p2[0]},${p2[1]}`;
-    }
-    return d + 'Z';
-  }
+  // 海の名前 [名前, 経度, 緯度, 小さい字か]
+  const SEAS = [
+    ['玄界灘', 129.82, 33.86], ['周防灘', 131.32, 33.82], ['日向灘', 131.82, 32.05], ['東シナ海', 129.62, 32.05],
+    ['有明海', 130.33, 33.05, 1], ['八代海', 130.38, 32.3, 1], ['豊後水道', 132.04, 33.02, 1], ['錦江湾', 130.68, 31.38, 1],
+  ];
 
   function el(name, attrs = {}, parent) {
     const e = document.createElementNS(NS, name);
@@ -99,10 +67,18 @@
   let train, trainEmoji;
   let candidates = null;
 
-  // a→b 方向の区間パス（routeOverrides の via があれば2次ベジェ）
+  // a→b 方向の区間パス。geo.js に実際の線形があればそれを、なければ直線（via があれば2次ベジェ）で結ぶ。
+  // geo.js の線形は「キーの前の駅 → 後ろの駅」の向きなので、逆向きのときは点列を反転する。
+  const reversed = {};
   function segmentD(a, b) {
+    const key = YT.Data.edgeKey(a, b);
+    const d = GEO && GEO.routes[key];
+    if (d) {
+      if (key.startsWith(`${a}|`)) return d;
+      return (reversed[key] = reversed[key] || 'M' + d.slice(1).split('L').reverse().join('L'));
+    }
     const A = D.byId[a], B = D.byId[b];
-    const o = D.overrides[YT.Data.edgeKey(a, b)];
+    const o = D.overrides[key];
     if (o && o.via) return `M${A.x},${A.y} Q${o.via[0]},${o.via[1]} ${B.x},${B.y}`;
     return `M${A.x},${A.y} L${B.x},${B.y}`;
   }
@@ -110,156 +86,166 @@
   function buildDefs() {
     const defs = el('defs', {}, svg);
     defs.innerHTML = `
-      <pattern id="p-wave" width="44" height="22" patternUnits="userSpaceOnUse">
-        <path d="M0 14 Q11 7 22 14 T44 14" fill="none" stroke="#67e8f9" stroke-opacity=".07" stroke-width="1.4"/>
-        <path d="M-22 3 Q-11 -4 0 3 T22 3 T44 3" fill="none" stroke="#f5c451" stroke-opacity=".035" stroke-width="1"/>
+      <pattern id="p-wave" width="56" height="28" patternUnits="userSpaceOnUse">
+        <path d="M0 18 Q14 10 28 18 T56 18" fill="none" stroke="#ffffff" stroke-opacity=".38" stroke-width="1.3" stroke-linecap="round"/>
+        <path d="M-14 5 Q-7 1 0 5 T14 5" fill="none" stroke="#5c8f97" stroke-opacity=".12" stroke-width="1" stroke-linecap="round"/>
       </pattern>
-      <linearGradient id="g-land" x1="0" y1="0" x2=".7" y2="1">
-        <stop offset="0" stop-color="#1a4034"/><stop offset=".5" stop-color="#11302a"/><stop offset="1" stop-color="#0a1f1c"/>
+      <linearGradient id="g-land" x1="0" y1="0" x2=".6" y2="1">
+        <stop offset="0" stop-color="#f4ecd2"/><stop offset=".55" stop-color="#ece3c4"/><stop offset="1" stop-color="#e3d8b4"/>
+      </linearGradient>
+      <linearGradient id="g-neighbor" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#ebe3cc"/><stop offset="1" stop-color="#e2d9bf"/>
       </linearGradient>
       <radialGradient id="g-highland">
-        <stop offset="0" stop-color="#2f6b4f" stop-opacity=".95"/>
-        <stop offset=".6" stop-color="#1f5240" stop-opacity=".55"/>
-        <stop offset="1" stop-color="#143a30" stop-opacity="0"/>
-      </radialGradient>
-      <radialGradient id="g-forest" cx=".45" cy=".4" r=".7">
-        <stop offset="0" stop-color="#2f7a4f"/><stop offset=".7" stop-color="#1b5238"/><stop offset="1" stop-color="#0f3324"/>
+        <stop offset="0" stop-color="#9dbb84" stop-opacity=".75"/>
+        <stop offset=".6" stop-color="#b6c994" stop-opacity=".4"/>
+        <stop offset="1" stop-color="#cfd8a8" stop-opacity="0"/>
       </radialGradient>
       <linearGradient id="g-peak" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#3f7d5c"/><stop offset="1" stop-color="#173b2d"/>
+        <stop offset="0" stop-color="#8fae76"/><stop offset="1" stop-color="#5f8456"/>
       </linearGradient>
       <radialGradient id="g-gold" cx=".35" cy=".3" r=".8">
-        <stop offset="0" stop-color="#fffbe6"/><stop offset=".3" stop-color="#ffe08a"/><stop offset=".65" stop-color="#e0a526"/><stop offset="1" stop-color="#7a4b00"/>
+        <stop offset="0" stop-color="#fff6d8"/><stop offset=".35" stop-color="#ffd877"/><stop offset=".75" stop-color="#e8a93a"/><stop offset="1" stop-color="#b9761c"/>
       </radialGradient>
       <filter id="f-paper" x="0" y="0" width="100%" height="100%">
-        <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="7" result="n"/>
-        <feColorMatrix in="n" type="matrix" values="0 0 0 0 .02  0 0 0 0 .06  0 0 0 0 .05  0 0 0 .55 0"/>
+        <feTurbulence type="fractalNoise" baseFrequency=".75" numOctaves="3" seed="11" result="n"/>
+        <feColorMatrix in="n" type="matrix" values="0 0 0 0 .45  0 0 0 0 .36  0 0 0 0 .22  0 0 0 .5 0"/>
       </filter>
       <filter id="f-soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6"/></filter>
-      <filter id="f-railshadow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2.2"/></filter>
+      <filter id="f-railshadow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="1.6"/></filter>
       <radialGradient id="g-gloss" cx=".35" cy=".28" r=".75">
-        <stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".35" stop-color="#fff" stop-opacity=".25"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+        <stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset=".4" stop-color="#fff" stop-opacity=".18"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
       </radialGradient>
       <radialGradient id="g-rays">
-        <stop offset="0" stop-color="#fff6c4" stop-opacity=".95"/><stop offset=".55" stop-color="#ffd34d" stop-opacity=".5"/><stop offset="1" stop-color="#ffd34d" stop-opacity="0"/>
+        <stop offset="0" stop-color="#fff3cf" stop-opacity=".9"/><stop offset=".55" stop-color="#ffcf6b" stop-opacity=".45"/><stop offset="1" stop-color="#ffcf6b" stop-opacity="0"/>
       </radialGradient>
       <filter id="f-glow" x="-100%" y="-100%" width="300%" height="300%">
-        <feGaussianBlur stdDeviation="4" result="b"/>
+        <feGaussianBlur stdDeviation="3" result="b"/>
         <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
       </filter>
       <filter id="f-shadow" x="-20%" y="-20%" width="140%" height="140%">
-        <feDropShadow dx="0" dy="10" stdDeviation="9" flood-color="#000" flood-opacity=".75"/>
-      </filter>
-      <filter id="f-neon" x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur stdDeviation="3.5" result="b1"/><feGaussianBlur stdDeviation="9" result="b2"/>
-        <feMerge><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="SourceGraphic"/></feMerge>
+        <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#6b5236" flood-opacity=".28"/>
       </filter>
       <radialGradient id="g-tail">
-        <stop offset="0" stop-color="#fffbe6"/><stop offset=".4" stop-color="#ffd34d" stop-opacity=".9"/><stop offset="1" stop-color="#ff8a00" stop-opacity="0"/>
+        <stop offset="0" stop-color="#ffffff" stop-opacity=".95"/><stop offset=".6" stop-color="#fbf4e6" stop-opacity=".7"/><stop offset="1" stop-color="#efe3cc" stop-opacity="0"/>
       </radialGradient>`;
-    // 駅ごとの宝石：県の色から、光の当たる明るい面と沈む暗い面を作る
+    // 駅ごとのボタン：県の色を、光の当たる明るい面からやわらかく沈ませる
     Object.entries(D.meta.prefectures).forEach(([, { color }], i) => {
-      el('radialGradient', { id: `gem-${i}`, cx: '.34', cy: '.28', r: '.85' }, defs).innerHTML = `
-        <stop offset="0" stop-color="#ffffff"/>
-        <stop offset=".16" stop-color="${mix(color, '#ffffff', 0.55)}"/>
-        <stop offset=".5" stop-color="${color}"/>
-        <stop offset=".85" stop-color="${mix(color, '#000000', 0.55)}"/>
-        <stop offset="1" stop-color="${mix(color, '#000000', 0.75)}"/>`;
+      el('radialGradient', { id: `gem-${i}`, cx: '.36', cy: '.3', r: '.85' }, defs).innerHTML = `
+        <stop offset="0" stop-color="${mix(color, '#ffffff', 0.7)}"/>
+        <stop offset=".45" stop-color="${mix(color, '#ffffff', 0.15)}"/>
+        <stop offset="1" stop-color="${mix(color, '#5a3d2b', 0.3)}"/>`;
     });
   }
 
-  // 16進カラーを割合 k で混ぜる（宝石の明暗用）
+  // 16進カラーを割合 k で混ぜる（ボタンの明暗用）
   function mix(a, b, k) {
     const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
     const [x, y] = [p(a), p(b)];
     return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * k).toString(16).padStart(2, '0')).join('');
   }
 
-  // 盤面：海 → 浅瀬のにじみ → 島（影つき）→ 紙の質感 → 山地の等高線 → 山アイコン → 装飾
+  // 盤面：海 → 浅瀬のにじみ → 対岸 → 島（影つき）→ 和紙の質感 → 山地 → 県境・県名 → 線路網 → 山アイコン → 地名・装飾
   function buildBoard() {
     // 海は viewBox の外まで広げ、枠の縦横比が違っても余白が出ないようにする（svg は overflow: visible）
     const [vx, vy, vw, vh] = D.meta.viewBox;
     const sea = { x: vx - vw, y: vy - vh, width: vw * 3, height: vh * 3 };
-    // 下地の色は .map-frame の背景（CSS）に任せ、ここでは波模様だけ敷く
+    // 下地の色は .map-board の背景（CSS）に任せ、ここでは波模様だけ敷く
     el('rect', { ...sea, fill: 'url(#p-wave)' }, layers.bg);
+    if (!GEO) return;
 
-    const islands = [MAINLAND, AMAKUSA, TANEGASHIMA, SAKURAJIMA].map(smoothClosed);
-    const yaku = smoothClosed(YAKUSHIMA);
+    const lands = GEO.land.map((l) => l.d);
     const defs = svg.querySelector('defs');
     const clip = el('clipPath', { id: 'c-land' }, defs);
-    [...islands, yaku].forEach((d) => el('path', { d }, clip));
+    lands.forEach((d) => el('path', { d }, clip));
 
-    // 浅瀬：海岸線のまわりに水色のにじみを2重に
+    // 浅瀬：海岸線のまわりに水色のにじみを2重に（水彩のように）
     const shore = el('g', { class: 'shore' }, layers.bg);
-    [...islands, yaku].forEach((d) => {
-      el('path', { d, class: 'shore-far' }, shore);
-      el('path', { d, class: 'shore-near' }, shore);
-      el('path', { d, class: 'land-glow' }, shore); // 大地をふちどるゴールドの光
-    });
+    const coast = lands.join(' ');
+    el('path', { d: coast, class: 'shore-far' }, shore);
+    el('path', { d: coast, class: 'shore-near' }, shore);
+    // 対岸（山口県・愛媛県）は淡く置いて、九州が海に浮かぶ位置関係を見せる
+    GEO.neighbor.forEach((d) => el('path', { d, class: 'land-neighbor' }, layers.bg));
 
+    // 海岸線：県ごとの輪のふちを太く描き、その上に塗りを重ねる。県どうしの継ぎ目の線は塗りに隠れ、
+    // 海に面したふちの外側半分だけが海岸線として残る。
     const land = el('g', { filter: 'url(#f-shadow)' }, layers.bg);
-    islands.forEach((d, i) => el('path', { d, class: i === 3 ? 'land land-volcano' : 'land' }, land));
-    el('path', { d: yaku, class: 'land land-forest' }, land);
+    el('path', { d: coast, class: 'land-coast' }, land);
+    GEO.land.forEach((l) => el('path', { d: l.d, class: l.yaku ? 'land land-forest' : 'land' }, land));
 
-    // 島の内側だけに描くもの（紙の質感・山地）
+    // 島の内側だけに描くもの（和紙の質感・山地・県境）
     const inner = el('g', { 'clip-path': 'url(#c-land)' }, layers.bg);
+    // 県ごとに、県の色をほんのり重ねる（どこの県かが色でわかるように）
+    GEO.land.forEach((l) => {
+      const color = (D.meta.prefectures[l.pref] || {}).color;
+      if (color) el('path', { d: l.d, class: 'land-tint', style: `--pref:${color}` }, inner);
+    });
     el('rect', { x: vx, y: vy, width: vw, height: vh, filter: 'url(#f-paper)', class: 'land-texture' }, inner);
-    HIGHLANDS.forEach(([x, y, rx, ry, rot, name]) => {
-      const g = el('g', { transform: `translate(${x} ${y}) rotate(${rot})` }, inner);
+    const u = km();
+    HIGHLANDS.forEach(([lon, lat, rxKm, ryKm, rot, name]) => {
+      const [x, y] = project(lon, lat);
+      const rx = rxKm * u, ry = ryKm * u;
+      const g = el('g', { transform: `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${rot})` }, inner);
       el('ellipse', { rx: rx * 1.25, ry: ry * 1.25, fill: 'url(#g-highland)', filter: 'url(#f-soft)' }, g);
       [0.95, 0.68, 0.42].forEach((k) => el('ellipse', { rx: rx * k, ry: ry * k, class: 'contour' }, g));
       if (name) {
-        const t = el('text', { y: ry * 0.95 + 12, 'text-anchor': 'middle', transform: `rotate(${-rot})`, class: 'terrain-label' }, g);
+        const t = el('text', { y: 4, 'text-anchor': 'middle', transform: `rotate(${-rot})`, class: 'terrain-label terrain-label-lg' }, g);
         t.textContent = name;
       }
     });
-    // 阿蘇の外輪山：カルデラをぐるりと囲むリング
-    const aso = D.byId.aso;
-    if (aso) {
-      el('ellipse', { cx: aso.x + 2, cy: aso.y - 4, rx: 34, ry: 28, class: 'caldera' }, inner);
-      el('ellipse', { cx: aso.x + 2, cy: aso.y - 4, rx: 34, ry: 28, class: 'caldera-rim' }, inner);
+    // 阿蘇の外輪山：カルデラをぐるりと囲むリング（実寸）
+    {
+      const [lon, lat, rxKm, ryKm] = ASO_CALDERA;
+      const [cx, cy] = project(lon, lat);
+      el('ellipse', { cx, cy, rx: rxKm * u, ry: ryKm * u, class: 'caldera' }, inner);
+      el('ellipse', { cx, cy, rx: rxKm * u, ry: ryKm * u, class: 'caldera-rim' }, inner);
     }
     // 県境（点線）と県名（エリア名）
-    PREF_BORDERS.forEach((pts) => el('path', { d: smoothOpen(pts), class: 'pref-border' }, inner));
-    PREF_LABELS.forEach(([name, x, y]) => {
+    GEO.borders.forEach((d) => el('path', { d, class: 'pref-border' }, inner));
+    PREF_LABELS.forEach(([name, lon, lat]) => {
+      const [x, y] = project(lon, lat);
       const color = (D.meta.prefectures[name] || {}).color || '#8a7a58';
-      const t = el('text', { x, y, 'text-anchor': 'middle', class: 'pref-label', style: `--pref:${color}` }, inner);
+      const t = el('text', { x: x.toFixed(1), y: y.toFixed(1), 'text-anchor': 'middle', class: 'pref-label', style: `--pref:${color}` }, inner);
       t.textContent = name;
     });
-    // 島のふち：内側に細い白のハイライト（紙の盤面を切り抜いたような立体感）
-    [...islands, yaku].forEach((d) => el('path', { d, class: 'land-rim' }, inner));
+
+    // 実在の線路網：九州の鉄道をすべて細く描き、すごろくの路線はその上に重ねる
+    const net = el('g', { class: 'rail-network', 'aria-hidden': 'true' }, layers.bg);
+    el('path', { d: GEO.network.filter((n) => !n.shin).map((n) => n.d).join(' '), class: 'net-line' }, net);
+    el('path', { d: GEO.network.filter((n) => n.shin).map((n) => n.d).join(' '), class: 'net-line net-shin' }, net);
 
     const peaks = el('g', { class: 'peaks' }, layers.bg);
-    PEAKS.forEach(([x, y, k, name]) => {
-      const g = el('g', { transform: `translate(${x} ${y}) scale(${k})`, class: 'peak' }, peaks);
-      el('path', { d: 'M-13 7 Q-7 -4 -2 -10 Q1 -12 3 -9 Q8 -3 13 7 Z', fill: 'url(#g-peak)' }, g);
-      el('path', { d: 'M-4 -6 Q-1 -11 3 -9 L5 -6 Q2 -4 0 -6 Q-2 -4 -4 -6 Z', class: 'peak-snow' }, g);
+    PEAKS.forEach(([lon, lat, k, name]) => {
+      const [x, y] = project(lon, lat);
+      const g = el('g', { transform: `translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${k})`, class: 'peak' }, peaks);
+      el('path', { d: 'M-12 6 Q-6 -4 -2 -9 Q1 -11 3 -8 Q7 -3 12 6 Z', fill: 'url(#g-peak)' }, g);
+      el('path', { d: 'M-4 -5 Q-1 -10 3 -8 L5 -5 Q2 -3 0 -5 Q-2 -3 -4 -5 Z', class: 'peak-snow' }, g);
       if (name) {
-        const t = el('text', { y: 18, 'text-anchor': 'middle', class: 'terrain-label' }, g);
+        const t = el('text', { y: 17, 'text-anchor': 'middle', class: 'terrain-label' }, g);
         t.textContent = name;
       }
     });
     // 桜島の噴煙
-    const smoke = el('g', { class: 'smoke', transform: 'translate(254 578)' }, layers.bg);
+    const [sx, sy] = project(...SAKURAJIMA_TOP);
+    const smoke = el('g', { class: 'smoke', transform: `translate(${sx.toFixed(1)} ${(sy - 4).toFixed(1)})` }, layers.bg);
     [0, 1, 2].forEach((i) => el('circle', { r: 3 + i, style: `--i:${i}` }, smoke));
 
-    // 縮尺外の離島枠
-    el('rect', { x: 150, y: 736, width: 140, height: 72, rx: 10, class: 'inset-frame' }, layers.bg);
-    const t = el('text', { x: 158, y: 750, class: 'inset-label' }, layers.bg);
-    t.textContent = '特別航路・縮尺外';
+    // 屋久島の枠：縮尺はそのままで、位置だけ左下にずらしていることを示す
+    const [ix, iy] = project(130.53, 30.35);
+    el('rect', { x: (ix - 58).toFixed(1), y: (iy - 46).toFixed(1), width: 116, height: 98, rx: 12, class: 'inset-frame' }, layers.bg);
+    const t = el('text', { x: (ix - 50).toFixed(1), y: (iy - 32).toFixed(1), class: 'inset-label' }, layers.bg);
+    t.textContent = '屋久島（位置をずらして表示）';
 
-    // 方位と装飾
-    const deco = el('g', { class: 'map-deco', transform: 'translate(500 60)' }, layers.bg);
-    deco.innerHTML = `<circle r="20" class="compass"/><path d="M0 -16 L5 0 L0 16 L-5 0Z" class="compass-needle"/>
-      <text y="-24" text-anchor="middle" class="compass-n">N</text>`;
-    [['玄界灘', 40, 120], ['日向灘', 470, 470], ['東シナ海', 40, 520], ['有明海', 190, 276]].forEach(([name, x, y], i) => {
-      const s = el('text', { x, y, class: i === 3 ? 'sea-label sea-label-sm' : 'sea-label' }, layers.bg);
+    // 方位と海の名前
+    const deco = el('g', { class: 'map-deco', transform: `translate(${vx + vw - 34} ${vy + vh - 40})` }, layers.bg);
+    deco.innerHTML = `<circle r="20" class="compass"/><path d="M0 -15 L5 0 L0 15 L-5 0Z" class="compass-needle"/>
+      <path d="M0 -15 L5 0 L-5 0Z" class="compass-north"/>
+      <text y="-25" text-anchor="middle" class="compass-n">N</text>`;
+    SEAS.forEach(([name, lon, lat, small]) => {
+      const [x, y] = project(lon, lat);
+      const s = el('text', { x: x.toFixed(1), y: y.toFixed(1), 'text-anchor': 'middle', class: small ? 'sea-label sea-label-sm' : 'sea-label' }, layers.bg);
       s.textContent = name;
     });
-    // 海に浮かぶ波しるし（盤面のにぎやかし）
-    [[96, 470], [480, 600], [470, 160], [120, 640], [330, 760], [500, 380]].forEach(([x, y]) =>
-      el('path', { d: `M${x} ${y} q5 -6 10 0 t10 0 t10 0`, class: 'wave-mark' }, layers.bg)
-    );
   }
 
   // 路線種別ごとの線のつくり。線は下から順に重ねる。

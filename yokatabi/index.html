@@ -9,12 +9,12 @@
   <meta property="og:description" content="九州の路線図すごろくで、名産品物件・湯けむり物件を買収して王国を築こう。">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary">
-  <meta name="theme-color" content="#090d16">
+  <meta name="theme-color" content="#fbf6ec">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎲</text></svg>">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@400;500&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -93,7 +93,7 @@
 
       <aside class="side flex flex-col gap-4">
         <div class="panel dice-panel">
-          <p class="card-kicker"><span>DICE COMMAND</span></p>
+          <p class="card-kicker"><span>さいころ</span></p>
           <div class="flex items-center gap-4">
             <div id="die" class="die" aria-hidden="true"></div>
             <div class="flex-1">
@@ -106,7 +106,7 @@
         </div>
 
         <div class="panel current-panel">
-          <p class="card-kicker"><span>CURRENT STATION</span></p>
+          <p class="card-kicker"><span>いまいる駅</span></p>
           <p class="text-xs t-dim font-bold">現在地</p>
           <div class="flex items-baseline gap-2 flex-wrap">
             <h2 id="current-name" class="current-name">-</h2>
@@ -118,7 +118,7 @@
         </div>
 
         <div class="panel mini-collection">
-          <p class="card-kicker"><span>HOLO COLLECTION</span></p>
+          <p class="card-kicker"><span>旅の手帳</span></p>
           <div class="flex items-center justify-between gap-2">
             <h3 class="font-bold">📔 コレクション手帳</h3>
             <span id="mini-count" class="chip chip-gold">0 / 15</span>
@@ -130,12 +130,12 @@
         </div>
 
         <div class="panel how">
-          <p class="card-kicker"><span>HOW TO PLAY</span></p>
+          <p class="card-kicker"><span>あそびかた</span></p>
           <h3 class="font-bold mb-2">あそびかた</h3>
           <ol class="text-sm t-dim space-y-1 list-decimal pl-5">
             <li>サイコロを振るか、地図の駅をタップして🚂で移動。</li>
             <li>到着すると<b>物件カード</b>が開き、現地調査メモ・名産品・宿がわかる。</li>
-            <li>カード内のボタンからお取り寄せ・予約に進むと<b class="t-gold">買収完了</b>！駅が金色に輝き、手帳にホログラムカードが加わる。</li>
+            <li>カード内のボタンからお取り寄せ・予約に進むと<b class="t-gold">買収完了</b>！駅が金色のメダルになり、手帳に旅のスタンプカードが加わる。</li>
           </ol>
         </div>
       </aside>
@@ -174,7 +174,7 @@
   <footer class="site-footer">
     <div class="max-w-6xl mx-auto px-4 py-6 text-xs space-y-1">
       <p>「よか旅すごろく九州」はオリジナルの企画・世界観で制作した非公式の旅メディアです。既存のゲーム作品・鉄道事業者とは関係ありません。</p>
-      <p>地図は路線のつながりを表すイメージで、実際の縮尺・線形とは異なります。黒川温泉・高千穂・屋久島は旅のマスとして「駅」としています。掲載情報はプロトタイプ用で、最新の営業・運行状況は各公式情報をご確認ください。</p>
+      <p>地図の海岸線・県境・線路の位置は実際の地理データにもとづいています（屋久島は位置をずらして表示。バス・航路の線は経路のイメージ）。地形：国土数値情報（行政区域データ）を加工した dataofjapan/land、線路・駅：station_database（CC BY 4.0）。黒川温泉・高千穂・屋久島は旅のマスとして「駅」としています。掲載情報はプロトタイプ用で、最新の営業・運行状況は各公式情報をご確認ください。</p>
       <p>【PR】物件カード内の購入・予約ボタンはアフィリエイト（広告）リンクを含みます。<span id="data-source" class="opacity-60"></span></p>
     </div>
   </footer>
@@ -197,6 +197,7 @@
   <script src="js/sound.js"></script>
   <script src="js/store.js"></script>
   <script src="js/data.js"></script>
+  <script src="js/geo.js"></script>
   <script src="js/map.js"></script>
   <script src="js/trip.js"></script>
   <script src="js/app.js"></script>

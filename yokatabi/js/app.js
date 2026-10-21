@@ -247,7 +247,7 @@
     const grid = $('#mini-grid');
     grid.innerHTML = owned.length
       ? owned.map((stn) => holoCard(stn, st.acquired[stn.id], 'mini', miniShown && !miniShown.has(stn.id) ? 'is-new' : '')).join('')
-      : '<p class="mini-empty">カード内のボタンからお取り寄せ・予約すると、ここにホログラムカードが加わります。</p>';
+      : '<p class="mini-empty">カード内のボタンからお取り寄せ・予約すると、ここに旅のスタンプカードが加わります。</p>';
     miniShown = new Set(owned.map((stn) => stn.id));
   }
 
