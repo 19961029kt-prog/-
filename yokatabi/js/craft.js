@@ -13,14 +13,13 @@
   const isFree = (slot, id) => item(slot, id).price === 0;
   const owns = (slot, id) => isFree(slot, id) || YT.Store.isOwned(slot, id);
 
-  // 稼いだ額：初到着ごとの発見ボーナス ＋ オーナー刻印した駅の評価額。残高はそこから使った額を引く
+  // 稼いだ額：初到着ごとの発見ボーナス ＋ 共同株主（上位3名）としての配当（js/ownership.js）。残高はそこから使った額を引く
   function earned() {
     const st = YT.Store.get();
     const visited = D.stations.filter((s) => st.visited[s.id]).length;
-    const stamped = D.stations.filter((s) => st.acquired[s.id]).reduce((n, s) => n + s.assetValue, 0);
-    return visited * D.meta.craft.discoveryBonus + stamped;
+    return visited * D.meta.craft.discoveryBonus + YT.Ownership.totalDividends();
   }
-  const balance = () => earned() - YT.Store.get().spent;
+  const balance = () => Math.max(0, earned() - YT.Store.get().spent);
 
   // よりみち切符：高級車両・連結車両（ticket: true）を1つアンロックするごとに1日1枚ずつ増え、最大 ticketMax 枚
   function ticketsPerDay() {

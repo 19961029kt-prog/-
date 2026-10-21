@@ -58,10 +58,31 @@ ranks.forEach((r, i) => {
 });
 if (ranks.length && ranks[ranks.length - 1].min > total) errors.push(`最上位の称号（${ranks[ranks.length - 1].min}万円）に全駅買収（${total}万円）でも届きません`);
 if (!data.stations.some((s) => s.gateway)) errors.push('gateway（旅の出発・到着地）を持つ駅がありません');
-// オーナー刻印：手配中から刻印シートまでの秒数・旅の楽しみ・宣誓の文
+// オーナー権：立候補届をひらくまでの秒数・下克上ボーナス・共同株主の人数・ショップの見分け方
 const owner = data.meta.owner ?? {};
-if (!(owner.minAwaySeconds > 0)) errors.push('meta.owner.minAwaySeconds（刻印シートをひらくまでの秒数）がありません');
-if (!(owner.joys ?? []).length || !owner.oath) errors.push('meta.owner の joys（旅の楽しみ）と oath（宣誓の文）がそろっていません');
+if (!(owner.minAwaySeconds > 0)) errors.push('meta.owner.minAwaySeconds（立候補届をひらくまでの秒数）がありません');
+if (!(owner.upsetBonus >= 1)) errors.push('meta.owner.upsetBonus（下克上ボーナスの倍率、1以上）がありません');
+if (!(owner.shareholders >= 1)) errors.push('meta.owner.shareholders（共同株主の人数）がありません');
+if (!(owner.maxAmount > 0)) errors.push('meta.owner.maxAmount（1回に記録できる金額の上限）がありません');
+for (const sh of owner.shops ?? []) {
+  try {
+    new RegExp(sh.match, 'i');
+  } catch (e) {
+    errors.push(`meta.owner.shops ${sh.id}: match が正規表現になっていません`);
+  }
+}
+if (!(owner.shops ?? []).length) errors.push('meta.owner.shops（レシートから見分けるショップ）がありません');
+// ライバル旅人：駅ごとに、いる旅人のIDで、金額は正の数・重複なし・共同株主の人数以上
+const rivalIds = new Set((data.meta.rivals ?? []).map((r) => r.id));
+for (const s of data.stations) {
+  const rv = s.rivals ?? [];
+  if (rv.length < (owner.shareholders ?? 3)) errors.push(`${s.id}: rivals（ライバル旅人の実績）が ${owner.shareholders} 人ぶんありません`);
+  if (new Set(rv.map((r) => r.id)).size !== rv.length) errors.push(`${s.id}: rivals に同じ旅人が2回出ています`);
+  rv.forEach((r) => {
+    if (!rivalIds.has(r.id)) errors.push(`${s.id}: rivals の ${r.id} が meta.rivals にいません`);
+    if (!(r.amount > 0)) errors.push(`${s.id}: rivals ${r.id} の amount がありません`);
+  });
+}
 // クラフト工房：装備欄ごとに、0円の初期装備がちょうど1つ・IDが重複しない・価格は0以上
 // （初期装備のIDは js/store.js の equipped の初期値と同じであること）
 const craft = data.meta.craft ?? {};

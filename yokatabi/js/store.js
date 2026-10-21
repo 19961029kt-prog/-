@@ -1,16 +1,23 @@
 // 進捗の保存（localStorage）。プライベートブラウズ等で使えない場合はメモリ上だけで動く。
+// レシートの画像そのものは重いので、ここではなく IndexedDB（js/receipts.js）に置き、ここには画像のIDだけを持つ。
 (function () {
   'use strict';
   const YT = (window.YT = window.YT || {});
 
   const KEY = 'yokatabi.kyushu.v1';
+  const VERSION = 2;
 
   function blank() {
     return {
-      version: 1,
+      version: VERSION,
       currentStationId: null,
       visited: {},   // { stationId: ISO日時（初到着） }
-      acquired: {},  // { stationId: { at, via: 'product'|'stay', provider, item, joy } } … オーナー刻印済み
+      // いまトップオーナー（購入実績1位）の駅。順位から計算して書き戻す（js/ownership.js）。称号・旅しおり・地図の金色が使う
+      acquired: {},  // { stationId: { at（1位になった日時）, via, provider, item } }
+      // 駅ごとの購入実績（レシートで立候補した記録）。ランキングはこれとライバル旅人の実績から計算する
+      purchases: {}, // { stationId: [{ id, at, amount（読み取った金額・円）, scored（ランキングに入れた額）, upset（下克上ボーナス）, shop, via, item, imageId, hash }] }
+      legacyStamps: {}, // 旧版（ボタンと刻印シートで取れた頃）のオーナー刻印。記念としてアルバムにだけ残す
+      profile: { name: '' }, // ランキングに出る自分の旅人名（空なら「あなた」）
       actions: {},   // { stationId: { product?: ISO, stay?: ISO } } … ジャーニー「購入する」「訪れる」
       favorites: {}, // { stationId: true }  … 「つづく」：推し駅登録
       itineraries: [], // マイ旅しおり：[{ id, savedAt, departDate, title, seq: { g1, day1, day2, g2 } }]
@@ -18,15 +25,35 @@
       rankSeen: null, // カットインを出し終えた称号の段階（0〜）。null は未初期化（既存データの移行用）
       rolls: 0,
       muted: false,
-      // オーナー刻印の手配中（ショップ・宿のボタンを押してから、刻印シートで押印するまで）
-      // { stationId, via, providerId, provider, item, clickedAt（ミリ秒） }。押しただけでは刻印にしない
+      // ショップ・宿のボタンを押してから、レシートで立候補するまで
+      // { stationId, via, providerId, provider, item, clickedAt（ミリ秒） }
       pendingOwner: null,
-      // クラフト資金：残高は「発見ボーナス × 初到着の駅数 ＋ 刻印した駅の評価額 − 使った額」で毎回計算する
+      // クラフト資金：残高は「発見ボーナス × 初到着の駅数 ＋ 共同株主の配当 − 使った額」で毎回計算する
       spent: 0,
       owned: {},     // { 'livery:forest': ISO日時, … } … アンロック済みのパーツ（初期装備は持っている扱い）
       equipped: { livery: 'hidamari', carriage: 'none', trail: 'puff', hat: 'straw', outfit: 'canvas', buddy: 'none' },
       tickets: { date: '', used: 0 }, // よりみち切符：その日に使った枚数
     };
+  }
+
+  // 保存データを今の形にそろえる。version 1（ボタンと刻印シートだけでオーナーになれた頃）の刻印は、
+  // 購入実績がないので順位には入れず、記念の刻印としてアルバムに残す。パーツは持ったまま、使った額は0に戻す
+  // （配当の計算が変わって残高がマイナスにならないように）。
+  function normalize(parsed) {
+    if (!parsed || ![1, VERSION].includes(parsed.version)) return null;
+    const b = blank();
+    const s = Object.assign(b, parsed);
+    s.equipped = Object.assign(blank().equipped, parsed.equipped || {}); // 新しく増えた装備欄は初期装備で埋める
+    if (parsed.version === 1) {
+      s.legacyStamps = parsed.acquired || {};
+      s.acquired = {};
+      s.purchases = {};
+      s.spent = 0;
+      s.pendingOwner = null;
+      s.rankSeen = null; // 称号は購入実績から数え直すので、カットインの段階も今の称号にそろえ直す
+      s.version = VERSION;
+    }
+    return s;
   }
 
   let state = blank();
@@ -42,8 +69,7 @@
     try {
       const b64 = location.hash.slice(CARRY.length).replace(/-/g, '+').replace(/_/g, '/');
       const json = new TextDecoder().decode(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)));
-      const parsed = JSON.parse(json);
-      if (parsed && parsed.version === 1) data = parsed;
+      data = normalize(JSON.parse(json));
     } catch (e) {
       /* 壊れていたら引き継がない */
     }
@@ -56,17 +82,28 @@
   }
   // 旅の進み具合。新しいURLで先に遊んでいた場合は、進んでいるほうを残す
   const progress = (s) =>
-    Object.keys(s.acquired || {}).length * 100 + (s.itineraries || []).length * 10 + Object.keys(s.visited || {}).length;
+    Object.values(s.purchases || {}).reduce((n, l) => n + l.length, 0) * 100 +
+    Object.keys(s.legacyStamps || {}).length * 50 +
+    (s.itineraries || []).length * 10 +
+    Object.keys(s.visited || {}).length;
+
+  function write() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(state));
+    } catch (e) {
+      /* 保存できない環境ではセッション中のみ保持 */
+    }
+  }
 
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed && parsed.version === 1) {
-          const b = blank();
-          state = Object.assign(b, parsed);
-          state.equipped = Object.assign(b.equipped, parsed.equipped || {}); // 新しく増えた装備欄は初期装備で埋める
+        const s = normalize(JSON.parse(raw));
+        if (s) {
+          const migrated = JSON.parse(raw).version !== VERSION;
+          state = s;
+          if (migrated) write();
         }
       }
     } catch (e) {
@@ -74,22 +111,14 @@
     }
     const carried = takeCarried();
     if (carried && progress(carried) > progress(state)) {
-      state = Object.assign(blank(), carried);
-      try {
-        localStorage.setItem(KEY, JSON.stringify(state));
-      } catch (e) {
-        /* 保存できない環境ではセッション中のみ保持 */
-      }
+      state = carried;
+      write();
     }
     return state;
   }
 
   function save() {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(state));
-    } catch (e) {
-      /* 保存できない環境ではセッション中のみ保持 */
-    }
+    write();
     listeners.forEach((fn) => fn(state));
   }
 
@@ -112,13 +141,13 @@
       return first;
     },
     isVisited: (id) => !!state.visited[id],
-    // ショップ・宿のボタンを押した：ジャーニー（購入する／訪れる）の一歩として記録する。刻印はまだ
+    // ショップ・宿のボタンを押した：ジャーニー（購入する／訪れる）の一歩として記録する
     recordAction(id, via) {
       state.actions[id] = state.actions[id] || {};
       if (!state.actions[id][via]) state.actions[id][via] = new Date().toISOString();
       save();
     },
-    // 手配中の記録（刻印シートで押印するまで、再読み込みしても残す）
+    // 手配中の記録（レシートで立候補するまで、再読み込みしても残す）
     setPendingOwner(info) {
       state.pendingOwner = info;
       save();
@@ -128,24 +157,32 @@
       state.pendingOwner = null;
       save();
     },
-    // オーナー刻印：刻印シートで押印したときだけ呼ぶ。初めての刻印なら true を返す
-    // info = { via: 'product'|'stay', provider, item, joy }。2回目以降は記録を上書きしない
-    acquire(id, info) {
+    // 購入実績（レシート）を1件足す
+    addPurchase(id, rec) {
+      (state.purchases[id] ||= []).push(rec);
       state.actions[id] = state.actions[id] || {};
-      if (!state.actions[id][info.via]) state.actions[id][info.via] = new Date().toISOString();
+      if (!state.actions[id][rec.via]) state.actions[id][rec.via] = rec.at;
+      if (!state.visited[id]) state.visited[id] = rec.at;
       if (state.pendingOwner && state.pendingOwner.stationId === id) state.pendingOwner = null;
-      if (state.acquired[id]) {
-        save();
-        return false;
-      }
-      state.acquired[id] = Object.assign({ at: new Date().toISOString() }, info);
-      if (!state.visited[id]) state.visited[id] = state.acquired[id].at;
       save();
-      return true;
+    },
+    getPurchases: (id) => state.purchases[id] || [],
+    allPurchases: () => Object.entries(state.purchases).flatMap(([stationId, list]) => list.map((r) => ({ stationId, ...r }))),
+    hasReceiptHash: (hash) => Object.values(state.purchases).some((l) => l.some((r) => r.hash === hash)),
+    // トップオーナーの駅を、順位の計算結果に合わせて書き戻す（1位になった日時は、最初に1位になったときのまま）
+    syncOwners(top) {
+      let changed = false;
+      for (const id of Object.keys(state.acquired)) if (!top[id]) (delete state.acquired[id]), (changed = true);
+      for (const [id, info] of Object.entries(top)) if (!state.acquired[id]) (state.acquired[id] = info), (changed = true);
+      if (changed) save();
     },
     isAcquired: (id) => !!state.acquired[id],
     getAcquisition: (id) => state.acquired[id] || null,
     getActions: (id) => state.actions[id] || {},
+    setProfileName(name) {
+      state.profile.name = String(name || '').trim().slice(0, 12);
+      save();
+    },
     toggleFavorite(id) {
       if (state.favorites[id]) delete state.favorites[id];
       else state.favorites[id] = true;
@@ -211,11 +248,13 @@
       state.muted = !!v;
       save();
     },
+    // 旅の記録をリセット（購入実績・レシートの記録も消す。画像は呼び出し側で IndexedDB から消す）
     reset() {
-      const { muted, itineraries } = state;
+      const { muted, itineraries, profile } = state;
       state = blank();
       state.muted = muted;
       state.itineraries = itineraries; // 保存した旅しおりは旅の記録のリセットでは消さない
+      state.profile = profile;
       save();
     },
   };

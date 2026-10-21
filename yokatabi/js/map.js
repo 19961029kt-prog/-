@@ -267,6 +267,10 @@
       el('circle', { r: 12.5, fill: 'url(#g-seal)', class: 'seal-disc' }, seal);
       el('circle', { r: 9, class: 'seal-ring' }, seal);
       el('text', { y: 4.2, 'text-anchor': 'middle', class: 'seal-char' }, seal).textContent = '印';
+      // 共同株主（2〜3位）：駅のしるしの右上に小さな「株」の札
+      const share = el('g', { class: 'station-share', transform: 'translate(10 -10)' }, g);
+      el('circle', { r: 6.5, class: 'share-disc' }, share);
+      el('text', { y: 3.2, 'text-anchor': 'middle', class: 'share-char' }, share).textContent = '株';
       const [dx, dy, anchor] = LABEL_OFFSET[s.labelDir] || LABEL_OFFSET.right;
       el('text', { x: dx, y: dy, 'text-anchor': anchor, class: 'station-label' }, g).textContent = s.name;
 
@@ -410,6 +414,7 @@
     },
 
     refresh(state) {
+      const shareholders = new Set(YT.Ownership ? YT.Ownership.shareholderOf() : []);
       D.stations.forEach((s) => {
         const g = nodes[s.id];
         g.classList.toggle('is-visited', !!state.visited[s.id]);
@@ -417,6 +422,7 @@
         g.classList.toggle('is-current', state.currentStationId === s.id);
         g.classList.toggle('is-favorite', !!state.favorites[s.id]);
         g.classList.toggle('is-pending', !!(state.pendingOwner && state.pendingOwner.stationId === s.id));
+        g.classList.toggle('is-shareholder', !state.acquired[s.id] && shareholders.has(s.id));
       });
     },
 

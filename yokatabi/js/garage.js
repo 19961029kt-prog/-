@@ -134,7 +134,8 @@
           <h3 class="sec-title"><span>💰</span>クラフト資金の貯めかた</h3>
           <ul>
             <li>はじめての駅に着くと <b>よりみち発見ボーナス ${api.yen(D.meta.craft.discoveryBonus)}</b></li>
-            <li>オーナー刻印を押すと、その駅の <b>資産評価額（${api.yen(Math.min(...D.stations.map((s) => s.assetValue)))}〜${api.yen(Math.max(...D.stations.map((s) => s.assetValue)))}）</b></li>
+            <li>駅の購入実績ランキングで <b>上位3名（共同株主）</b>に入ると、その駅の評価額（${api.yen(Math.min(...D.stations.map((s) => s.assetValue)))}〜${api.yen(Math.max(...D.stations.map((s) => s.assetValue)))}）を、上位3名の中での金額の割合で <b>配当</b>として受け取れます（1位ほど多い）</li>
+            <li>クラフト資金はゲームの中だけのもので、お金の価値はありません</li>
           </ul>
         </section>`;
       drawStage();
@@ -186,7 +187,7 @@
       if (!r.ok) {
         if (r.reason === 'short') {
           Sound.click();
-          api.toast(`💰 クラフト資金があと${api.yen(r.short)}足りません。駅を発見したり、オーナー刻印を押したりして貯めましょう`);
+          api.toast(`💰 クラフト資金があと${api.yen(r.short)}足りません。駅を発見したり、共同株主になったりして貯めましょう`);
         }
         return;
       }

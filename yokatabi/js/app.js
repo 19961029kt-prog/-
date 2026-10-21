@@ -1,8 +1,9 @@
 // UI全体の結線：ヘッダー（称号・踏破率・総資産額・クラフト資金・アバター）・よりみちダイス・寄り道手帖（モーダル）・
-// オーナー刻印の演出・オーナー刻印手帖・マイ旅しおり・Xシェア。刻印の2段階フローは owner.js、工房は garage.js。
+// 購入実績ランキング・王座交代の演出・オーナー刻印手帖（切手・レシートアルバム）・マイ旅しおり・Xシェア。
+// 立候補（スクショの読み取り）は owner.js、順位の計算は ownership.js、工房は garage.js。
 (function () {
   'use strict';
-  const { Data, Store, Sound, Map, Trip, Craft, Dice, Owner, Garage } = window.YT;
+  const { Data, Store, Sound, Map, Trip, Craft, Dice, Owner, Garage, Ownership, Receipts } = window.YT;
 
   let D = null;
   let busy = false; // 列車走行中・ダイス回転中
@@ -21,6 +22,7 @@
     return `${oku}億${rest ? rest.toLocaleString('ja-JP') + '万' : ''}円`;
   };
   const pct = (n, d) => (d ? Math.round((n / d) * 100) : 0);
+  const yenJP = (v) => `¥${Number(v).toLocaleString('ja-JP')}`;
   const fmtDate = (iso) => {
     const d = new Date(iso);
     return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
@@ -76,17 +78,13 @@
     $('#current-pref').textContent = s.prefecture;
     $('#current-pref').style.setProperty('--pref', (D.meta.prefectures[s.prefecture] || {}).color);
     $('#current-tagline').textContent = s.tagline;
-    $('#current-status').innerHTML = st.acquired[s.id]
-      ? '<span class="chip chip-gold">印 オーナー刻印済み</span>'
-      : Owner.isPendingFor(s.id)
-        ? '<span class="chip chip-green">🧭 視察・手配中</span>'
-        : '<span class="chip">まだ刻印していません</span>';
+    $('#current-status').innerHTML = rankChip(s.id);
     // 手配中の駅を別の駅で忘れないよう、パネルの下に小さく出す
     const p = Owner.pending();
     const chip = $('#pending-chip');
-    chip.hidden = !p || Store.isAcquired(p.stationId);
+    chip.hidden = !p;
     if (!chip.hidden) {
-      chip.innerHTML = `<span>🧭 <b>${esc(D.byId[p.stationId].name)}駅</b>を${esc(p.provider)}で視察・手配中</span><button class="link-btn" data-open-station="${esc(p.stationId)}">寄り道手帖をひらく</button>`;
+      chip.innerHTML = `<span>🧭 <b>${esc(D.byId[p.stationId].name)}駅</b>を${esc(p.provider)}で視察・手配中</span><button class="link-btn" data-candidacy-open="${esc(p.stationId)}">スクショで立候補する</button>`;
     }
   }
 
@@ -102,7 +100,7 @@
     if (!$('[data-view="garage"]').hidden) Garage.render();
   }
 
-  // ---------- 称号（刻印した駅の評価額の合計でランクアップ） ----------
+  // ---------- 称号（トップオーナーの駅の評価額の合計でランクアップ） ----------
   // meta.ranks：九州旅人 ➔ 九州開拓使 ➔ 九州大名 ➔ 九州鉄道王。min は総資産額（万円）のしきい値
   const ranks = () => D.meta.ranks;
   function rankInfo(assets) {
@@ -137,7 +135,7 @@
         <h3 class="ladder-title">称号の道</h3>
         <p class="ladder-next">${
           info.next
-            ? `次の称号「<b>${esc(info.next.title)}</b>」まで、刻印した資産あと <b>${yenBig(info.toNext)}</b>`
+            ? `次の称号「<b>${esc(info.next.title)}</b>」まで、トップオーナーの駅の資産あと <b>${yenBig(info.toNext)}</b>`
             : '最高位「九州鉄道王」に到達しました。九州のレールは、どこまでもあなたの旅路です'
         }</p>
       </div>
@@ -165,7 +163,7 @@
     if (Store.get().rankSeen === null) Store.setRankSeen(rankInfo(stats().assets).index);
   }
 
-  // オーナー刻印のたびに呼ぶ：称号が上がっていたらカットインを出す
+  // トップオーナーになるたびに呼ぶ：称号が上がっていたらカットインを出す
   function checkRankUp(delay) {
     const before = Store.get().rankSeen ?? 0;
     const now = rankInfo(stats().assets).index;
@@ -180,7 +178,7 @@
     const { assets } = stats();
     const layer = $('#cutin');
     const chars = [...rank.title].map((c, i) => `<span style="--c:${i}">${esc(c)}</span>`).join('');
-    const share = shareUrl(`【称号ランクアップ】九州の駅にオーナー刻印を押しつづけて、称号「${rank.title}」になりました！\n総資産 ${yenBig(assets)}`);
+    const share = shareUrl(`【称号ランクアップ】九州の駅のトップオーナーになりつづけて、称号「${rank.title}」になりました！\n総資産 ${yenBig(assets)}`);
     layer.className = `cutin rank-${rank.metal}`;
     layer.innerHTML = `
       <div class="cutin-band" role="alertdialog" aria-labelledby="cutin-title" aria-describedby="cutin-flavor">
@@ -253,7 +251,7 @@
     $('#mini-assets').textContent = yenBig(s.assets);
     $('#mini-grid').innerHTML = owned.length
       ? owned.map((stn) => stampCard(stn, st.acquired[stn.id], 'mini', miniShown && !miniShown.has(stn.id) ? 'is-new' : '')).join('')
-      : '<p class="mini-empty">寄り道手帖のボタンからお取り寄せ・予約の手配をして、オーナー刻印を押すと、ここに切手のようなカードが増えていきます。</p>';
+      : '<p class="mini-empty">寄り道手帖のボタンからお買い物・予約をして、完了画面のスクショで立候補し、購入実績で1位になると、ここにトップオーナーの切手が増えていきます。</p>';
     miniShown = new Set(owned.map((stn) => stn.id));
   }
 
@@ -450,9 +448,11 @@
 
   function stationShareText(s) {
     const st = stats();
-    if (Store.isAcquired(s.id)) {
-      return `【${s.name}駅】のオーナー刻印を押しました📮 資産評価額${yen(s.assetValue)}\n称号「${rankInfo(st.assets).rank.title}」／刻印 ${st.acquiredCount}駅／総資産 ${yenBig(st.assets)}`;
+    const me = Ownership.you(s.id);
+    if (me && me.rank === 1) {
+      return `【${s.name}駅】のトップオーナーになりました👑 累計購入 ${yenJP(me.totalAmount)}\n称号「${rankInfo(st.assets).rank.title}」／トップオーナー ${st.acquiredCount}駅／総資産 ${yenBig(st.assets)}`;
     }
+    if (me && me.rank <= D.meta.owner.shareholders) return `【${s.name}駅】の共同株主（${me.rank}位）になりました📈 1位まで下克上をねらいます\n九州踏破率 ${st.visitedPct}%`;
     return `${s.name}駅に寄り道中🚃 ${s.tagline}\n九州踏破率 ${st.visitedPct}%`;
   }
 
@@ -469,7 +469,8 @@
     const actions = Store.getActions(id);
     const color = (D.meta.prefectures[s.prefecture] || {}).color;
     const aff = D.meta.affiliate;
-    const pendingHere = Owner.isPendingFor(id) && !acq;
+    const pendingHere = Owner.isPendingFor(id);
+    const me = Ownership.you(id);
     const card = $('#modal-card');
     card.style.setProperty('--pref', color);
     card.classList.toggle('is-acquired', !!acq);
@@ -486,7 +487,7 @@
         <p class="modal-kana">${esc(s.kana)} ／ ${esc(s.tagline)}</p>
         <div class="modal-value">
           <span>資産評価額</span><b>${yen(s.assetValue)}</b>
-          ${acq ? `<span class="chip chip-gold">印 オーナー刻印済み ${fmtDate(acq.at)}</span>` : pendingHere ? '<span class="chip chip-green">🧭 視察・手配中</span>' : '<span class="chip chip-dim">オーナー募集中</span>'}
+          ${rankChip(id)}
         </div>
         ${s.note ? `<p class="modal-note">※${esc(s.note)}</p>` : ''}
         <button class="modal-close" data-close aria-label="閉じる">×</button>
@@ -500,13 +501,15 @@
       </ol>
 
       ${
-        acq
-          ? `<div class="owner-banner is-owner">印 あなたはこの駅の<b>オーナー</b>です（${acq.via === 'stay' ? '宿泊・体験' : '名産品'}の手配で刻印）</div>`
-          : pendingHere
-            ? Owner.panelHtml(id)
-            : `<div class="owner-banner">📮 <b>この手帖の中のボタン</b>からお取り寄せ・宿の予約を手配して、戻ってきたら<b>オーナー刻印</b>を押せます。
-               <small>※商品名で別に検索しても刻印にはなりません。ボタンを押してすぐ戻っただけでも刻印にはなりません</small></div>`
+        pendingHere
+          ? Owner.panelHtml(id)
+          : acq
+            ? `<div class="owner-banner is-owner">👑 あなたはこの駅の<b>トップオーナー</b>です（累計 ${yenJP(me.totalAmount)}）。追い越されないよう、旅の買い物を楽しんでください</div>`
+            : `<div class="owner-banner">🧾 <b>この手帖の中のボタン</b>からお取り寄せ・宿の予約をしたら、<b>注文完了画面のスクショ</b>でオーナー権に立候補できます。累計購入金額の<b>1位がトップオーナー</b>、上位3名は共同株主です。
+               <small>※ボタンを押しただけ・商品名で別に検索しただけでは記録になりません。同じスクショは二度使えません</small></div>`
       }
+
+      ${rankingHtml(id)}
 
       <section class="modal-sec">
         <h3 class="sec-title"><span>🚃</span>車窓とまちの寄り道ノート</h3>
@@ -514,7 +517,7 @@
       </section>
 
       <section class="modal-sec">
-        <h3 class="sec-title"><span>🎁</span>名産品物件 <em>お取り寄せで刻印へ</em></h3>
+        <h3 class="sec-title"><span>🎁</span>名産品物件 <em>お取り寄せで立候補へ</em></h3>
         <div class="items">
           ${s.products
             .map(
@@ -529,7 +532,7 @@
       </section>
 
       <section class="modal-sec">
-        <h3 class="sec-title"><span>♨</span>宿泊・体験物件 <em>宿の予約で刻印へ</em></h3>
+        <h3 class="sec-title"><span>♨</span>宿泊・体験物件 <em>宿の予約で立候補へ</em></h3>
         <div class="item">
           <div class="item-name">${esc(s.stay.name)} <span class="chip chip-dim">${esc(s.stay.kind)}</span></div>
           <p class="item-desc">${esc(s.stay.desc)}</p>
@@ -541,14 +544,90 @@
 
       <footer class="modal-foot">
         <a class="share-btn" href="${esc(shareUrl(stationShareText(s)))}" target="_blank" rel="noopener">
-          <span class="x-logo" aria-hidden="true">𝕏</span>${acq ? '刻印をシェア' : '寄り道をシェア'}
+          <span class="x-logo" aria-hidden="true">𝕏</span>${me && me.rank <= D.meta.owner.shareholders ? 'オーナー権をシェア' : '寄り道をシェア'}
         </a>
         <button class="fav-btn ${st.favorites[id] ? 'is-on' : ''}" data-fav>${st.favorites[id] ? '🔔 推し駅' : '🔔 推し駅にする'}</button>
         <button class="ghost-btn" data-close>旅をつづける</button>
       </footer>`;
+    loadThumbs(card);
   }
 
-  // 手帖をひらいている駅だけ描き直す（オーナー刻印の流れから呼ぶ）
+  // 順位のチップ（いまいる駅・寄り道手帖）
+  function rankChip(id) {
+    const me = Ownership.you(id);
+    if (me && me.rank === 1) return '<span class="chip chip-gold">👑 トップオーナー</span>';
+    if (me && me.rank <= D.meta.owner.shareholders) return `<span class="chip chip-share">📈 ${me.rank}位・共同株主</span>`;
+    if (me) return `<span class="chip">${me.rank}位</span>`;
+    if (Owner.isPendingFor(id)) return '<span class="chip chip-green">🧭 視察・手配中</span>';
+    return '<span class="chip chip-dim">オーナー募集中</span>';
+  }
+
+  // オーナー権ランキング（累計購入金額）。上位3名が共同株主で、駅の評価額を金額の割合で配当として分け合う
+  function rankingHtml(id) {
+    const s = D.byId[id];
+    const cfg = D.meta.owner;
+    const rows = Ownership.ranking(id);
+    const me = rows.find((r) => r.isYou);
+    const shown = rows.slice(0, cfg.shareholders);
+    if (me && me.rank > cfg.shareholders) shown.push(me);
+    const mine = Store.getPurchases(id);
+    return `<section class="modal-sec">
+        <h3 class="sec-title"><span>👑</span>オーナー権ランキング <em>累計購入金額</em></h3>
+        <ol class="ranking">${shown
+          .map(
+            (r) => `<li class="rk rk-${r.rank} ${r.isYou ? 'is-you' : ''}">
+              <span class="rk-no">${r.rank === 1 ? '👑' : r.rank}</span>
+              <span class="rk-name">${esc(r.icon)} ${esc(r.userName)}${r.isYou ? '<small>（あなた）</small>' : ''}</span>
+              <span class="rk-amt">${yenJP(r.totalAmount)}</span>
+              <span class="rk-share">${r.rank <= cfg.shareholders ? `${r.rank === 1 ? 'トップオーナー' : '共同株主'}・配当 ${Math.round(r.share * 100)}%（${yen(r.dividend)}）` : '株主の圏外'}</span>
+            </li>`
+          )
+          .join('')}</ol>
+        <p class="rank-note">1位がこの駅のトップオーナー（地図の金の印）。上位${cfg.shareholders}名は共同株主として、評価額 ${yen(s.assetValue)} ぶんのクラフト資金を金額の割合で分け合います。いまの1位でない人の申告額は、<b>下克上ボーナス×${cfg.upsetBonus}</b>で数えます。</p>
+        <div class="rank-actions">
+          <button class="primary-btn" data-candidacy="${esc(id)}" ${Owner.canApply(id) ? '' : 'disabled'}>🧾 オーナー権に立候補する</button>
+          ${Owner.canApply(id) ? '' : '<small>この手帖のショップ・宿のボタンからお買い物・予約をすると、立候補できます</small>'}
+        </div>
+        ${
+          mine.length
+            ? `<div class="mini-receipts" aria-label="この駅のレシート">${mine
+                .slice()
+                .reverse()
+                .map((r) => receiptCard(id, r, 'mini'))
+                .join('')}</div>`
+            : ''
+        }
+      </section>`;
+  }
+
+  // 切手風の領収証カード（スクショのサムネイル・金額・ショップ・査収のハンコ）
+  function receiptCard(stationId, r, size = '') {
+    const s = D.byId[stationId];
+    const color = (D.meta.prefectures[s.prefecture] || {}).color;
+    return `<article class="receipt ${size ? `receipt-${size}` : ''}" style="--pref:${color}">
+        <div class="receipt-paper">
+          <div class="receipt-thumb">${r.imageId ? `<img alt="${esc(s.name)}駅のレシート" data-thumb="${esc(r.imageId)}">` : '<span>🧾</span>'}</div>
+          <div class="receipt-body">
+            <p class="receipt-station">${esc(s.name)}<small>駅</small></p>
+            <p class="receipt-amount">${yenJP(r.amount)}</p>
+            <p class="receipt-shop">${r.via === 'stay' ? '♨' : '🎁'} ${esc(r.shop)}${size === 'mini' ? '' : `・${esc(r.item || '')}`}</p>
+            <p class="receipt-meta">${fmtDate(r.at)}${r.upset ? `　下克上×${D.meta.owner.upsetBonus} → ${yenJP(r.scored)}` : ''}</p>
+          </div>
+        </div>
+        <div class="receipt-stamp" aria-hidden="true">${Receipts.receiptStampSvg(fmtDate(r.at))}</div>
+      </article>`;
+  }
+  // 端末の中に保存したサムネイルを、あとから差し込む
+  function loadThumbs(root) {
+    root.querySelectorAll('img[data-thumb]').forEach((img) => {
+      Receipts.thumbUrl(img.dataset.thumb).then((u) => {
+        if (u) img.src = u;
+        else img.replaceWith(Object.assign(document.createElement('span'), { textContent: '🧾' }));
+      });
+    });
+  }
+
+  // 手帖をひらいている駅だけ描き直す（立候補の流れから呼ぶ）
   function refreshModal(id) {
     if (modalStationId === id) {
       const top = $('#modal-card').scrollTop;
@@ -583,6 +662,7 @@
   function onModalClick(ev) {
     if (ev.target.closest('[data-close]') || ev.target === $('#modal')) return closeModal();
     if (Owner.onClick(ev)) return;
+    if (ev.target.closest('[data-candidacy]')) return;
     const fav = ev.target.closest('[data-fav]');
     if (fav) {
       const on = Store.toggleFavorite(modalStationId);
@@ -597,22 +677,40 @@
     if (a) Owner.start(a.dataset.stationId, a);
   }
 
-  // ---------- オーナー刻印の完了演出 ----------
-  function celebrate(id) {
+  // ---------- 立候補のあと ----------
+  // 1位を取ったら王座交代の演出。それ以外は、何位になったかと配当をお知らせする
+  function afterCandidacy(id, result, amount) {
     const s = D.byId[id];
+    if (result.tookThrone) return celebrate(id, result);
+    const me = Ownership.you(id);
+    if (result.after <= D.meta.owner.shareholders) Sound.coin();
+    else Sound.gentle();
+    toast(
+      `🧾 ${s.name}駅に購入実績 ${yenJP(amount)}${result.upset ? `（下克上×${D.meta.owner.upsetBonus}で ${yenJP(result.scored)}）` : ''}を記録しました。いま${result.after}位${
+        result.after === 1 ? '（トップオーナーのまま）' : result.after <= D.meta.owner.shareholders ? `・共同株主（配当 ${yen(me.dividend)}）` : `・1位まであと お買い物 ${yenJP(Ownership.preview(id, 0).needToTop)} ぶん`
+      }`,
+      result.after <= D.meta.owner.shareholders ? 'toast-gold' : ''
+    );
+  }
+
+  // ---------- 王座交代（トップオーナーになった）の演出 ----------
+  function celebrate(id, result) {
+    const s = D.byId[id];
+    const me = Ownership.you(id);
+    const prev = Ownership.ranking(id)[1];
     Sound.fanfare();
     Map.burst(id);
     checkRankUp(2600);
     const layer = $('#celebrate');
     layer.innerHTML = `
       <div class="celebrate-box" role="alertdialog" aria-labelledby="celebrate-title">
-        <p class="celebrate-kicker">おめでとうございます</p>
-        <h2 id="celebrate-title" class="celebrate-title">オーナー刻印、完了！</h2>
+        <p class="celebrate-kicker">王座交代</p>
+        <h2 id="celebrate-title" class="celebrate-title">トップオーナー就任！</h2>
         <div class="celebrate-card">${stampCard(s, Store.getAcquisition(id), 'big')}</div>
-        <p class="celebrate-msg"><b>${esc(s.name)}駅</b>のオーナーになりました。<br>総資産額とクラフト資金に <b>${yen(s.assetValue)}</b> が加わりました。</p>
+        <p class="celebrate-msg"><b>${esc(s.name)}駅</b>の購入実績で1位になりました${prev ? `（${esc(prev.userName)}さんを追い越しました）` : ''}。<br>累計 <b>${yenJP(me.totalAmount)}</b>${result && result.upset ? `（下克上ボーナス×${D.meta.owner.upsetBonus}込み）` : ''}・配当 <b>${yen(me.dividend)}</b>／総資産額に <b>${yen(s.assetValue)}</b></p>
         <div class="celebrate-actions">
-          <a class="share-btn" href="${esc(shareUrl(stationShareText(s)))}" target="_blank" rel="noopener"><span class="x-logo">𝕏</span>刻印をシェア</a>
-          ${canMakeTrip() ? '<button class="ghost-btn ghost-light" data-go-trip>🧳 刻印した駅で旅しおりを作る</button>' : ''}
+          <a class="share-btn" href="${esc(shareUrl(stationShareText(s)))}" target="_blank" rel="noopener"><span class="x-logo">𝕏</span>オーナー権をシェア</a>
+          ${canMakeTrip() ? '<button class="ghost-btn ghost-light" data-go-trip>🧳 オーナーの駅で旅しおりを作る</button>' : ''}
           <button class="ghost-btn ghost-light" data-go-garage>🚂 クラフト工房へ</button>
           <button class="ghost-btn ghost-light" data-dismiss>手帖に戻る</button>
         </div>
@@ -641,31 +739,30 @@
         openTrip();
       });
     }
-    // 刻印した駅が旅しおりの条件に届いた瞬間に、一度だけ提案する
+    // オーナーの駅が旅しおりの条件に届いた瞬間に、一度だけ提案する
     if (canMakeTrip() && !Store.get().tripPrompted) {
       Store.markTripPrompted();
-      setTimeout(() => toast('🧳 刻印した駅が2つになりました。その駅を巡る1泊2日のモデルコースを作れます', 'toast-gold'), 1100);
+      setTimeout(() => toast('🧳 トップオーナーの駅が2つになりました。その駅を巡る1泊2日のモデルコースを作れます', 'toast-gold'), 1100);
     }
     $('[data-dismiss]', layer).focus();
   }
 
   // ---------- 切手風のスタンプカード ----------
-  // size: '' | 'big'（刻印の完了演出）| 'mini'（右側の手帖）
-  const JOY = () => Object.fromEntries(D.meta.owner.joys.map((j) => [j.id, j]));
+  // size: '' | 'big'（王座交代の演出）| 'mini'（右側の手帖）
   function stampCard(s, acq, size = '', extraClass = '') {
     const color = (D.meta.prefectures[s.prefecture] || {}).color;
-    const via = acq.via === 'stay' ? `♨ ${acq.provider}で${acq.item}を予約手配` : `🎁 ${acq.provider}で${acq.item}を手配`;
-    const joy = acq.joy && JOY()[acq.joy];
+    const me = Ownership.you(s.id);
+    const via = me ? `🧾 累計購入 ${yenJP(me.totalAmount)}・レシート${Store.getPurchases(s.id).length}枚` : '旧版の記念刻印';
     const no = String(D.stations.indexOf(s) + 1).padStart(3, '0');
     return `
-      <article class="stamp ${size ? `stamp-${size}` : ''} ${extraClass}" style="--pref:${color}" data-station="${esc(s.id)}" tabindex="0" aria-label="${esc(s.name)}駅のオーナー刻印カード">
+      <article class="stamp ${size ? `stamp-${size}` : ''} ${extraClass}" style="--pref:${color}" data-station="${esc(s.id)}" tabindex="0" aria-label="${esc(s.name)}駅のトップオーナーの切手">
         <div class="stamp-paper">
           <div class="stamp-art" aria-hidden="true">${stampArt(s)}</div>
           <div class="stamp-top"><span>${esc(s.prefecture)}</span><span>${esc(s.propertyType)}</span></div>
           <div class="stamp-value"><b>${Number(s.assetValue).toLocaleString('ja-JP')}</b><small>万円</small></div>
           <h3 class="stamp-name">${esc(s.name)}<small>駅</small></h3>
           ${size === 'mini' ? '' : `<p class="stamp-tagline">${esc(s.tagline)}</p><p class="stamp-via">${esc(via)}</p>`}
-          ${size === 'mini' ? '' : `<div class="stamp-foot"><span class="stamp-owner">${Craft.avatarSvg(undefined, { crop: true })}</span><span>${joy ? `${joy.icon} ${esc(joy.label)}` : '九州よりみちオーナー証'}</span><span>第${no}号</span></div>`}
+          ${size === 'mini' ? '' : `<div class="stamp-foot"><span class="stamp-owner">${Craft.avatarSvg(undefined, { crop: true })}</span><span>${me ? `👑 トップオーナー・配当 ${Math.round(me.share * 100)}%` : '九州よりみちオーナー証'}</span><span>第${no}号</span></div>`}
         </div>
         <div class="stamp-cancel" aria-hidden="true">${Owner.sealSvg(s, fmtDate(acq.at))}</div>
       </article>`;
@@ -697,7 +794,8 @@
         <div>
           <p class="owner-kicker">九州よりみち　オーナー証</p>
           <p class="owner-title">${emblemHtml(info.rank, 'sm')} ${esc(info.rank.title)}</p>
-          <p class="owner-sub">刻印 ${s.acquiredCount}駅 ／ 九州踏破率 ${s.visitedPct}%</p>
+          <p class="owner-sub">トップオーナー ${s.acquiredCount}駅 ／ 共同株主 ${Ownership.shareholderOf().length}駅 ／ 九州踏破率 ${s.visitedPct}%</p>
+          <label class="owner-name">旅人名 <input type="text" maxlength="12" value="${esc(st.profile.name)}" placeholder="あなた" data-profile-name></label>
         </div>
       </div>`;
     $('#col-kingdom').textContent = `${s.acquiredPct}%`;
@@ -706,7 +804,7 @@
     $('#col-max').textContent = yenBig(D.totalAsset);
     $('#col-share').href = shareUrl(
       s.acquiredCount
-        ? `称号「${info.rank.title}」として、九州の${s.acquiredCount}駅にオーナー刻印を押しました📖 総資産 ${yenBig(s.assets)}`
+        ? `称号「${info.rank.title}」として、九州の${s.acquiredCount}駅のトップオーナーになりました📖 総資産 ${yenBig(s.assets)}`
         : `よりみちダイス片手に、九州の旅をはじめました🎲 九州踏破率 ${s.visitedPct}%`
     );
     $('#collection-grid').innerHTML = D.stations
@@ -715,12 +813,15 @@
         if (acq) return stampCard(stn, acq);
         const visited = !!st.visited[stn.id];
         const pend = Owner.isPendingFor(stn.id);
+        const me = Ownership.you(stn.id);
+        const top = Ownership.owner(stn.id);
         return `<article class="stamp-blank" data-station="${esc(stn.id)}" tabindex="0" style="--pref:${(D.meta.prefectures[stn.prefecture] || {}).color}">
-            <div class="blank-q" aria-hidden="true">${pend ? '🧭' : '？'}</div>
+            <div class="blank-q" aria-hidden="true">${me ? me.rank : pend ? '🧭' : '？'}</div>
             <div class="blank-name">${esc(stn.name)}<small>駅</small></div>
             <div class="blank-pref">${esc(stn.prefecture)}・${esc(stn.propertyType)}</div>
             <div class="blank-value">評価額 ${yen(stn.assetValue)}</div>
-            <div class="blank-state">${pend ? '視察・手配中' : visited ? '訪問済み・まだ刻印していません' : 'まだ訪れていない駅'}</div>
+            <div class="blank-state">${me ? `${me.rank}位${me.rank <= D.meta.owner.shareholders ? '・共同株主' : ''}（1位まで お買い物 ${yenJP(Ownership.preview(stn.id, 0).needToTop)} ぶん）` : pend ? '視察・手配中' : visited ? '訪問済み・まだ立候補していません' : 'まだ訪れていない駅'}</div>
+            <div class="blank-top">いまのオーナー：${esc(top.icon)} ${esc(top.userName)}</div>
           </article>`;
       })
       .join('');
@@ -730,6 +831,28 @@
       b.setAttribute('aria-selected', b.dataset.subTab === techoSub);
     });
     if (techoSub === 'trip') renderTrip();
+    if (techoSub === 'album') renderAlbum();
+  }
+
+  // 切手風レシートアルバム：立候補に使ったスクショを、新しい順にファイリングする
+  function renderAlbum() {
+    const list = Store.allPurchases().sort((a, b) => b.at.localeCompare(a.at));
+    const legacy = Object.entries(Store.get().legacyStamps || {}).filter(([id]) => D.byId[id]);
+    const total = list.reduce((n, r) => n + r.amount, 0);
+    $('#album-root').innerHTML = `
+      <div class="album-head">
+        <h3 class="sec-title"><span>🧾</span>旅のレシートアルバム <em>端末の中だけに保存</em></h3>
+        <p class="album-sum">${list.length ? `レシート <b>${list.length}</b>枚・購入実績の合計 <b>${yenJP(total)}</b>` : 'まだレシートはありません。寄り道手帖のショップ・宿のボタンからお買い物をして、完了画面のスクショで立候補すると、ここに切手のように並びます。'}</p>
+      </div>
+      <div class="album-grid">${list.map((r) => receiptCard(r.stationId, r)).join('')}</div>
+      ${
+        legacy.length
+          ? `<section class="legacy-sec"><h3 class="sec-title"><span>📮</span>旧版の記念刻印 <em>購入実績には入りません</em></h3>
+              <p class="album-sum">以前の版（ボタンと刻印シートでオーナーになれた頃）に押した刻印です。いまのランキングには入りませんが、記念に残しています。</p>
+              <div class="legacy-list">${legacy.map(([id, a]) => `<span class="chip">📮 ${esc(D.byId[id].name)}駅 ${fmtDate(a.at)}</span>`).join('')}</div></section>`
+          : ''
+      }`;
+    loadThumbs($('#album-root'));
   }
 
   function showView(name) {
@@ -750,7 +873,7 @@
   }
 
   // ---------- マイ旅しおり（オーナー刻印手帖の中） ----------
-  // 刻印した駅から 1泊2日のモデルコースを自動生成（js/trip.js）し、宿をまとめて比較・保存・共有する
+  // トップオーナーの駅から 1泊2日のモデルコースを自動生成（js/trip.js）し、宿をまとめて比較・保存・共有する
   const RIDE_ICON = { shinkansen: '🚄', trunk: '🚆', local: '🚃', scenic: '🚞', ferry: '⛴', bus: '🚌' };
   const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
   const trip = { key: null, result: null, index: 0, savedId: null, departDate: '' };
@@ -798,7 +921,7 @@
     const btn = $('#btn-trip-cta');
     const need = D.meta.trip.minAcquired - acquiredIds().length;
     btn.disabled = need > 0;
-    btn.innerHTML = need > 0 ? `🧳 あと${need}駅の刻印で旅しおりが作れます` : '🧳 刻印した駅で1泊2日の旅しおりを作る';
+    btn.innerHTML = need > 0 ? `🧳 あと${need}駅のトップオーナーで旅しおりが作れます` : '🧳 オーナーの駅で1泊2日の旅しおりを作る';
     btn.classList.toggle('is-ready', need <= 0);
   }
 
@@ -835,11 +958,11 @@
           <div class="tl-head">
             <button class="tl-name" data-open-station="${esc(s.id)}">${esc(name)}</button>
             <span class="chip chip-pref">${esc(s.prefecture)}</span>
-            ${owned ? '<span class="chip chip-gold">印 オーナー刻印済み</span>' : ''}
-            ${it.kind === 'free' && it.suggest ? '<span class="chip chip-sea">寄り道候補・まだ刻印していません</span>' : ''}
+            ${owned ? '<span class="chip chip-gold">👑 トップオーナー</span>' : ''}
+            ${it.kind === 'free' && it.suggest ? '<span class="chip chip-sea">寄り道候補・まだオーナーではない駅</span>' : ''}
           </div>
           <p class="tl-text">${esc(it.text)}</p>
-          ${it.kind === 'free' && it.suggest ? `<p class="tl-sub">刻印すると、次の旅しおりのコースに入ります。<button class="link-btn" data-open-station="${esc(s.id)}">寄り道手帖を見る</button></p>` : ''}
+          ${it.kind === 'free' && it.suggest ? `<p class="tl-sub">トップオーナーになると、次の旅しおりのコースに入ります。<button class="link-btn" data-open-station="${esc(s.id)}">寄り道手帖を見る</button></p>` : ''}
           ${it.kind === 'stop' ? `<p class="tl-sub">🎁 おみやげ候補：${s.products.map((p) => esc(p.name)).join('・')}</p>` : ''}
           ${it.kind === 'stay' ? `<p class="tl-sub">🏨 ${esc(s.stay.name)}（${esc(s.stay.kind)}） <a href="#trip-stays" class="link-btn">宿を比較する ↓</a></p>` : ''}
         </div>
@@ -895,7 +1018,7 @@
 
   function tripShareText(plan) {
     const route = plan.visits.map((id) => (id === plan.overnight ? `${D.byId[id].name}（泊）` : D.byId[id].name)).join('→');
-    return `【マイ旅しおり】オーナー刻印した九州の駅を巡る1泊2日🧳\n${route}\n資産評価額の合計 ${yenBig(plan.asset)}`;
+    return `【マイ旅しおり】トップオーナーになった九州の駅を巡る1泊2日🧳\n${route}\n資産評価額の合計 ${yenBig(plan.asset)}`;
   }
 
   function renderTrip() {
@@ -911,9 +1034,9 @@
         <div class="booklet booklet-locked">
           <p class="booklet-kicker">マイ旅しおり</p>
           <h2 class="booklet-title">マイ旅しおり</h2>
-          <p class="booklet-lead">オーナー刻印した駅が <b>${cfg.minAcquired}駅</b> になると、その駅を巡る<b>リアル九州旅行のモデルコース（1泊2日）</b>を自動でつくり、宿をまとめて比較できます。</p>
+          <p class="booklet-lead">トップオーナーの駅が <b>${cfg.minAcquired}駅</b> になると、その駅を巡る<b>リアル九州旅行のモデルコース（1泊2日）</b>を自動でつくり、宿をまとめて比較できます。</p>
           <div class="lock-progress"><i style="width:${pct(ids.length, cfg.minAcquired)}%"></i></div>
-          <p class="booklet-lead">いま刻印した駅 <b>${ids.length}</b> / ${cfg.minAcquired}駅 ── あと<b>${r.need}駅</b></p>
+          <p class="booklet-lead">いまトップオーナーの駅 <b>${ids.length}</b> / ${cfg.minAcquired}駅 ── あと<b>${r.need}駅</b></p>
           <button class="dice-btn" data-tab-go="map">🎲 すごろくマップへ</button>
         </div>${savedSec}`;
       return;
@@ -933,7 +1056,7 @@
           .join('')}</div>`;
 
     if (!plan) {
-      root.innerHTML = `${tabs}<div class="booklet"><p>刻印した駅どうしが離れていて、1泊2日に収まるコースが見つかりませんでした。もう少し近い駅に刻印すると提案できます。</p></div>${savedSec}`;
+      root.innerHTML = `${tabs}<div class="booklet"><p>オーナーの駅どうしが離れていて、1泊2日に収まるコースが見つかりませんでした。もう少し近い駅のオーナーになると提案できます。</p></div>${savedSec}`;
       return;
     }
 
@@ -943,13 +1066,13 @@
       ${tabs}
       <article class="booklet" id="booklet">
         <div class="booklet-ribbon" aria-hidden="true">1泊2日</div>
-        <p class="booklet-kicker">マイ旅しおり ── オーナー刻印した駅を巡るリアル九州旅行のモデルコース</p>
+        <p class="booklet-kicker">マイ旅しおり ── トップオーナーの駅を巡るリアル九州旅行のモデルコース</p>
         <h2 class="booklet-title">${esc(plan.title)}</h2>
         <p class="booklet-route">${plan.visits
           .map((id) => `<span class="${id === plan.overnight ? 'is-night' : ''}">${esc(D.byId[id].name)}${id === plan.overnight ? '<small>泊</small>' : ''}</span>`)
           .join('<i>→</i>')}</p>
         <dl class="booklet-stats">
-          <div><dt>巡る刻印駅</dt><dd>${plan.visits.length}駅</dd></div>
+          <div><dt>巡るオーナー駅</dt><dd>${plan.visits.length}駅</dd></div>
           <div><dt>移動時間（目安）</dt><dd>${plan.moved}</dd></div>
           <div><dt>資産評価額の合計</dt><dd>${yenBig(plan.asset)}</dd></div>
         </dl>
@@ -970,13 +1093,13 @@
             )
             .join('')}
         </div>
-        ${left.length ? `<p class="booklet-left">🧭 今回のコースに入りきらなかった刻印駅：<b>${left.map((id) => esc(D.byId[id].name)).join('・')}</b>（2泊以上の旅や、別のプランでどうぞ）</p>` : ''}
+        ${left.length ? `<p class="booklet-left">🧭 今回のコースに入りきらなかったオーナー駅：<b>${left.map((id) => esc(D.byId[id].name)).join('・')}</b>（2泊以上の旅や、別のプランでどうぞ）</p>` : ''}
         <p class="booklet-notice">※${esc(cfg.notice)}</p>
       </article>
 
       <section class="stay-compare" id="trip-stays">
         <h3 class="sec-title"><span>🏨</span>宿をまとめて比較する <em>楽天トラベル・じゃらん</em></h3>
-        <p class="stay-lead">このプランの宿泊地と、ほかの候補プランの宿泊地を並べています。ボタンを押すと各サイトで同じ条件の宿を探せます（まだ刻印していない駅は、予約の手配のあとにオーナー刻印へ進めます）。</p>
+        <p class="stay-lead">このプランの宿泊地と、ほかの候補プランの宿泊地を並べています。ボタンを押すと各サイトで同じ条件の宿を探せます（予約のあと、完了画面のスクショでその駅のオーナー権に立候補できます）。</p>
         <div class="stay-list">${stayRows(plan, otherOvernights)}</div>
         <p class="disclosure">${esc(D.meta.affiliate.disclosure)}</p>
       </section>
@@ -1038,11 +1161,11 @@
       if (trip.savedId === del.dataset.deleteSaved) trip.savedId = null;
       return renderTrip();
     }
-    // 宿比較のボタン：リンクは新しいタブで開き、その駅の「視察・手配中」にする（刻印は戻ってきてから）
+    // 宿比較のボタン：リンクは新しいタブで開き、その駅の「視察・手配中」にする（立候補は戻ってきてから）
     const a = t.closest('.aff-btn');
     if (a && a.dataset.stationId) {
       Owner.start(a.dataset.stationId, a);
-      if (!Store.isAcquired(a.dataset.stationId)) toast(`🏨 ${a.dataset.label}で${D.byId[a.dataset.stationId].name}の宿を視察中。予約の手配が済んだら戻ってきてください`);
+      toast(`🏨 ${a.dataset.label}で${D.byId[a.dataset.stationId].name}の宿を視察中。予約が済んだら、完了画面のスクショを持って戻ってきてください`);
     }
   }
 
@@ -1073,6 +1196,7 @@
     if (window.YOKATABI_GEO && window.YOKATABI_GEO.source) $('#geo-source').textContent = window.YOKATABI_GEO.source;
 
     Craft.init(D);
+    Ownership.init(D);
     Sound.setMuted(Store.get().muted);
     renderMute();
     syncRankSeen();
@@ -1082,7 +1206,7 @@
     Map.init($('#map'), D, { onStationClick });
     Map.placeTrain(Store.get().currentStationId);
     Dice.mount($('#die'));
-    const api = { esc, yen, yenBig, fmtDate, toast, renderAll, refreshModal, celebrate, confetti };
+    const api = { esc, yen, yenBig, fmtDate, toast, renderAll, refreshModal, afterCandidacy, confetti };
     Owner.init(D, api);
     Garage.init(D, api, $('#garage-root'));
     renderAll();
@@ -1102,6 +1226,8 @@
     $('#btn-open-current').addEventListener('click', () => !busy && openModal(Store.get().currentStationId));
     $('#modal').addEventListener('click', onModalClick);
     document.addEventListener('click', (e) => {
+      const c = e.target.closest('[data-candidacy-open]');
+      if (c) return Owner.openSheet(c.dataset.candidacyOpen);
       const o = e.target.closest('#pending-chip [data-open-station], #collection-grid [data-station], #mini-grid [data-station]');
       if (o && !busy) openModal(o.dataset.openStation || o.dataset.station);
     });
@@ -1130,6 +1256,11 @@
       })
     );
     $('#btn-trip-cta').addEventListener('click', openTrip);
+    $('#techo-owner').addEventListener('change', (e) => {
+      if (!e.target.matches('[data-profile-name]')) return;
+      Store.setProfileName(e.target.value);
+      toast(`旅人名を「${Ownership.youName()}」にしました（ランキングに出ます）`);
+    });
     $('#trip-root').addEventListener('click', onTripClick);
     $('#trip-root').addEventListener('change', (e) => {
       if (e.target.id !== 'trip-date') return;
@@ -1139,8 +1270,9 @@
     $('#btn-clear-course').addEventListener('click', clearCourse);
     $('#btn-course-trip').addEventListener('click', openTrip);
     $('#btn-reset').addEventListener('click', () => {
-      if (!confirm('旅の記録（訪問・オーナー刻印・推し駅・クラフト工房のパーツ）をすべてリセットします。よろしいですか？')) return;
+      if (!confirm('旅の記録（訪問・購入実績とレシート・推し駅・クラフト工房のパーツ）をすべてリセットします。よろしいですか？')) return;
       Store.reset();
+      Receipts.clear();
       Store.visit(D.meta.startStationId);
       syncRankSeen();
       clearChoice();
