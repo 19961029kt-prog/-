@@ -53,6 +53,7 @@ yokatabi/
 ├── index.html               画面の骨格（Tailwind CDN＋Google Fonts）。<head> に検索・共有用の情報
 ├── favicon.svg / icon-192.png / apple-touch-icon.png   アイコン（象牙のサイコロ）
 ├── og.jpg                   共有・検索用の画像（1200×630）
+├── robots.txt / sitemap.xml 検索エンジン向け（公開URLのサイトの一番上に置かれる）
 ├── stations.json            駅・物件マスター（唯一の正）
 ├── css/style.css            デザインシステム「ほっこり旅の絵地図」（トークン・盤面・駅のシール・紙のカード・スタンプカード・モーダル）
 ├── js/
@@ -255,13 +256,15 @@ python3 -m http.server 8000     # → http://localhost:8000/
 
 ## 11. デプロイ
 
-**いま**：リポジトリ直下の `.github/workflows/deploy-pages.yml` が、Vite のビルド結果に `yokatabi/` を丸ごとコピーして公開している（公開URL：`https://19961029kt-prog.github.io/-/yokatabi/`）。`tools/` と `CLAUDE.md` は公開物から除く。
-
-**移転の予定**：アプリ名の入った URL（GitHub の組織のサイト `https://<組織>.github.io/`）へ移す。手順：
-1. 組織のリポジトリ `<組織>.github.io` を作る（このリポジトリの名前なら、既定のブランチに置いたファイルがそのまま公開される）
-2. `bash yokatabi/tools/publish-site.sh <そのチェックアウト>` で公開するファイルだけを並べ、commit → push
-3. `index.html` の `<head>` の URL を新しい URL に書き換える（検索・共有の節）。`robots.txt`・`sitemap.xml` も新しい URL で置く
-4. 旧URLには転送ページを置く：`deploy-pages.yml` の yokatabi のコピーを `node yokatabi/tools/build-redirect.mjs <新しいURL> dist/yokatabi` に置き換える。転送ページは遊んだ記録を URL の # に載せて渡し、`js/store.js` が受け取る（新しい URL で先に進んでいた場合は、進んでいるほうを残す）
+- **公開URL：`https://q-trip.github.io/`**（GitHub の組織 `q-trip` のリポジトリ `q-trip/q-trip.github.io`。既定のブランチ `main` に置いたファイルがそのまま公開される）。
+- **開発はこのリポジトリの `yokatabi/` で行い**、公開するときだけ公開用リポジトリへ並べて push する（公開は、スクリーンショットを見せて OK をもらってから）：
+  ```bash
+  git clone https://github.com/q-trip/q-trip.github.io /tmp/q-trip.github.io
+  bash yokatabi/tools/publish-site.sh /tmp/q-trip.github.io   # 検証 → tools/ と CLAUDE.md を除いて並べる
+  cd /tmp/q-trip.github.io && git add -A && git commit -m "…" && git push origin main
+  ```
+- `robots.txt`・`sitemap.xml` は新しい URL のサイトの一番上に置かれる前提で書いてある。URL を変えるときは、これと `<head>` の URL（検索・共有の節）をまとめて直す。
+- **旧URL（`https://19961029kt-prog.github.io/-/yokatabi/`）**：リポジトリ直下の `.github/workflows/deploy-pages.yml` が、`node yokatabi/tools/build-redirect.mjs https://q-trip.github.io/ dist/yokatabi` で転送ページだけを置く。転送ページは遊んだ記録を URL の # に載せて渡し、`js/store.js` が受け取る（新しい URL で先に進んでいた場合は、進んでいるほうを残す）。旧URLで共有されたリンクのために、この転送ページは残しておく。
 
 ## 12. コーディング規約
 

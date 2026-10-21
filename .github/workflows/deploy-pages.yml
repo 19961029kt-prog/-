@@ -40,13 +40,10 @@ jobs:
               *) cp "$f" dist/ ;;
             esac
           done
-      - name: Copy Q-TRIP 九州よりみちダイス (yokatabi/, standalone static site)
-        # yokatabi/ はビルド不要の静的サイト。開発用の tools/ と CLAUDE.md は公開しない
-        run: |
-          node yokatabi/tools/build-fallback.mjs --check
-          node yokatabi/tools/test-trip.mjs
-          cp -r yokatabi dist/yokatabi
-          rm -rf dist/yokatabi/tools dist/yokatabi/CLAUDE.md
+      - name: Redirect Q-TRIP 九州よりみちダイス (yokatabi/) to its new URL
+        # Q-TRIP は https://q-trip.github.io/ に移った（公開は q-trip/q-trip.github.io リポジトリ）。
+        # 旧URL /yokatabi/ には、遊んだ記録を引き継いで新しいURLへ移る転送ページだけを置く
+        run: node yokatabi/tools/build-redirect.mjs https://q-trip.github.io/ dist/yokatabi
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
