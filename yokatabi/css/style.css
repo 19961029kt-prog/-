@@ -629,7 +629,7 @@ body.modal-open { overflow: hidden; }
 /* ふちのミシン目：外側の帯にだけ丸い穴を並べ、内側は塗りで残す */
 .stamp {
   --perf: 5px;
-  position: relative; display: block; padding: 9px; background: #fffdf9; cursor: pointer; color: var(--ink);
+  position: relative; display: block; overflow: hidden; padding: 9px; background: #fffdf9; cursor: pointer; color: var(--ink);
   -webkit-mask: radial-gradient(circle at center, transparent 3.1px, #000 3.6px) calc(var(--perf) * -1) calc(var(--perf) * -1) / 10px 10px round, linear-gradient(#000 0 0) content-box;
   mask: radial-gradient(circle at center, transparent 3.1px, #000 3.6px) calc(var(--perf) * -1) calc(var(--perf) * -1) / 10px 10px round, linear-gradient(#000 0 0) content-box;
   filter: drop-shadow(0 2px 3px rgba(90, 64, 40, .2));
