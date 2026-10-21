@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 実在の地理データから、盤面の地図（海岸線・県境・線路網・区間の線形）と駅の座標を作る。
+// 実在の地理データから、盤面の地図（海岸線・県境・山地・線路網・区間の線形）と駅の座標を作る。
 // 手描きの近似ではなく、九州の形と線路の位置を実際の地図に合わせるためのツール。
 //
 //   bash tools/fetch-geo-data.sh <データのフォルダ>   … 元データをダウンロード（初回だけ）
@@ -14,14 +14,18 @@
 //                    路線の線形（国土数値情報「鉄道（N02）」を加工したもの）を使う。
 //   n02/*.geojson  … （任意）国土数値情報「鉄道（N02）」の RailroadSection。置いてあれば、下地の線路網を
 //                    これから作る（九州旅客鉄道の区間だけ）。無ければ station_database の線形を使う。
+//   dem/9/x/y.png  … 標高タイル Terrain Tiles（Mapzen／AWS Open Data、Terrarium 形式）。山地の等高線を作る。
 //
-// 投影：正距円筒図法（中央緯度 32.5° で経度を縮める）。海岸線・県境・線路・駅を、すべて同じ式 proj() で
-//       盤面の座標にする（駅が線路から浮かないように）。屋久島だけは縮尺そのままで位置をずらす。
+// 投影 latLngToSvg：盤面（viewBox 800×960）に、北緯 30.15〜34.05°・東経 129.35〜132.05° の範囲が収まるよう、
+//       正距円筒図法（範囲の中央の緯度で経度を cos 倍に縮める）で縦横同じ倍率に変換する。
+//       縦横を別々の倍率で引き伸ばすと九州の形が横に太るので、倍率は1つにして、左右の余白は海として見せる。
+//       海岸線・県境・山地・線路・駅を、すべて同じ式で盤面の座標にする（駅が線路から浮かないように）。
 //
 // 出力：
-//   js/geo.js       … window.YOKATABI_GEO（投影の定数・陸地・県の塗り・県境・線路網・区間ごとの線形・出典）
+//   js/geo.js       … window.YOKATABI_GEO（投影の定数・陸地・県の塗り・県境・山地・線路網・区間ごとの線形・経由駅・出典）
 //   stations.json   … 各駅の x / y を実際の位置に書き換える（ほかの項目には触れない）
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
+import { inflateSync } from 'node:zlib';
 import { dirname, resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -37,27 +41,15 @@ const data = JSON.parse(readFileSync(stationsPath, 'utf8'));
 const [VX, VY, VW, VH] = data.meta.viewBox;
 
 // ---------- 投影 ----------
-// 九州の広さなら、中央の緯度で経度を縮める正距円筒図法で、見た目の歪みはほぼ出ない。
-// 本土（平戸〜佐伯、佐多岬〜門司）が盤面いっぱいに入るよう倍率と原点を決める。
-const LAT0 = 32.5;
+const BOUNDS = { south: 30.15, north: 34.05, west: 129.35, east: 132.05 };
+const LAT0 = (BOUNDS.south + BOUNDS.north) / 2;
+const LNG0 = (BOUNDS.west + BOUNDS.east) / 2;
 const COS = Math.cos((LAT0 * Math.PI) / 180);
-const BOX = { west: 129.47, east: 132.1, south: 30.97, north: 34.0 };
-const K = Math.min((VW - 8) / ((BOX.east - BOX.west) * COS), (VH - 60) / (BOX.north - BOX.south));
-const OX = VX + (VW - (BOX.east - BOX.west) * COS * K) / 2 - BOX.west * COS * K;
-const OY = VY + 34 + BOX.north * K;
-const proj = ([lon, lat]) => [lon * COS * K + OX, OY - lat * K];
-
-// 屋久島は本土から約60km南にあり、そのままでは盤面からはみ出す。
-// 縮尺はそのままに、薩摩半島の西の海（盤面の左下）へ位置だけずらして置く。
-const YAKU_BOX = { west: 130.3, east: 130.75, south: 30.2, north: 30.5 };
-const inYaku = ([lon, lat]) => lon > YAKU_BOX.west && lon < YAKU_BOX.east && lat > YAKU_BOX.south && lat < YAKU_BOX.north;
-const yakuCenter = proj([130.53, 30.35]);
-const YAKU_TARGET = [VX + 70, VY + VH - 62];
-const YAKU_SHIFT = [YAKU_TARGET[0] - yakuCenter[0], YAKU_TARGET[1] - yakuCenter[1]];
-const projAny = (p) => {
-  const q = proj(p);
-  return inYaku(p) ? [q[0] + YAKU_SHIFT[0], q[1] + YAKU_SHIFT[1]] : q;
-};
+const K = Math.min(VW / ((BOUNDS.east - BOUNDS.west) * COS), VH / (BOUNDS.north - BOUNDS.south));
+const CX = VX + VW / 2;
+const TOP = VY + (VH - (BOUNDS.north - BOUNDS.south) * K) / 2;
+const latLngToSvg = (lat, lng) => [CX + (lng - LNG0) * COS * K, TOP + (BOUNDS.north - lat) * K];
+const proj = ([lon, lat]) => latLngToSvg(lat, lon);
 
 // ---------- 小道具 ----------
 const r1 = (v) => Math.round(v * 10) / 10;
@@ -222,23 +214,22 @@ for (const id of KYUSHU) {
 // 県境は両側の県で2回入るので、1本にする
 const borderUniq = [...new Map(borderSegs.map((s) => [s.k, s])).values()];
 
-// 盤面に入る島だけを描く（重心が盤面の外にある島＝五島・対馬・種子島などは描かない）。屋久島はずらして置く。
+// 盤面に入る島だけを描く（重心が盤面の外にある島＝対馬・五島の西側などは描かない）。
 const centroid = (pts) => pts.reduce((c, p) => [c[0] + p[0] / pts.length, c[1] + p[1] / pts.length], [0, 0]);
 const onBoard = ([x, y], m = 6) => x > VX - m && x < VX + VW + m && y > VY - m && y < VY + VH + m;
 function shapes(rings, tol, minArea) {
   const out = [];
   for (const ring of rings) {
     if (ring.length < 4) continue;
-    const yaku = inYaku(ring[0]);
-    const pts = simplifyRing(ring.map(projAny), tol);
+    const pts = simplifyRing(ring.map(proj), tol);
     if (pts.length < 3 || area(pts) < minArea || !onBoard(centroid(pts))) continue;
-    out.push({ pts, yaku, area: area(pts) });
+    out.push({ pts, area: area(pts) });
   }
   return out.sort((a, b) => b.area - a.area);
 }
 
 // 陸地（九州全体の海岸線）：塗りと海岸線の太線・浅瀬のにじみに使う
-const land = shapes(ringsFrom(coastSegs), 0.3, 0.8).map((l) => ({ d: pathClosed(l.pts), yaku: l.yaku || undefined }));
+const land = shapes(ringsFrom(coastSegs), 0.3, 0.8).map((l) => pathClosed(l.pts));
 // 県ごとの塗り（県の色をほんのり重ねる）。陸地の内側だけに描くので、少し粗くてよい
 const tint = [];
 for (const id of KYUSHU) {
@@ -255,6 +246,140 @@ for (const id of NEIGHBOR) {
     if (pts.length < 3 || area(pts) < 4 || !visible(pts, 40)) continue;
     neighbor.push(pathClosed(pts));
   }
+}
+
+// ---------- 山地（標高タイル Terrain Tiles） ----------
+// 標高を格子に並べ、標高が LEVELS 以上のマスの外周をたどって等高線の輪にする（N03 の外周と同じ考え方：
+// マスの辺のうち、内側と外側の境にある辺だけを残してつなぐ）。階段状のふちは Chaikin でなめらかにしてから間引く。
+const LEVELS = [400, 800, 1200]; // m。低い山並み・山地・高い峰の3段
+const demDir = join(dataDir, 'dem/9');
+const mountains = [];
+let demSource = '';
+if (existsSync(demDir)) {
+  const Z = 9, TILE = 256;
+  const xs = readdirSync(demDir).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+  const ys = readdirSync(join(demDir, String(xs[0]))).map((f) => parseInt(f, 10)).filter(Number.isFinite).sort((a, b) => a - b);
+  const W = xs.length * TILE, H = ys.length * TILE;
+  const elev = new Float32Array(W * H);
+  for (const [i, tx] of xs.entries()) {
+    for (const [j, ty] of ys.entries()) {
+      const img = readPng(readFileSync(join(demDir, String(tx), `${ty}.png`)));
+      for (let y = 0; y < TILE; y++) {
+        for (let x = 0; x < TILE; x++) {
+          const o = (y * TILE + x) * img.bpp;
+          // Terrarium 形式：標高 = (R×256 + G + B/256) − 32768
+          elev[(j * TILE + y) * W + i * TILE + x] = img.data[o] * 256 + img.data[o + 1] + img.data[o + 2] / 256 - 32768;
+        }
+      }
+    }
+  }
+  // 細かいでこぼこを均す（3×3 の平均を2回）
+  const blur = (src) => {
+    const out = new Float32Array(W * H);
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        let sum = 0, n = 0;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const xx = x + dx, yy = y + dy;
+          if (xx >= 0 && yy >= 0 && xx < W && yy < H) (sum += src[yy * W + xx]), n++;
+        }
+        out[y * W + x] = sum / n;
+      }
+    }
+    return out;
+  };
+  const smooth = blur(blur(elev));
+  // 格子の角（px, py）→ 経度・緯度（ウェブメルカトルのタイル座標から）
+  const N = TILE * 2 ** Z;
+  const cornerLonLat = (px, py) => {
+    const gx = xs[0] * TILE + px, gy = ys[0] * TILE + py;
+    return [(gx / N) * 360 - 180, (Math.atan(Math.sinh(Math.PI * (1 - (2 * gy) / N))) * 180) / Math.PI];
+  };
+  const chaikin = (pts, n) => {
+    for (let k = 0; k < n; k++) {
+      const out = [];
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i], q = pts[(i + 1) % pts.length];
+        out.push([p[0] * 0.75 + q[0] * 0.25, p[1] * 0.75 + q[1] * 0.25], [p[0] * 0.25 + q[0] * 0.75, p[1] * 0.25 + q[1] * 0.75]);
+      }
+      pts = out;
+    }
+    return pts;
+  };
+  for (const level of LEVELS) {
+    const inside = (x, y) => x >= 0 && y >= 0 && x < W && y < H && smooth[y * W + x] >= level;
+    // 内側を右手に見る向きで、境の辺を有向の辺として集める（角の番号 = y×(W+1)+x）
+    const from = [], to = [];
+    const V = (x, y) => y * (W + 1) + x;
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        if (!inside(x, y)) continue;
+        if (!inside(x, y - 1)) from.push(V(x, y)), to.push(V(x + 1, y));
+        if (!inside(x + 1, y)) from.push(V(x + 1, y)), to.push(V(x + 1, y + 1));
+        if (!inside(x, y + 1)) from.push(V(x + 1, y + 1)), to.push(V(x, y + 1));
+        if (!inside(x - 1, y)) from.push(V(x, y + 1)), to.push(V(x, y));
+      }
+    }
+    const out = new Map();
+    from.forEach((a, i) => (out.get(a) || out.set(a, []).get(a)).push(i));
+    const used = new Uint8Array(from.length);
+    const rings = [];
+    for (let i = 0; i < from.length; i++) {
+      if (used[i]) continue;
+      const ring = [];
+      let e = i;
+      while (e !== undefined && !used[e]) {
+        used[e] = 1;
+        ring.push(from[e]);
+        e = (out.get(to[e]) || []).find((k) => !used[k]);
+      }
+      if (ring.length > 8) rings.push(ring);
+    }
+    const ds = [];
+    for (const ring of rings) {
+      const pts = ring.map((v) => proj(cornerLonLat(v % (W + 1), Math.floor(v / (W + 1)))));
+      const sm = simplifyRing(chaikin(pts, 2), 0.35);
+      if (sm.length < 4 || area(sm) < 3 || !visible(sm, 0)) continue;
+      ds.push(pathClosed(sm));
+    }
+    mountains.push({ level, d: ds.join('') });
+  }
+  demSource = '／山地：Terrain Tiles（Mapzen・AWS Open Data。SRTM・GMTED2010 は U.S. Geological Survey、ETOPO1 は NOAA 提供）の標高を加工';
+}
+
+// PNG（8bit・インターレースなし）を読む。標高タイルを読むためだけの小さな読み込み器
+function readPng(buf) {
+  let p = 8, w = 0, h = 0, bpp = 0;
+  const idat = [];
+  while (p < buf.length) {
+    const len = buf.readUInt32BE(p), type = buf.toString('ascii', p + 4, p + 8), body = buf.subarray(p + 8, p + 8 + len);
+    if (type === 'IHDR') {
+      w = body.readUInt32BE(0);
+      h = body.readUInt32BE(4);
+      bpp = { 2: 3, 6: 4 }[body[9]];
+      if (body[8] !== 8 || !bpp || body[12]) throw new Error('対応していない PNG です（8bit の RGB／RGBA・インターレースなしのみ）');
+    } else if (type === 'IDAT') idat.push(body);
+    else if (type === 'IEND') break;
+    p += 12 + len;
+  }
+  const raw = inflateSync(Buffer.concat(idat));
+  const stride = w * bpp, data = Buffer.alloc(h * stride);
+  for (let y = 0; y < h; y++) {
+    const filter = raw[y * (stride + 1)], src = y * (stride + 1) + 1, dst = y * stride;
+    for (let x = 0; x < stride; x++) {
+      const a = x >= bpp ? data[dst + x - bpp] : 0, b = y ? data[dst - stride + x] : 0, c = y && x >= bpp ? data[dst - stride + x - bpp] : 0;
+      let v = raw[src + x];
+      if (filter === 1) v += a;
+      else if (filter === 2) v += b;
+      else if (filter === 3) v += (a + b) >> 1;
+      else if (filter === 4) {
+        const pp = a + b - c, pa = Math.abs(pp - a), pb = Math.abs(pp - b), pc = Math.abs(pp - c);
+        v += pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
+      }
+      data[dst + x] = v & 255;
+    }
+  }
+  return { w, h, bpp, data };
 }
 
 // ---------- 駅と路線 ----------
@@ -348,6 +473,13 @@ const PLACES = {
   yakushima: [130.5715, 30.4255], // 宮之浦港
 };
 
+// 経由駅：すごろくのマスではないが、路線がどこを通っているかの目印として小さく描く駅（実際の駅の位置）
+const WAYPOINTS = ['小倉', '行橋', '中津', '鳥栖', '久留米', '日田', '佐賀', '早岐', '諫早', '熊本', '立野', '大分', '延岡', '都城', '川内'].map((name) => {
+  const [lng, lat] = station(name);
+  const [x, y] = proj([lng, lat]);
+  return { name, x: r1(x), y: r1(y) };
+});
+
 // 区間の線形。鉄道は [路線コード, 発駅, 着駅] を順につなぎ、バス・航路は通る地点（経度緯度）で曲線にする。
 const LEGS = {
   'hakata|mojiko': [[[11902], '博多', '門司港']],
@@ -372,9 +504,9 @@ const LEGS = {
   'aso|takachiho': [{ via: [[131.17, 32.83]] }],
   // 高千穂→延岡はバス、延岡→宮崎は日豊本線
   'miyazaki|takachiho': [{ via: [[131.45, 32.66]], to: '延岡', start: 'takachiho' }, [[11907], '延岡', '宮崎']],
-  // 航路：錦江湾を南へ抜けて屋久島（ずらして置いた位置）へ
-  'kagoshima-chuo|yakushima': [{ via: [[130.57, 31.58], [130.66, 31.3], [130.66, 31.08], [130.45, 30.95]], sea: true }],
-  'ibusuki|yakushima': [{ via: [[130.66, 31.2], [130.5, 31.0]], sea: true }],
+  // 航路：鹿児島港から錦江湾を南へ抜け、大隅海峡を渡って宮之浦港へ（通る地点は航路のイメージ）
+  'kagoshima-chuo|yakushima': [{ via: [[130.575, 31.585], [130.67, 31.38], [130.7, 31.13], [130.66, 30.86], [130.6, 30.6]], sea: true }],
+  'ibusuki|yakushima': [{ via: [[130.665, 31.24], [130.67, 31.0], [130.62, 30.68]], sea: true }],
 };
 
 // 曲線の通過点を、Catmull-Rom で細かい点列にする（列車がなめらかに走れるように）
@@ -393,7 +525,7 @@ function spline(pts, steps = 10) {
 
 const dist = (p, q) => Math.hypot((p[0] - q[0]) * COS, p[1] - q[1]);
 const ids = Object.keys(PLACES);
-const XY = Object.fromEntries(ids.map((id) => [id, projAny(PLACES[id])]));
+const XY = Object.fromEntries(ids.map((id) => [id, proj(PLACES[id])]));
 const edgeKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 const routes = {};
 const routeTracks = {};
@@ -490,20 +622,24 @@ for (const s of data.stations) {
   const toLeg = tracks.length ? nearestOn(p, tracks) : 0;
   check.push({ name: s.name, toNet, toLeg });
 }
+// 経由駅も、線路網の上にあるかを測る
+for (const w of WAYPOINTS) check.push({ name: `${w.name}（経由駅）`, toNet: nearestOn([w.x, w.y], network.map((n) => n.pts)), toLeg: 0 });
 network.forEach((n) => delete n.pts);
 const LIMIT = 1.0;
 const bad = check.filter((c) => c.toNet > LIMIT || c.toLeg > LIMIT);
 
 const geo = {
-  source: `海岸線・県境：国土数値情報「行政区域（N03）」（国土交通省）を加工／線路：${networkSource}／駅の位置：station_database（CC BY 4.0、駅データ.jp 由来）`,
-  proj: { lat0: LAT0, cos: +COS.toFixed(6), k: +K.toFixed(4), ox: +OX.toFixed(3), oy: +OY.toFixed(3) },
-  yaku: { box: YAKU_BOX, shift: YAKU_SHIFT.map(r1) },
+  source: `海岸線・県境：国土数値情報「行政区域（N03）」（国土交通省）を加工${demSource}／線路：${networkSource}／駅の位置：station_database（CC BY 4.0、駅データ.jp 由来）`,
+  // map.js の latLngToSvg が同じ式を使う：x = cx + (lng - lng0)·cos·k、y = top + (north - lat)·k
+  proj: { bounds: BOUNDS, lat0: LAT0, lng0: LNG0, cos: +COS.toFixed(6), k: +K.toFixed(4), cx: CX, top: +TOP.toFixed(3) },
   land,
   tint,
   borders,
   neighbor,
+  mountains,
   network,
   routes,
+  waypoints: WAYPOINTS,
 };
 const js = `// 自動生成：node tools/build-geo.mjs で作る。手で編集しない。\n// ${geo.source}\nwindow.YOKATABI_GEO = ${JSON.stringify(geo)};\n`;
 writeFileSync(resolve(root, 'js/geo.js'), js);
@@ -526,7 +662,7 @@ for (const s of data.stations) {
 JSON.parse(text); // 置き換えで壊れていないことを確かめる
 writeFileSync(stationsPath, text);
 
-console.log(`js/geo.js: 陸地 ${land.length}・県境 ${borders.length}・線路網 ${network.length}・区間 ${Object.keys(routes).length}（${(js.length / 1024).toFixed(0)}KB）`);
+console.log(`js/geo.js: 陸地 ${land.length}・県境 ${borders.length}・山地 ${mountains.map((m) => `${m.level}m ${(m.d.length / 1024).toFixed(0)}KB`).join('・')}・線路網 ${network.length}・区間 ${Object.keys(routes).length}・経由駅 ${WAYPOINTS.length}（${(js.length / 1024).toFixed(0)}KB）`);
 console.log('倍率', K.toFixed(2), '（盤面1単位 ≒', (111.32 / K).toFixed(2), 'km）');
 console.log('出典:', geo.source);
 console.log('駅と線路の距離（盤面単位・1≒0.45km）：駅\t線路網まで\t区間の線路まで');

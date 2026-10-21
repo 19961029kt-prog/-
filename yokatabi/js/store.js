@@ -10,7 +10,7 @@
       version: 1,
       currentStationId: null,
       visited: {},   // { stationId: ISO日時（初到着） }
-      acquired: {},  // { stationId: { at, via: 'product'|'stay', provider, item } }
+      acquired: {},  // { stationId: { at, via: 'product'|'stay', provider, item, joy } } … オーナー刻印済み
       actions: {},   // { stationId: { product?: ISO, stay?: ISO } } … ジャーニー「購入する」「訪れる」
       favorites: {}, // { stationId: true }  … 「つづく」：推し駅登録
       itineraries: [], // マイ旅しおり：[{ id, savedAt, departDate, title, seq: { g1, day1, day2, g2 } }]
@@ -18,6 +18,14 @@
       rankSeen: null, // カットインを出し終えた称号の段階（0〜）。null は未初期化（既存データの移行用）
       rolls: 0,
       muted: false,
+      // オーナー刻印の手配中（ショップ・宿のボタンを押してから、刻印シートで押印するまで）
+      // { stationId, via, providerId, provider, item, clickedAt（ミリ秒） }。押しただけでは刻印にしない
+      pendingOwner: null,
+      // クラフト資金：残高は「発見ボーナス × 初到着の駅数 ＋ 刻印した駅の評価額 − 使った額」で毎回計算する
+      spent: 0,
+      owned: {},     // { 'livery:forest': ISO日時, … } … アンロック済みのパーツ（初期装備は持っている扱い）
+      equipped: { livery: 'hidamari', carriage: 'none', trail: 'puff', hat: 'straw', outfit: 'canvas', buddy: 'none' },
+      tickets: { date: '', used: 0 }, // よりみち切符：その日に使った枚数
     };
   }
 
@@ -55,7 +63,11 @@
       const raw = localStorage.getItem(KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed && parsed.version === 1) state = Object.assign(blank(), parsed);
+        if (parsed && parsed.version === 1) {
+          const b = blank();
+          state = Object.assign(b, parsed);
+          state.equipped = Object.assign(b.equipped, parsed.equipped || {}); // 新しく増えた装備欄は初期装備で埋める
+        }
       }
     } catch (e) {
       /* 読めなくても初期状態で続行 */
@@ -100,11 +112,28 @@
       return first;
     },
     isVisited: (id) => !!state.visited[id],
-    // 買収：アフィリエイトボタン経由の行動を記録し、初回の買収なら true を返す
-    // info = { via: 'product'|'stay', provider, item }。2回目以降は買収記録を上書きしない
+    // ショップ・宿のボタンを押した：ジャーニー（購入する／訪れる）の一歩として記録する。刻印はまだ
+    recordAction(id, via) {
+      state.actions[id] = state.actions[id] || {};
+      if (!state.actions[id][via]) state.actions[id][via] = new Date().toISOString();
+      save();
+    },
+    // 手配中の記録（刻印シートで押印するまで、再読み込みしても残す）
+    setPendingOwner(info) {
+      state.pendingOwner = info;
+      save();
+    },
+    getPendingOwner: () => state.pendingOwner,
+    clearPendingOwner() {
+      state.pendingOwner = null;
+      save();
+    },
+    // オーナー刻印：刻印シートで押印したときだけ呼ぶ。初めての刻印なら true を返す
+    // info = { via: 'product'|'stay', provider, item, joy }。2回目以降は記録を上書きしない
     acquire(id, info) {
       state.actions[id] = state.actions[id] || {};
       if (!state.actions[id][info.via]) state.actions[id][info.via] = new Date().toISOString();
+      if (state.pendingOwner && state.pendingOwner.stationId === id) state.pendingOwner = null;
       if (state.acquired[id]) {
         save();
         return false;
@@ -153,6 +182,29 @@
     },
     countRoll() {
       state.rolls += 1;
+      save();
+    },
+    // クラフト：アンロック（残高の確認は呼び出し側で行う）と装備
+    unlock(slot, id, price) {
+      const key = `${slot}:${id}`;
+      if (state.owned[key]) return false;
+      state.owned[key] = new Date().toISOString();
+      state.spent += price;
+      save();
+      return true;
+    },
+    isOwned: (slot, id) => !!state.owned[`${slot}:${id}`],
+    equip(slot, id) {
+      state.equipped[slot] = id;
+      save();
+    },
+    // よりみち切符：日付が変わったら使った枚数を0に戻す
+    ticketsUsed(today) {
+      return state.tickets.date === today ? state.tickets.used : 0;
+    },
+    useTicket(today) {
+      if (state.tickets.date !== today) state.tickets = { date: today, used: 0 };
+      state.tickets.used += 1;
       save();
     },
     setMuted(v) {

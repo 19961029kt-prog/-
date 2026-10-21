@@ -22,7 +22,7 @@ for (const s of data.stations) {
     if (s[key] === undefined) errors.push(`${s.id ?? '?'}: ${key} がありません`);
   }
   const len = [...(s.memo ?? '')].length;
-  if (len < 100 || len > 150) errors.push(`${s.id}: memo が ${len} 文字です（100〜150文字）`);
+  if (len < 120 || len > 200) errors.push(`${s.id}: memo が ${len} 文字です（120〜200文字）`);
   for (const c of s.connections ?? []) {
     if (!ids.has(c)) errors.push(`${s.id}: 接続先 ${c} が存在しません`);
     else if (!data.stations.find((t) => t.id === c).connections.includes(s.id)) {
@@ -58,6 +58,26 @@ ranks.forEach((r, i) => {
 });
 if (ranks.length && ranks[ranks.length - 1].min > total) errors.push(`最上位の称号（${ranks[ranks.length - 1].min}万円）に全駅買収（${total}万円）でも届きません`);
 if (!data.stations.some((s) => s.gateway)) errors.push('gateway（旅の出発・到着地）を持つ駅がありません');
+// オーナー刻印：手配中から刻印シートまでの秒数・旅の楽しみ・宣誓の文
+const owner = data.meta.owner ?? {};
+if (!(owner.minAwaySeconds > 0)) errors.push('meta.owner.minAwaySeconds（刻印シートをひらくまでの秒数）がありません');
+if (!(owner.joys ?? []).length || !owner.oath) errors.push('meta.owner の joys（旅の楽しみ）と oath（宣誓の文）がそろっていません');
+// クラフト工房：装備欄ごとに、0円の初期装備がちょうど1つ・IDが重複しない・価格は0以上
+// （初期装備のIDは js/store.js の equipped の初期値と同じであること）
+const craft = data.meta.craft ?? {};
+const DEFAULT_EQUIP = { livery: 'hidamari', carriage: 'none', trail: 'puff', hat: 'straw', outfit: 'canvas', buddy: 'none' };
+if (!(craft.discoveryBonus > 0)) errors.push('meta.craft.discoveryBonus（発見ボーナス）がありません');
+for (const sec of [...(craft.train ?? []), ...(craft.avatar ?? [])]) {
+  const items = sec.items ?? [];
+  const free = items.filter((i) => i.price === 0);
+  if (free.length !== 1) errors.push(`meta.craft ${sec.slot}: 0円の初期装備がちょうど1つではありません`);
+  else if (DEFAULT_EQUIP[sec.slot] !== free[0].id) errors.push(`meta.craft ${sec.slot}: 初期装備 ${free[0].id} が store.js の初期値 ${DEFAULT_EQUIP[sec.slot]} と違います`);
+  if (new Set(items.map((i) => i.id)).size !== items.length) errors.push(`meta.craft ${sec.slot}: ID が重複しています`);
+  items.forEach((i) => !(i.price >= 0 && i.name) && errors.push(`meta.craft ${sec.slot}/${i.id}: name・price がそろっていません`));
+}
+for (const slot of Object.keys(DEFAULT_EQUIP)) {
+  if (![...(craft.train ?? []), ...(craft.avatar ?? [])].some((s) => s.slot === slot)) errors.push(`meta.craft に装備欄 ${slot} がありません`);
+}
 if (errors.length) {
   console.error('stations.json の検証に失敗しました:\n  ' + errors.join('\n  '));
   process.exit(1);

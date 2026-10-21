@@ -224,7 +224,7 @@
       d2.push(
         pick
           ? { kind: 'free', time: clock(t), id: pick.x.id, suggest: true,
-              text: `フリータイム。足を延ばすなら、まだ買収していない${pick.x.name}へ（片道 約${duration(pick.go)}）。${pick.x.plan.day}` }
+              text: `フリータイム。足を延ばすなら、まだオーナー刻印していない${pick.x.name}へ（片道 約${duration(pick.go)}）。${pick.x.plan.day}` }
           : { kind: 'free', time: clock(t), id: cur, suggest: false, text: 'フリータイム。もうひと湯やおみやげ探しで、ゆっくりどうぞ。' }
       );
     }

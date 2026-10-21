@@ -8,9 +8,11 @@
 #        国土交通省の配布元（https://nlftp.mlit.go.jp/ksj/）から直接取った GeoJSON を置いてもよい。
 # sd/  … station_database（CC BY 4.0）。駅の緯度経度と、路線の線形（国土数値情報「鉄道（N02）」を加工）。
 # n02/ … （任意）国土数値情報「鉄道（N02）」の *RailroadSection*.geojson を手で置くと、下地の線路網をそこから作る。
+# dem/ … 標高タイル Terrain Tiles（Mapzen／AWS Open Data、Terrarium 形式、ズーム9）。山地の等高線に使う。
+#        日本の標高は SRTM・GMTED2010（U.S. Geological Survey）と ETOPO1（NOAA）から作られている。
 set -euo pipefail
 dir="${1:?使い方: bash tools/fetch-geo-data.sh <データのフォルダ>}"
-mkdir -p "$dir/n03" "$dir/sd" "$dir/n02"
+mkdir -p "$dir/n03" "$dir/sd" "$dir/n02" "$dir/dem"
 
 for p in 40 41 42 43 44 45 46 35 38; do
   curl -fsSL --retry 3 -o "$dir/n03/$p.json" \
@@ -22,3 +24,12 @@ curl -fsSL --retry 3 -o "$dir/sd/json.zip" \
   "https://raw.githubusercontent.com/Seo-4d696b75/station_database/main/out/extra/json.zip"
 python3 -c "import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])" "$dir/sd/json.zip" "$dir/sd"
 echo "sd/json/"
+
+# 九州（北緯30.1〜34.1度・東経128.7〜132.7度）を覆うズーム9のタイル
+for x in $(seq 439 445); do
+  for y in $(seq 204 211); do
+    mkdir -p "$dir/dem/9/$x"
+    curl -fsSL --retry 3 -o "$dir/dem/9/$x/$y.png" "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/9/$x/$y.png"
+  done
+done
+echo "dem/9/"
