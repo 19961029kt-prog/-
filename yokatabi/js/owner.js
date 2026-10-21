@@ -1,8 +1,9 @@
 // オーナー権への立候補：お買い物・宿の予約のスクショ（旅のレシート）で、その駅の購入実績を記録する。
 //   1) 寄り道手帖のショップ・宿のボタンを押す → 「視察・手配中」（押した時刻・駅・ショップを保存）
 //   2) 別タブから戻ってきたとき、15秒未満なら「まだ寄り道の途中」の案内。15秒以上なら立候補シートをひらく
-//   3) 立候補シート：注文完了・予約完了のスクショを置く → 「AIスマート読取」で金額とショップを読み取り、確認フォームに入れる
-//      （読み取りは端末の中の文字認識。違っていたら直せる）→ 「オーナー権を確定する」で査収のハンコが押され、実績に加わる
+//   3) 立候補シート：注文完了・予約完了のスクショを置く → 「AIスマート読取」で文字を読み、厳格3点チェック
+//      ①押したショップのレシートで、その駅の名産品・宿に関係する注文か ②駅に止まった日（到着日）と注文日が同じか
+//      ③購入金額（違っていたら直せる）。①②を満たすと「実績を確定して刻印する」で査収済のハンコが押され、実績に加わる
 //   4) 累計購入金額のランキングを計算し直し、1位になったら王座交代の演出（順位の計算は js/ownership.js）
 // ボタンを押しただけ・すぐ戻っただけでは何も起きない。同じスクショは二度使えない。
 (function () {
@@ -70,6 +71,52 @@
     </svg>`;
   }
 
+  // ---------- 厳格3点チェック ----------
+  function checkRow(key, num, title, detail) {
+    return `<li class="check is-wait" data-check="${key}"><span class="check-icon" aria-hidden="true">⏳</span>
+        <span class="check-body"><b>【チェック${num}：${title}】</b><span class="check-detail">${detail || '審査を待っています'}</span></span></li>`;
+  }
+  function setCheck(key, state, detail) {
+    const li = $(`[data-check="${key}"]`);
+    if (!li) return;
+    li.className = `check is-${state}`;
+    li.querySelector('.check-icon').textContent = { ok: '✅', ng: '❌', warn: '⚠️', wait: '⏳' }[state];
+    li.querySelector('.check-detail').innerHTML = detail;
+  }
+  // スクショの文字から3点を確かめる。ショップは「この駅の手帖から開いたショップ」、日付は「この駅に停車した日」と比べる
+  function judge(id, text, parsed, file) {
+    const s = D.byId[id];
+    const esc = api.esc;
+    const shops = D.meta.owner.shops;
+    const clicked = new Set(Object.keys(Store.getActions(id).shops || {}));
+    if (pending() && pending().stationId === id) clicked.add(pending().providerId);
+    const label = (sid) => (shops.find((x) => x.id === sid) || {}).label || sid;
+    // ①ショップと関連商品
+    const word = text ? Receipts.matchItem(text, s) : null;
+    let shop;
+    if (!parsed.shop) shop = { ok: false, detail: 'ショップ名が読み取れませんでした。ショップ名が写るように撮ったスクショを置いてください' };
+    else if (!clicked.has(parsed.shop)) shop = { ok: false, detail: `読み取ったショップは「${esc(label(parsed.shop))}」です。この駅の手帖から開いたショップ（${[...clicked].map((x) => esc(label(x))).join('・') || 'なし'}）のスクショを置いてください` };
+    else if (!word) shop = { ok: false, detail: `${esc(label(parsed.shop))}のスクショですが、${esc(s.name)}駅の名産品・宿に関係する言葉（例：${esc(Receipts.stationWords(s).slice(0, 3).join('・'))}）が見つかりませんでした` };
+    else shop = { ok: true, detail: `対象ショップ（${esc(label(parsed.shop))}）・${esc(s.name)}駅の関連商品（「${esc(word)}」）の購入を確認` };
+    // ②到着日と注文日
+    const arrival = Store.arrivalDate(id);
+    const ymd = (v) => v.replace(/-/g, '/');
+    const found = text ? Receipts.findDates(text, Number((arrival || Store.localDate()).slice(0, 4))) : { near: [], full: [] };
+    const dates = found.near.length ? found.near : found.full;
+    const shot = file && file.lastModified ? Store.localDate(file.lastModified) : null;
+    let date;
+    if (!arrival) date = { ok: false, detail: 'この駅に停車した日の記録がありません。ダイスでこの駅に止まってから立候補してください' };
+    else if (dates.includes(arrival)) date = { ok: true, orderDate: arrival, detail: `駅到着日（${ymd(arrival)}）当日の注文であることを確認` };
+    else if (dates.length) date = { ok: false, orderDate: dates[0], detail: `スクショの注文日（${ymd(dates[0])}）が、この駅に停車した日（${ymd(arrival)}）と違います。停車した日のお買い物・予約だけが記録できます` };
+    else if (shot === arrival) date = { ok: true, orderDate: arrival, viaShot: true, detail: `注文日の表示は見つかりませんでしたが、スクショの撮影日（${ymd(shot)}）が駅到着日と同じことを確認` };
+    else date = { ok: false, detail: `注文日・予約日が読み取れませんでした。注文日が写るスクショか、この駅に停車した日（${ymd(arrival)}）に撮ったスクショを置いてください` };
+    // ③金額
+    const amount = parsed.amount
+      ? { ok: true, detail: `購入金額 <b>${yenJP(parsed.amount)}</b> を自動で読み取りました（違っていたら下の欄で直せます）` }
+      : { ok: false, detail: '金額が見つかりませんでした。スクショの合計金額を下の欄に入れてください' };
+    return { shop, date, amount };
+  }
+
   // ---------- 立候補シート ----------
   let sheet = null; // 開いているシートの状態 { id, file, hash, url, thumb, reading, done }
 
@@ -81,8 +128,7 @@
     const me = Ownership.you(id);
     const top = Ownership.owner(id);
     const upset = (me ? me.rank : null) !== 1;
-    const shops = D.meta.owner.shops;
-    const defShop = p ? shops.find((x) => x.label === p.provider) || shops.find((x) => x.id === p.providerId) : null;
+    const arrival = Store.arrivalDate(id);
     return `
       <article class="deed deed-apply" role="dialog" aria-modal="true" aria-labelledby="deed-title" style="--pref:${color}">
         <div class="deed-inner">
@@ -93,6 +139,7 @@
             <p class="deed-name">${esc(s.name)}<small>駅</small></p>
             <p class="deed-value">いまのトップオーナー <b>${esc(top.icon)} ${esc(top.userName)}</b>（累計 ${yenJP(top.totalAmount)}）${me ? `／あなた ${me.rank}位（${yenJP(me.totalAmount)}）` : ''}</p>
             ${upset ? `<p class="deed-bonus">⚔ 下克上ボーナス：いまの1位ではないので、申告額を <b>×${D.meta.owner.upsetBonus}</b> で数えます</p>` : ''}
+            <p class="deed-arrival">🚉 この駅に停車した日：<b>${arrival ? esc(arrival.replace(/-/g, '/')) : '記録なし'}</b>${p ? `　手配先：<b>${esc(p.provider)}</b>` : ''}</p>
           </div>
           <label class="drop" data-drop>
             <input type="file" accept="image/*" data-file hidden>
@@ -105,21 +152,26 @@
             <span class="drop-preview" hidden>
               <img alt="置いたスクショ" data-preview>
               <span class="scan" aria-hidden="true"><i></i></span>
-              <span class="drop-stamp" aria-hidden="true">${Receipts.receiptStampSvg(api.fmtDate(new Date().toISOString()))}</span>
+              <span class="drop-stamp" aria-hidden="true" data-stamp-art></span>
             </span>
           </label>
           <p class="scan-status" data-status aria-live="polite"></p>
+          <ol class="checks" data-checks hidden aria-label="厳格3点チェック">
+            ${checkRow('shop', '①', '対象ショップ・関連商品', '')}
+            ${checkRow('date', '②', '駅到着日と注文日', '')}
+            ${checkRow('amount', '③', '購入金額', '')}
+          </ol>
           <div class="apply-form" data-form hidden>
             <div class="apply-row">
               <label>金額 <span class="amount-field">¥<input type="text" inputmode="numeric" autocomplete="off" data-amount aria-label="購入金額（円）"></span></label>
-              <label>ショップ <select data-shop>${shops.map((x) => `<option value="${esc(x.id)}" ${defShop && defShop.id === x.id ? 'selected' : ''}>${esc(x.label)}</option>`).join('')}</select></label>
+              <p class="apply-shop">ショップ <b data-shop-label>—</b><small>（スクショから読み取り）</small></p>
             </div>
-            <p class="apply-candidates" data-cands></p>
             <p class="apply-preview" data-preview-line></p>
+            <p class="apply-verdict" data-verdict></p>
           </div>
-          <button class="stamp-btn" data-confirm disabled>オーナー権を確定する</button>
+          <button class="stamp-btn" data-confirm disabled>実績を確定して刻印する</button>
           <button class="link-btn deed-later" data-deed-later>あとで立候補する</button>
-          <p class="deed-note">※ スクショはこの端末の中にだけ保存され、どこにも送信されません（文字の読み取りも端末の中で行います）。同じスクショは二度使えません。実際の購入の内容は確かめていないので、ご自分の購入だけを記録してください。ランキングと配当はゲームの中だけのもので、お金の価値はありません。</p>
+          <p class="deed-note">※ 審査は、この手帖のボタンから開いたショップのスクショであること・その駅に停車した日の注文であること・金額を、端末の中の文字の読み取りで確かめます（スクショはどこにも送信されません）。同じスクショは二度使えません。文字の読み取りでは実際の購入までは確かめられないので、ご自分の購入だけを記録してください。ランキングと配当はゲームの中だけのもので、お金の価値はありません。</p>
         </div>
       </article>`;
   }
@@ -129,11 +181,18 @@
     const v = Number(String($('[data-amount]').value).replace(/[^\d]/g, ''));
     return v > 0 && v <= D.meta.owner.maxAmount ? v : 0;
   }
-  // 金額を変えるたびに、ランキングでどうなるかを見せる
+  // 金額を変えるたびに、ランキングでどうなるかを見せる。①②を満たし、金額が入っていれば確定できる
   function updatePreview() {
     const v = amountValue();
     const line = $('[data-preview-line]');
-    $('[data-confirm]').disabled = !(sheet.file && sheet.done && v);
+    const c = sheet.checks;
+    const pass = !!(c && c.shop.ok && c.date.ok);
+    $('[data-confirm]').disabled = !(sheet.file && sheet.done && v && pass);
+    if (c) {
+      setCheck('amount', v ? 'ok' : 'warn', v ? (c.amount.ok && v === sheet.parsed.amount ? c.amount.detail : `購入金額 <b>${yenJP(v)}</b>（手で直した金額）`) : c.amount.detail);
+      $('[data-verdict]').innerHTML = pass && v ? '🟢 <b>審査基準クリア</b>：「実績を確定して刻印する」で査収済のハンコを押します' : pass ? '金額を入れると確定できます' : '🔴 審査基準を満たしていません。条件に合うスクショを置き直してください（画像をタップで選び直せます）';
+      $('[data-verdict]').className = `apply-verdict ${pass && v ? 'is-ok' : 'is-ng'}`;
+    }
     if (!v) {
       line.textContent = '金額を確かめてください（1円〜100万円）';
       return;
@@ -167,24 +226,28 @@
       status.textContent = '画像を読み込めませんでした';
       return;
     }
-    Object.assign(sheet, { file, hash, url: loaded.url, img: loaded.img, done: false });
+    Object.assign(sheet, { file, hash, url: loaded.url, img: loaded.img, done: false, checks: null, parsed: null, text: '' });
     $('[data-preview]').src = loaded.url;
     $('.drop-empty').hidden = true;
     $('.drop-preview').hidden = false;
     $('[data-drop]').classList.add('is-scanning');
     $('[data-form]').hidden = true;
-    status.innerHTML = '<b class="scan-label">AIスマート読取</b>🔍 旅のレシート・スクショから購入実績を解析中…';
+    $('[data-checks]').hidden = false;
+    ['shop', 'date', 'amount'].forEach((k) => setCheck(k, 'wait', '審査中…'));
+    $('[data-confirm]').disabled = true;
+    status.innerHTML = '<b class="scan-label">AIスマート読取</b>🔍 旅のレシート・スクショを厳格審査中…';
     Sound.click();
-    // 心地よく待てるよう、読み取りが速く終わっても1秒は解析の演出を見せる
-    const minWait = new Promise((r) => setTimeout(r, 1000));
+    // 心地よく待てるよう、読み取りが速く終わっても約1.5秒は審査の演出を見せる
+    const minWait = new Promise((r) => setTimeout(r, (D.meta.owner.scanSeconds || 1.5) * 1000));
     let parsed = { amount: null, shop: null, candidates: [] };
+    let text = '';
     let failed = false;
     try {
-      const text = await Receipts.recognize(file, (m) => {
+      text = await Receipts.recognize(file, (m) => {
         if (!isSheetOpen() || !sheet) return;
         const pct = Math.round((m.progress || 0) * 100);
-        if (/loading|initializ/.test(m.status)) status.innerHTML = `<b class="scan-label">AIスマート読取</b>🔍 解析中…（初回だけ、文字認識の準備をしています ${pct}%）`;
-        else if (/recogniz/.test(m.status)) status.innerHTML = `<b class="scan-label">AIスマート読取</b>🔍 旅のレシート・スクショから購入実績を解析中… ${pct}%`;
+        if (/loading|initializ/.test(m.status)) status.innerHTML = `<b class="scan-label">AIスマート読取</b>🔍 厳格審査の準備中…（初回だけ、文字認識を読み込みます ${pct}%）`;
+        else if (/recogniz/.test(m.status)) status.innerHTML = `<b class="scan-label">AIスマート読取</b>🔍 旅のレシート・スクショを厳格審査中… ${pct}%`;
       });
       parsed = Receipts.parse(text, D.meta.owner.shops, D.meta.owner.maxAmount);
     } catch (e) {
@@ -192,25 +255,34 @@
     }
     await minWait;
     if (!sheet || sheet.file !== file) return; // 途中で別の画像に替えた・閉じた
+    const checks = judge(sheet.id, text, parsed, file);
+    Object.assign(sheet, { parsed, checks, text });
+    // 判定バッジを ①→②→③ の順に出す
+    const order = ['shop', 'date', 'amount'];
+    for (const k of order) {
+      await new Promise((r) => setTimeout(r, 320));
+      if (!sheet || sheet.file !== file) return;
+      const c = checks[k];
+      setCheck(k, c.ok ? 'ok' : k === 'amount' ? 'warn' : 'ng', c.detail);
+      if (c.ok) Sound.click();
+    }
     sheet.done = true;
     $('[data-drop]').classList.remove('is-scanning');
     $('[data-form]').hidden = false;
     // スマホでは確認フォームが画面の下に隠れやすいので、読み取りが終わったら見える位置まで送る
     $('[data-form]').scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     if (parsed.amount) $('[data-amount]').value = parsed.amount.toLocaleString('ja-JP');
-    if (parsed.shop) $('[data-shop]').value = parsed.shop;
-    $('[data-cands]').innerHTML =
-      parsed.candidates.length > 1
-        ? `ほかに見つかった金額：${parsed.candidates.map((v) => `<button type="button" class="cand" data-cand="${v}">${yenJP(v)}</button>`).join('')}`
-        : '';
+    $('[data-shop-label]').textContent = parsed.shop ? D.meta.owner.shops.find((x) => x.id === parsed.shop).label : '読み取れませんでした';
+    const pass = checks.shop.ok && checks.date.ok;
     status.innerHTML = failed
-      ? '自動で読み取れませんでした（通信や画像の状態によります）。金額を確かめて入力してください'
-      : parsed.amount
-        ? `✨ 読み取りました：<b>${yenJP(parsed.amount)}</b>${parsed.shop ? `・${api.esc(D.meta.owner.shops.find((x) => x.id === parsed.shop).label)}` : ''}　違っていたら直してください`
-        : '金額が見つかりませんでした。スクショの合計金額を入力してください';
-    Sound.diceSettle();
+      ? '自動で読み取れませんでした（通信や画像の状態によります）。もう一度お試しください'
+      : pass
+        ? '✨ 審査が終わりました。金額を確かめてください'
+        : '審査が終わりました。満たしていない項目があります';
+    if (pass) Sound.diceSettle();
+    else Sound.gentle();
     updatePreview();
-    if (!parsed.amount) $('[data-amount]').focus();
+    if (pass && !parsed.amount) $('[data-amount]').focus();
   }
 
   // 「オーナー権を確定する」：査収のハンコを押してから記録する
@@ -218,8 +290,12 @@
     const v = amountValue();
     if (!sheet || !sheet.file || !sheet.done || !v) return;
     const id = sheet.id;
-    const shopId = $('[data-shop]').value;
+    const c = sheet.checks;
+    if (!c || !c.shop.ok || !c.date.ok) return;
+    const shopId = sheet.parsed.shop;
     const shop = D.meta.owner.shops.find((x) => x.id === shopId);
+    const arrival = Store.arrivalDate(id);
+    $('[data-stamp-art]').innerHTML = Receipts.receiptStampSvg(arrival.replace(/-/g, '.'), D.byId[id].name);
     const p = pending() && pending().stationId === id ? pending() : null;
     const btn = $('[data-confirm]');
     btn.disabled = true;
@@ -235,7 +311,10 @@
     const s = D.byId[id];
     const item = p ? p.item : via === 'stay' ? s.stay.name : s.products[0].name;
     setTimeout(() => {
-      const result = Ownership.register(id, { id: imageId, at: new Date().toISOString(), amount: v, shop: shop.label, shopId, via, item, imageId: thumb ? imageId : null, hash: sheet.hash });
+      const result = Ownership.register(id, {
+        id: imageId, at: new Date().toISOString(), amount: v, shop: shop.label, shopId, via, item, imageId: thumb ? imageId : null, hash: sheet.hash,
+        arrival, orderDate: c.date.orderDate, verified: { word: (Receipts.matchItem(sheet.text || '', D.byId[id]) || ''), byShotDate: !!c.date.viaShot },
+      });
       early = false;
       Owner.closeSheet();
       api.renderAll();
@@ -262,7 +341,7 @@
 
     // ショップ・宿のボタンを押した（リンクは新しいタブで開く。preventDefault しない）
     start(id, btn) {
-      Store.recordAction(id, btn.dataset.via);
+      Store.recordAction(id, btn.dataset.via, btn.dataset.provider);
       early = false;
       Store.setPendingOwner({
         stationId: id,
@@ -294,7 +373,7 @@
                 : '注文や予約が済んだら、完了画面のスクショを撮って、この画面に戻ってきてください。オーナー権の立候補届がひらきます。'
             }</p>
             <div class="pending-actions">
-              <button class="primary-btn" data-candidacy="${esc(id)}">🧾 オーナー権に立候補する（購入実績を記録）</button>
+              <button class="primary-btn" data-candidacy="${esc(id)}">🧾 オーナー権に立候補する（レシート証明を提出）</button>
               <button class="link-btn" data-owner-cancel>手配をとりやめる</button>
             </div>
           </div>
@@ -349,11 +428,6 @@
       });
       $('[data-amount]').addEventListener('input', updatePreview);
       root.onclick = (e) => {
-        const cand = e.target.closest('[data-cand]');
-        if (cand) {
-          $('[data-amount]').value = Number(cand.dataset.cand).toLocaleString('ja-JP');
-          return updatePreview();
-        }
         if (e.target.closest('[data-deed-later]') || e.target === root) return Owner.closeSheet();
         if (e.target.closest('[data-confirm]')) confirm();
       };

@@ -98,26 +98,41 @@
     const d1s = toMin(cfg.day1Start), d1e = toMin(cfg.day1End);
     const d2s = toMin(cfg.day2Start) + cfg.morningMinutes, d2e = toMin(cfg.day2End);
     const stayMin = (id) => D.byId[id].plan.minutes;
-    const found = [];
+    // 泊まる駅と巡る駅の組み合わせ（sig）ごとに、いちばん点の高い道順だけを残す
+    // （プランを選ぶときも sig ごとに1つしか使わないので、全部の道順を貯めておく必要はない。駅が増えても速く終わるように）
+    const bestBySig = new Map();
+    const sigOf = (overnight, visits) => `${overnight}:${[...visits].sort().join(',')}`;
 
     // dusk：1日目の観光を終えた時刻。早すぎると午後がまるごと空くので減点する
-    function record(g1, day1, day2, g2, moved, dusk, end) {
-      const visits = [...day1, ...day2];
+    function score(g1, day1, day2, g2, moved, dusk, end) {
+      const visits = day1.length + day2.length;
       const overnight = day1[day1.length - 1];
       const onsen = D.byId[overnight].propertyType === '湯けむり物件';
-      const asset = visits.reduce((n, id) => n + D.byId[id].assetValue, 0);
+      let asset = 0;
+      for (const id of day1) asset += D.byId[id].assetValue;
+      for (const id of day2) asset += D.byId[id].assetValue;
       const idle1 = Math.max(0, d1e - 60 - dusk); // 17:00 より前に1日目が終わる
       const idle2 = Math.max(0, d2s + 240 - end); // 2日目が昼過ぎより前に終わる
-      const score = visits.length * 1000 + (onsen ? 120 : 0) + asset / 20 - moved * 1.2 + (g1 === g2 ? 40 : 0) - idle1 * 0.8 - idle2 * 0.3;
-      found.push({ g1, g2, day1, day2, overnight, visits, moved, score });
+      return visits * 1000 + (onsen ? 120 : 0) + asset / 20 - moved * 1.2 + (g1 === g2 ? 40 : 0) - idle1 * 0.8 - idle2 * 0.3;
+    }
+    function record(g1, day1, day2, g2, moved, sc) {
+      const visits = [...day1, ...day2];
+      const overnight = day1[day1.length - 1];
+      const sig = sigOf(overnight, visits);
+      const prev = bestBySig.get(sig);
+      if (!prev || sc > prev.score) bestBySig.set(sig, { g1, g2, day1, day2, overnight, visits, moved, score: sc });
     }
 
-    // 2日目：泊まった駅から買収駅を巡り、gateway で解散
+    // 2日目：泊まった駅から買収駅を巡り、gateway で解散（解散する gateway は、点がいちばん高いものだけ）
     function day2(cur, t, g1, d1, d2, seen, moved, dusk) {
-      gateways.forEach((g2) => {
+      let best = null;
+      for (const g2 of gateways) {
         const tt = router.travel(cur, g2);
-        if (t + tt <= d2e) record(g1, d1, d2, g2, moved + tt, dusk, t + tt);
-      });
+        if (t + tt > d2e) continue;
+        const sc = score(g1, d1, d2, g2, moved + tt, dusk, t + tt);
+        if (!best || sc > best.sc) best = { g2, sc, moved: moved + tt };
+      }
+      if (best) record(g1, d1, d2, best.g2, best.moved, best.sc);
       if (d1.length + d2.length >= cfg.maxStops) return;
       A.forEach((a) => {
         if (seen.has(a)) return;
@@ -150,14 +165,14 @@
     }
 
     gateways.forEach((g1) => day1(g1, d1s, g1, [], new Set(), 0));
-    found.sort((x, y) => y.score - x.score);
+    const found = [...bestBySig.values()].sort((x, y) => y.score - x.score);
 
     // 巡れる買収駅がいちばん多いプランより2駅以上少ない案、2駅巡れるのに1駅だけの案は出さない
     const best = found.length ? found[0].visits.length : 0;
     const enough = (p) => p.visits.length >= Math.max(best - 1, Math.min(best, 2));
     // 似たプランばかりにならないよう、泊まる駅が違うものを優先して選ぶ
     const picked = [];
-    const sig = (p) => `${p.overnight}:${[...p.visits].sort().join(',')}`;
+    const sig = (p) => sigOf(p.overnight, p.visits);
     for (const strict of [true, false]) {
       for (const p of found) {
         if (picked.length >= limit) break;

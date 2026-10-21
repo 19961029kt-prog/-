@@ -471,10 +471,21 @@ const PLACES = {
   'kagoshima-chuo': station('鹿児島中央'),
   ibusuki: station('指宿'),
   yakushima: [130.5715, 30.4255], // 宮之浦港
+  dazaifu: station('太宰府', 36002), // 西鉄太宰府線
+  saga: station('佐賀', 11905),
+  arita: station('有田', 11918),
+  shimabara: station('島原', 99912), // 島原鉄道
+  kumamoto: station('熊本', 1010),
+  hitoyoshi: station('人吉', 11925),
+  misumi: station('三角', 11924),
+  hita: station('日田', 11913),
+  aoshima: station('青島', 11928),
+  'kirishima-onsen': station('霧島温泉', 11926),
+  sakurajima: [130.5967, 31.5917], // 桜島港
 };
 
 // 経由駅：すごろくのマスではないが、路線がどこを通っているかの目印として小さく描く駅（実際の駅の位置）
-const WAYPOINTS = ['小倉', '行橋', '中津', '鳥栖', '久留米', '日田', '佐賀', '早岐', '諫早', '熊本', '立野', '大分', '延岡', '都城', '川内'].map((name) => {
+const WAYPOINTS = ['小倉', '行橋', '中津', '鳥栖', '久留米', '早岐', '諫早', '武雄温泉', '伊万里', '宇土', '立野', '大分', '延岡', '都城', '吉松', '隼人', '川内'].map((name) => {
   const [lng, lat] = station(name);
   const [x, y] = proj([lng, lat]);
   return { name, x: r1(x), y: r1(y) };
@@ -484,19 +495,34 @@ const WAYPOINTS = ['小倉', '行橋', '中津', '鳥栖', '久留米', '日田'
 const LEGS = {
   'hakata|mojiko': [[[11902], '博多', '門司港']],
   'hakata|karatsu': [[[99905], '博多', '姪浜'], [[11909], '姪浜', '唐津']],
-  'hakata|ureshino-onsen': [[[11903], '博多', '鳥栖'], [[11905], '鳥栖', '江北'], [[11918], '江北', '武雄温泉'], [[1012], '武雄温泉', '嬉野温泉']],
+  // 太宰府：JR で二日市へ、歩いて西鉄二日市へ乗り換えて西鉄太宰府線（乗り換えの徒歩はなめらかな線でつなぐ）
+  'dazaifu|hakata': [[[11903], '博多', '二日市'], { via: [], to: '西鉄二日市' }, [[36002], '西鉄二日市', '太宰府']],
+  'hakata|saga': [[[11903], '博多', '鳥栖'], [[11905], '鳥栖', '佐賀']],
+  'karatsu|saga': [[[11905], '佐賀', '久保田'], [[11921], '久保田', '唐津']],
+  'saga|ureshino-onsen': [[[11905], '佐賀', '江北'], [[11918], '江北', '武雄温泉'], [[1012], '武雄温泉', '嬉野温泉']],
+  'arita|saga': [[[11905], '佐賀', '江北'], [[11918], '江北', '有田']],
+  'arita|karatsu': [[[11921], '唐津', '山本'], [[11920], '山本', '伊万里'], [[99910], '伊万里', '有田']],
+  'arita|huis-ten-bosch': [[[11918], '有田', '早岐'], [[11922], '早岐', 'ハウステンボス']],
   'nagasaki|ureshino-onsen': [[[1012], '嬉野温泉', '長崎']],
-  'hakata|kagoshima-chuo': [[[1010], '博多', '鹿児島中央']],
-  'aso|hakata': [[[11903], '博多', '熊本'], [[11923], '熊本', '阿蘇']],
-  'hakata|yufuin': [[[11903], '博多', '久留米'], [[11913], '久留米', '由布院']],
-  'huis-ten-bosch|karatsu': [[[11921], '唐津', '山本'], [[11920], '山本', '伊万里'], [[99911], '伊万里', '佐世保'], [[11918], '佐世保', '早岐'], [[11922], '早岐', 'ハウステンボス']],
-  'huis-ten-bosch|ureshino-onsen': [[[1012], '嬉野温泉', '武雄温泉'], [[11918], '武雄温泉', '早岐'], [[11922], '早岐', 'ハウステンボス']],
   'huis-ten-bosch|nagasaki': [[[11922], 'ハウステンボス', '諫早'], [[11905], '諫早', '長崎']],
+  'nagasaki|shimabara': [[[11905], '長崎', '諫早'], [[99912], '諫早', '島原']],
+  // 島原港から有明海を渡って熊本港へ、そこからバスで熊本駅へ（通る地点は経路のイメージ）
+  'kumamoto|shimabara': [{ via: [[130.395, 32.785], [130.5, 32.765], [130.585, 32.755], [130.64, 32.772]], start: 'shimabara', sea: true }],
+  'hakata|kumamoto': [[[1010], '博多', '熊本']],
+  'kagoshima-chuo|kumamoto': [[[1010], '熊本', '鹿児島中央']],
+  'aso|kumamoto': [[[11923], '熊本', '阿蘇']],
+  'kumamoto|misumi': [[[11903], '熊本', '宇土'], [[11924], '宇土', '三角']],
+  // 人吉：肥薩線の八代〜人吉は不通のため、九州自動車道の高速バス（通る地点は経路のイメージ）
+  'hitoyoshi|kumamoto': [{ via: [[130.72, 32.62], [130.64, 32.47], [130.7, 32.32]], start: 'kumamoto' }],
+  'hakata|hita': [[[11903], '博多', '久留米'], [[11913], '久留米', '日田']],
+  'hita|yufuin': [[[11913], '日田', '由布院']],
   'beppu|mojiko': [[[11906], '門司港', '別府']],
   'beppu|yufuin': [[[11906], '別府', '大分'], [[11913], '大分', '由布院']],
   'aso|beppu': [[[11923], '阿蘇', '大分'], [[11906], '大分', '別府']],
   'beppu|miyazaki': [[[11906], '別府', '佐伯'], [[11907], '佐伯', '宮崎']],
-  'kagoshima-chuo|miyazaki': [[[11907], '宮崎', '鹿児島中央']],
+  'aoshima|miyazaki': [[[11907], '宮崎', '南宮崎'], [[11928], '南宮崎', '青島']],
+  'kirishima-onsen|miyazaki': [[[11907], '宮崎', '都城'], [[11929], '都城', '吉松'], [[11926], '吉松', '霧島温泉']],
+  'kagoshima-chuo|kirishima-onsen': [[[11907], '鹿児島中央', '隼人'], [[11926], '隼人', '霧島温泉']],
   'ibusuki|kagoshima-chuo': [[[11930], '鹿児島中央', '指宿']],
   // バス：道路のデータは使わないので、実際の経路が通る地点を結ぶゆるやかな曲線にする
   'aso|kurokawa-onsen': [{ via: [[131.1, 33.0]] }],
@@ -504,6 +530,8 @@ const LEGS = {
   'aso|takachiho': [{ via: [[131.17, 32.83]] }],
   // 高千穂→延岡はバス、延岡→宮崎は日豊本線
   'miyazaki|takachiho': [{ via: [[131.45, 32.66]], to: '延岡', start: 'takachiho' }, [[11907], '延岡', '宮崎']],
+  // 航路：鹿児島港から錦江湾を渡って桜島港へ（駅から港まではバス・市電）
+  'kagoshima-chuo|sakurajima': [{ via: [[130.556, 31.588], [130.5645, 31.597], [130.582, 31.596]], start: 'kagoshima-chuo', sea: true }],
   // 航路：鹿児島港から錦江湾を南へ抜け、大隅海峡を渡って宮之浦港へ（通る地点は航路のイメージ）
   'kagoshima-chuo|yakushima': [{ via: [[130.575, 31.585], [130.67, 31.38], [130.7, 31.13], [130.66, 30.86], [130.6, 30.6]], sea: true }],
   'ibusuki|yakushima': [{ via: [[130.665, 31.24], [130.67, 31.0], [130.62, 30.68]], sea: true }],
@@ -611,12 +639,14 @@ const nearestOn = (p, polys) => {
   for (const pts of polys) for (let i = 0; i < pts.length - 1; i++) best = Math.min(best, segDist(p, pts[i], pts[i + 1]));
   return best;
 };
-const NOT_RAIL = new Set(['kurokawa-onsen', 'takachiho', 'yakushima']); // バス停・旧駅・港（旅のマス）
+const NOT_RAIL = new Set(['kurokawa-onsen', 'takachiho', 'yakushima', 'sakurajima']); // バス停・旧駅・港（旅のマス）
+// JR 以外の鉄道の駅（西鉄・島原鉄道）：下地の JR 線路網には載らないので、区間の線路からの距離だけを測る
+const NOT_JR = new Set(['dazaifu', 'shimabara']);
 const check = [];
 for (const s of data.stations) {
   if (NOT_RAIL.has(s.id)) continue;
   const p = XY[s.id];
-  const toNet = nearestOn(p, network.map((n) => n.pts));
+  const toNet = NOT_JR.has(s.id) ? 0 : nearestOn(p, network.map((n) => n.pts));
   // この駅から出る鉄道の区間の線路のうち、いちばん近いもの（駅は線路の上にあるはず）
   const tracks = s.connections.flatMap((c) => routeTracks[edgeKey(s.id, c)] || []);
   const toLeg = tracks.length ? nearestOn(p, tracks) : 0;

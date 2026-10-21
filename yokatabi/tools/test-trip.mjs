@@ -4,7 +4,7 @@
 // - 買収駅が足りないときは提案しない
 // - どの2駅の組み合わせでもコースが作れるか（作れない組み合わせは一覧で出す）
 // - すべてのプランが時間割（1日目の出発〜2日目の解散）に収まり、時刻が前後しないか
-// - 全15駅を買収した状態でも十分速く計算できるか
+// - 全駅を買収した状態でも十分速く計算できるか
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -71,7 +71,7 @@ for (let i = 0; i < ids.length; i++) {
 console.log(`   ${pairs}組中、両方を1泊2日で巡れない組み合わせ ${far.length}組`);
 if (far.length) console.log('   ' + far.join(' / '));
 
-console.log('3) 全15駅を買収した状態');
+console.log('3) 全駅を買収した状態');
 const t0 = Date.now();
 const all = Trip.generate(D, ids);
 const ms = Date.now() - t0;

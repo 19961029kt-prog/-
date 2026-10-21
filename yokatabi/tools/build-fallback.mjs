@@ -99,6 +99,26 @@ for (const sec of [...(craft.train ?? []), ...(craft.avatar ?? [])]) {
 for (const slot of Object.keys(DEFAULT_EQUIP)) {
   if (![...(craft.train ?? []), ...(craft.avatar ?? [])].some((s) => s.slot === slot)) errors.push(`meta.craft に装備欄 ${slot} がありません`);
 }
+// 経済の定数（旅の便り・いいね・シェア）と、オーナーの配当の割合
+for (const k of ['postBonus', 'likeGivenBonus', 'likeReceivedBonus', 'likeReceivedMax', 'shareBonus']) if (!(craft[k] > 0)) errors.push(`meta.craft.${k} がありません`);
+if (!Array.isArray(owner.dividendRates) || owner.dividendRates.length < (owner.shareholders ?? 3)) errors.push('meta.owner.dividendRates（1位から順の配当の割合）が共同株主の人数ぶんありません');
+// ライバル旅人のアバター：工房にあるパーツのID
+const itemIds = (slot) => new Set([...(craft.train ?? []), ...(craft.avatar ?? [])].find((s) => s.slot === slot)?.items.map((i) => i.id) ?? []);
+for (const r of data.meta.rivals ?? []) {
+  for (const slot of ['hat', 'outfit', 'buddy', 'livery']) if (r.avatar && !itemIds(slot).has(r.avatar[slot])) errors.push(`meta.rivals ${r.id}: avatar.${slot} の ${r.avatar[slot]} が工房にありません`);
+}
+// 地域テーマ：ご当地の車窓と演出（js/scenery.js）
+const THEMES = new Set(['onsen', 'volcano', 'ocean', 'forest', 'city']);
+for (const s of data.stations) if (!THEMES.has(s.regionTheme)) errors.push(`${s.id}: regionTheme が ${[...THEMES].join('/')} のどれでもありません`);
+// 旅人たちのポストカード（架空・初期データ）
+const SCENES = new Set(['steam', 'sea', 'mountain', 'volcano', 'forest', 'city', 'pottery', 'shrine', 'sunset', 'night', 'food', 'train']);
+(data.postcards ?? []).forEach((p, i) => {
+  if (!ids.has(p.stationId)) errors.push(`postcards[${i}]: 駅 ${p.stationId} がありません`);
+  if (!rivalIds.has(p.rivalId)) errors.push(`postcards[${i}]: 旅人 ${p.rivalId} が meta.rivals にいません`);
+  if (!p.comment || [...p.comment].length > 60) errors.push(`postcards[${i}]: comment（60文字まで）がありません`);
+  if (!SCENES.has(p.scene)) errors.push(`postcards[${i}]: scene ${p.scene} は絵がありません`);
+  if (!(p.likes >= 0)) errors.push(`postcards[${i}]: likes がありません`);
+});
 if (errors.length) {
   console.error('stations.json の検証に失敗しました:\n  ' + errors.join('\n  '));
   process.exit(1);

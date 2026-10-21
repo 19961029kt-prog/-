@@ -70,6 +70,12 @@ window.YOKATABI_FALLBACK_DATA = {
       "upsetBonus": 1.3,
       "shareholders": 3,
       "maxAmount": 1000000,
+      "dividendRates": [
+        1,
+        0.3,
+        0.15
+      ],
+      "scanSeconds": 1.5,
       "shops": [
         {
           "id": "amazon",
@@ -102,46 +108,99 @@ window.YOKATABI_FALLBACK_DATA = {
       {
         "id": "yukemuri",
         "name": "湯けむり探訪人",
-        "icon": "♨"
+        "icon": "♨",
+        "avatar": {
+          "hat": "tenugui",
+          "outfit": "yukata",
+          "buddy": "none",
+          "livery": "hidamari"
+        }
       },
       {
         "id": "ekiben",
         "name": "駅弁ハンター",
-        "icon": "🍱"
+        "icon": "🍱",
+        "avatar": {
+          "hat": "conductor",
+          "outfit": "canvas",
+          "buddy": "bento",
+          "livery": "caldera"
+        }
       },
       {
         "id": "sketch",
         "name": "車窓スケッチ部",
-        "icon": "✏"
+        "icon": "✏",
+        "avatar": {
+          "hat": "straw",
+          "outfit": "blazer",
+          "buddy": "camera",
+          "livery": "forest"
+        }
       },
       {
         "id": "minato",
         "name": "港町の食いしん坊",
-        "icon": "🐟"
+        "icon": "🐟",
+        "avatar": {
+          "hat": "straw",
+          "outfit": "canvas",
+          "buddy": "bento",
+          "livery": "gullwing"
+        }
       },
       {
         "id": "touge",
         "name": "峠の写真家",
-        "icon": "📷"
+        "icon": "📷",
+        "avatar": {
+          "hat": "conductor",
+          "outfit": "canvas",
+          "buddy": "camera",
+          "livery": "caldera"
+        }
       },
       {
         "id": "asaichi",
         "name": "朝市の常連さん",
-        "icon": "🧺"
+        "icon": "🧺",
+        "avatar": {
+          "hat": "tenugui",
+          "outfit": "yukata",
+          "buddy": "bento",
+          "livery": "hidamari"
+        }
       },
       {
         "id": "hitou",
         "name": "秘湯めぐり隊",
-        "icon": "🏔"
+        "icon": "🏔",
+        "avatar": {
+          "hat": "straw",
+          "outfit": "yukata",
+          "buddy": "none",
+          "livery": "forest"
+        }
       },
       {
         "id": "yakou",
         "name": "夜汽車の旅人",
-        "icon": "🌙"
+        "icon": "🌙",
+        "avatar": {
+          "hat": "kinghat",
+          "outfit": "tuxedo",
+          "buddy": "cat",
+          "livery": "royal"
+        }
       }
     ],
     "craft": {
       "discoveryBonus": 200,
+      "postBonus": 1000,
+      "likeGivenBonus": 10,
+      "likeReceivedBonus": 50,
+      "likeReceivedMax": 20,
+      "shareBonus": 500,
       "ticketMax": 3,
       "train": [
         {
@@ -450,30 +509,12 @@ window.YOKATABI_FALLBACK_DATA = {
   "routeOverrides": [
     {
       "between": [
-        "hakata",
-        "kagoshima-chuo"
-      ],
-      "type": "shinkansen",
-      "name": "九州新幹線",
-      "minutes": 80
-    },
-    {
-      "between": [
         "ureshino-onsen",
         "nagasaki"
       ],
       "type": "shinkansen",
       "name": "西九州新幹線",
       "minutes": 25
-    },
-    {
-      "between": [
-        "hakata",
-        "yufuin"
-      ],
-      "type": "scenic",
-      "name": "久大本線（観光特急が走る高原ルート）",
-      "minutes": 130
     },
     {
       "between": [
@@ -522,42 +563,6 @@ window.YOKATABI_FALLBACK_DATA = {
     },
     {
       "between": [
-        "hakata",
-        "aso"
-      ],
-      "type": "local",
-      "name": "鹿児島本線・豊肥本線",
-      "minutes": 120
-    },
-    {
-      "between": [
-        "hakata",
-        "ureshino-onsen"
-      ],
-      "type": "trunk",
-      "name": "長崎本線・佐世保線（リレー特急）",
-      "minutes": 60
-    },
-    {
-      "between": [
-        "karatsu",
-        "huis-ten-bosch"
-      ],
-      "type": "local",
-      "name": "筑肥線・松浦鉄道",
-      "minutes": 140
-    },
-    {
-      "between": [
-        "ureshino-onsen",
-        "huis-ten-bosch"
-      ],
-      "type": "local",
-      "name": "佐世保線・大村線",
-      "minutes": 60
-    },
-    {
-      "between": [
         "mojiko",
         "beppu"
       ],
@@ -582,15 +587,6 @@ window.YOKATABI_FALLBACK_DATA = {
       "type": "trunk",
       "name": "日豊本線",
       "minutes": 200
-    },
-    {
-      "between": [
-        "miyazaki",
-        "kagoshima-chuo"
-      ],
-      "type": "trunk",
-      "name": "日豊本線",
-      "minutes": 130
     },
     {
       "between": [
@@ -645,6 +641,186 @@ window.YOKATABI_FALLBACK_DATA = {
       "type": "bus",
       "name": "バス＋鉄道連絡（延岡経由）",
       "minutes": 170
+    },
+    {
+      "between": [
+        "hakata",
+        "dazaifu"
+      ],
+      "type": "local",
+      "name": "鹿児島本線・西鉄太宰府線（二日市で乗り換え）",
+      "minutes": 45
+    },
+    {
+      "between": [
+        "hakata",
+        "saga"
+      ],
+      "type": "trunk",
+      "name": "鹿児島本線・長崎本線",
+      "minutes": 40
+    },
+    {
+      "between": [
+        "saga",
+        "ureshino-onsen"
+      ],
+      "type": "trunk",
+      "name": "長崎本線・佐世保線＋西九州新幹線（武雄温泉で乗り換え）",
+      "minutes": 40
+    },
+    {
+      "between": [
+        "saga",
+        "arita"
+      ],
+      "type": "trunk",
+      "name": "長崎本線・佐世保線",
+      "minutes": 45
+    },
+    {
+      "between": [
+        "saga",
+        "karatsu"
+      ],
+      "type": "local",
+      "name": "唐津線",
+      "minutes": 70
+    },
+    {
+      "between": [
+        "karatsu",
+        "arita"
+      ],
+      "type": "local",
+      "name": "筑肥線・松浦鉄道（伊万里で乗り換え）",
+      "minutes": 95
+    },
+    {
+      "between": [
+        "arita",
+        "huis-ten-bosch"
+      ],
+      "type": "local",
+      "name": "佐世保線・大村線（早岐で乗り換え）",
+      "minutes": 35
+    },
+    {
+      "between": [
+        "nagasaki",
+        "shimabara"
+      ],
+      "type": "local",
+      "name": "長崎本線・島原鉄道（諫早で乗り換え）",
+      "minutes": 110
+    },
+    {
+      "between": [
+        "shimabara",
+        "kumamoto"
+      ],
+      "type": "ferry",
+      "name": "島原港〜熊本港 航路（フェリー・高速船）＋連絡バス",
+      "minutes": 120
+    },
+    {
+      "between": [
+        "hakata",
+        "kumamoto"
+      ],
+      "type": "shinkansen",
+      "name": "九州新幹線",
+      "minutes": 40
+    },
+    {
+      "between": [
+        "kumamoto",
+        "kagoshima-chuo"
+      ],
+      "type": "shinkansen",
+      "name": "九州新幹線",
+      "minutes": 55
+    },
+    {
+      "between": [
+        "kumamoto",
+        "aso"
+      ],
+      "type": "trunk",
+      "name": "豊肥本線",
+      "minutes": 75
+    },
+    {
+      "between": [
+        "kumamoto",
+        "misumi"
+      ],
+      "type": "local",
+      "name": "鹿児島本線・三角線（宇土から三角線へ）",
+      "minutes": 55
+    },
+    {
+      "between": [
+        "kumamoto",
+        "hitoyoshi"
+      ],
+      "type": "bus",
+      "name": "高速バス（九州自動車道経由・熊本市内〜人吉）",
+      "minutes": 100
+    },
+    {
+      "between": [
+        "hakata",
+        "hita"
+      ],
+      "type": "scenic",
+      "name": "鹿児島本線・久大本線（観光特急も走る高原ルート）",
+      "minutes": 80
+    },
+    {
+      "between": [
+        "hita",
+        "yufuin"
+      ],
+      "type": "scenic",
+      "name": "久大本線（観光特急が走る高原ルート）",
+      "minutes": 60
+    },
+    {
+      "between": [
+        "miyazaki",
+        "aoshima"
+      ],
+      "type": "local",
+      "name": "日豊本線・日南線（南宮崎から日南線へ）",
+      "minutes": 30
+    },
+    {
+      "between": [
+        "miyazaki",
+        "kirishima-onsen"
+      ],
+      "type": "local",
+      "name": "日豊本線・吉都線・肥薩線（都城・吉松で乗り換え）",
+      "minutes": 210
+    },
+    {
+      "between": [
+        "kagoshima-chuo",
+        "kirishima-onsen"
+      ],
+      "type": "local",
+      "name": "日豊本線・肥薩線（隼人で乗り換え）",
+      "minutes": 80
+    },
+    {
+      "between": [
+        "kagoshima-chuo",
+        "sakurajima"
+      ],
+      "type": "ferry",
+      "name": "鹿児島港〜桜島港 航路（桜島フェリー）",
+      "minutes": 45
     }
   ],
   "stations": [
@@ -659,10 +835,10 @@ window.YOKATABI_FALLBACK_DATA = {
       "connections": [
         "mojiko",
         "karatsu",
-        "ureshino-onsen",
-        "aso",
-        "yufuin",
-        "kagoshima-chuo"
+        "dazaifu",
+        "saga",
+        "kumamoto",
+        "hita"
       ],
       "assetValue": 5000,
       "rivals": [
@@ -706,7 +882,8 @@ window.YOKATABI_FALLBACK_DATA = {
         "kind": "都市型ホテル",
         "desc": "新幹線改札から徒歩圏。屋台はしごの拠点に。",
         "keyword": "博多駅 ホテル"
-      }
+      },
+      "regionTheme": "city"
     },
     {
       "id": "mojiko",
@@ -761,7 +938,123 @@ window.YOKATABI_FALLBACK_DATA = {
         "kind": "クラシックホテル",
         "desc": "海峡の夜景と汽笛を、窓辺で独り占め。",
         "keyword": "門司港 ホテル"
-      }
+      },
+      "regionTheme": "ocean"
+    },
+    {
+      "id": "dazaifu",
+      "name": "太宰府",
+      "kana": "だざいふ",
+      "prefecture": "福岡",
+      "x": 364.8,
+      "y": 130.7,
+      "labelDir": "right",
+      "connections": [
+        "hakata"
+      ],
+      "assetValue": 4000,
+      "rivals": [
+        {
+          "id": "ekiben",
+          "amount": 9600
+        },
+        {
+          "id": "sketch",
+          "amount": 5600
+        },
+        {
+          "id": "minato",
+          "amount": 3000
+        }
+      ],
+      "propertyType": "名産品物件",
+      "tagline": "梅の香と、学問の神様の杜",
+      "memo": "天満宮の朱をまとった小さな終着駅を出ると、参道には焼きたての梅ヶ枝餅の香ばしい匂いが流れてくる。石の鳥居をくぐり、心字池にかかる朱の太鼓橋をそっと渡れば、水面に鯉の影がゆらり。早春には社殿の脇で飛梅がほころび、樹齢千年を超えるといわれる大楠の木陰が、学問の神様の杜を深い緑で包みこむ。",
+      "note": "西鉄太宰府線の駅（JRからは二日市駅で西鉄二日市駅へ徒歩で乗り換え。博多からは直行バスもあり）",
+      "products": [
+        {
+          "name": "梅ヶ枝餅",
+          "desc": "香ばしく焼いた薄皮に粒あん。冷凍で参道の味を自宅に。",
+          "keyword": "梅ヶ枝餅"
+        },
+        {
+          "name": "あまおう",
+          "desc": "大粒で甘みと酸味が濃い、福岡生まれのいちご。",
+          "keyword": "あまおう いちご"
+        }
+      ],
+      "plan": {
+        "minutes": 120,
+        "day": "天満宮に参拝し、参道で梅ヶ枝餅の食べ歩き。九州国立博物館へも",
+        "evening": "参道の灯りがともる門前町を、ゆっくりそぞろ歩き",
+        "morning": "人の少ない朝の境内で、大楠の木陰を深呼吸"
+      },
+      "stay": {
+        "name": "参道近くの和モダンな宿",
+        "kind": "和モダン旅館",
+        "desc": "朝いちばんの静かな参道を、ひとり占めで歩ける。",
+        "keyword": "太宰府 旅館"
+      },
+      "regionTheme": "forest"
+    },
+    {
+      "id": "saga",
+      "name": "佐賀",
+      "kana": "さが",
+      "prefecture": "佐賀",
+      "x": 316.1,
+      "y": 193.4,
+      "labelDir": "top",
+      "connections": [
+        "hakata",
+        "karatsu",
+        "ureshino-onsen",
+        "arita"
+      ],
+      "assetValue": 3200,
+      "rivals": [
+        {
+          "id": "touge",
+          "amount": 7700
+        },
+        {
+          "id": "asaichi",
+          "amount": 4500
+        },
+        {
+          "id": "hitou",
+          "amount": 2400
+        }
+      ],
+      "propertyType": "名産品物件",
+      "tagline": "お堀の楠と、秋空の熱気球",
+      "memo": "高架のホームから降りると、空の広い城下町。佐賀城跡のお堀端では楠の大木が枝を広げ、水面に緑の影を落としている。秋の朝、嘉瀬川の河川敷から色とりどりの熱気球がいっせいに浮かび上がり、バーナーのごうという音が胸に響く。南に広がる有明海からは、冬になると摘みたての海苔の磯の香りが届く。",
+      "products": [
+        {
+          "name": "佐賀海苔",
+          "desc": "有明海で育つ、香り高く口どけのよい焼きのり。",
+          "keyword": "佐賀海苔 焼きのり"
+        },
+        {
+          "name": "小城羊羹",
+          "desc": "表面の砂糖がしゃりっと固まる、昔ながらの切り羊羹。",
+          "keyword": "小城羊羹"
+        }
+      ],
+      "gateway": "九州佐賀国際空港・佐賀駅",
+      "plan": {
+        "minutes": 120,
+        "day": "佐賀城本丸歴史館とお堀端を散策し、有明海の幸でランチ",
+        "evening": "城下の居酒屋で、有明海の魚と佐賀の地酒を",
+        "morning": "お堀端の楠並木を朝さんぽ（秋は熱気球の朝も）"
+      },
+      "stay": {
+        "name": "お堀端の城下町ホテル",
+        "kind": "シティホテル",
+        "desc": "熱気球の朝も、城下の散策も歩いて行ける拠点に。",
+        "keyword": "佐賀市 ホテル"
+      },
+      "regionTheme": "city"
     },
     {
       "id": "karatsu",
@@ -773,7 +1066,8 @@ window.YOKATABI_FALLBACK_DATA = {
       "labelDir": "top",
       "connections": [
         "hakata",
-        "huis-ten-bosch"
+        "saga",
+        "arita"
       ],
       "assetValue": 3000,
       "rivals": [
@@ -816,7 +1110,8 @@ window.YOKATABI_FALLBACK_DATA = {
         "kind": "海辺の料理宿",
         "desc": "朝獲れの魚介が主役。波音を聞きながら眠る。",
         "keyword": "唐津 料理旅館"
-      }
+      },
+      "regionTheme": "ocean"
     },
     {
       "id": "ureshino-onsen",
@@ -827,9 +1122,8 @@ window.YOKATABI_FALLBACK_DATA = {
       "y": 232.2,
       "labelDir": "right",
       "connections": [
-        "hakata",
-        "nagasaki",
-        "huis-ten-bosch"
+        "saga",
+        "nagasaki"
       ],
       "assetValue": 3500,
       "rivals": [
@@ -872,7 +1166,65 @@ window.YOKATABI_FALLBACK_DATA = {
         "kind": "老舗湯宿",
         "desc": "源泉かけ流しの客室露天で、肌もこころもつるり。",
         "keyword": "嬉野温泉 旅館"
-      }
+      },
+      "regionTheme": "onsen"
+    },
+    {
+      "id": "arita",
+      "name": "有田",
+      "kana": "ありた",
+      "prefecture": "佐賀",
+      "x": 229.4,
+      "y": 213.2,
+      "labelDir": "left",
+      "connections": [
+        "saga",
+        "karatsu",
+        "huis-ten-bosch"
+      ],
+      "assetValue": 3400,
+      "rivals": [
+        {
+          "id": "yakou",
+          "amount": 8200
+        },
+        {
+          "id": "yukemuri",
+          "amount": 4800
+        },
+        {
+          "id": "ekiben",
+          "amount": 2500
+        }
+      ],
+      "propertyType": "名産品物件",
+      "tagline": "白磁と藍の、やきものの里",
+      "memo": "駅を出て坂の町へ歩くと、窯の煙と土の匂いがかすかに漂う。裏通りには、登り窯の耐火れんがを赤土で塗り固めたトンバイ塀が続き、指先でなぞるとざらりと温かい。陶山神社では磁器の鳥居が青空に白く映え、参道の石段のすぐ脇を列車が横切っていく。手に取った器は薄く軽やかで、白い肌に藍の染付がすっと映える。",
+      "products": [
+        {
+          "name": "有田焼のマグカップ",
+          "desc": "白磁に藍の染付。毎日のコーヒーが少し特別に。",
+          "keyword": "有田焼 マグカップ"
+        },
+        {
+          "name": "有田焼の豆皿",
+          "desc": "手のひらサイズの絵付け皿。集めて並べたくなる。",
+          "keyword": "有田焼 豆皿"
+        }
+      ],
+      "plan": {
+        "minutes": 150,
+        "day": "窯元めぐりとトンバイ塀の裏通り、陶山神社の磁器の鳥居",
+        "evening": "旅先で出会った器で、佐賀の地酒をしっぽりと",
+        "morning": "泉山磁石場の白い岩肌を眺めに、朝の坂道を歩く"
+      },
+      "stay": {
+        "name": "窯元の町の古民家宿",
+        "kind": "古民家宿",
+        "desc": "土壁と太い梁の宿で、有田焼の器に盛った夕食を。",
+        "keyword": "有田町 宿"
+      },
+      "regionTheme": "city"
     },
     {
       "id": "nagasaki",
@@ -884,7 +1236,8 @@ window.YOKATABI_FALLBACK_DATA = {
       "labelDir": "bottom",
       "connections": [
         "ureshino-onsen",
-        "huis-ten-bosch"
+        "huis-ten-bosch",
+        "shimabara"
       ],
       "assetValue": 4500,
       "rivals": [
@@ -928,7 +1281,8 @@ window.YOKATABI_FALLBACK_DATA = {
         "kind": "高台ホテル",
         "desc": "客室から港の灯りを一望。夜更かし必至。",
         "keyword": "長崎 夜景 ホテル"
-      }
+      },
+      "regionTheme": "ocean"
     },
     {
       "id": "huis-ten-bosch",
@@ -937,10 +1291,9 @@ window.YOKATABI_FALLBACK_DATA = {
       "prefecture": "長崎",
       "x": 211.6,
       "y": 235.8,
-      "labelDir": "top",
+      "labelDir": "bottom",
       "connections": [
-        "karatsu",
-        "ureshino-onsen",
+        "arita",
         "nagasaki"
       ],
       "assetValue": 4800,
@@ -984,7 +1337,125 @@ window.YOKATABI_FALLBACK_DATA = {
         "kind": "オフィシャルホテル",
         "desc": "閉園後の静かな運河を散歩できる宿泊者の特権。",
         "keyword": "ハウステンボス ホテル"
-      }
+      },
+      "regionTheme": "city"
+    },
+    {
+      "id": "shimabara",
+      "name": "島原",
+      "kana": "しまばら",
+      "prefecture": "長崎",
+      "x": 331.3,
+      "y": 310,
+      "labelDir": "bottom",
+      "connections": [
+        "nagasaki",
+        "kumamoto"
+      ],
+      "assetValue": 3000,
+      "rivals": [
+        {
+          "id": "sketch",
+          "amount": 7200
+        },
+        {
+          "id": "minato",
+          "amount": 4200
+        },
+        {
+          "id": "touge",
+          "amount": 2200
+        }
+      ],
+      "propertyType": "名産品物件",
+      "tagline": "湧き水と鯉が泳ぐ城下町",
+      "memo": "島原城の大手門をかたどった駅舎を出ると、町のあちこちで清らかな湧き水の音がする。武家屋敷の通りでは真ん中を水路が走り、鯉の泳ぐ町並みでは色とりどりの鯉がゆったりと尾を振る。見上げれば白い天守の向こうに雲仙の山並み。湧水で冷やした白玉のかんざらしは、蜜のやさしい甘さがのどをすべり落ちていく。",
+      "products": [
+        {
+          "name": "島原手延べそうめん",
+          "desc": "細くてコシのある、島原半島伝統の手延べ麺。",
+          "keyword": "島原 手延べそうめん"
+        },
+        {
+          "name": "具雑煮",
+          "desc": "餅と山海の具がたっぷり。島原に伝わる郷土の味。",
+          "keyword": "島原 具雑煮"
+        }
+      ],
+      "plan": {
+        "minutes": 150,
+        "day": "島原城と武家屋敷、鯉の泳ぐ町並みで湧水めぐり。おやつはかんざらし",
+        "evening": "温泉宿で、有明海の幸と郷土の具雑煮を",
+        "morning": "湧水の水路沿いを、朝の光の中でのんびり散歩"
+      },
+      "stay": {
+        "name": "湧水の城下町の温泉旅館",
+        "kind": "温泉旅館",
+        "desc": "有明海の夜明けを望む湯で、旅の一日をはじめる。",
+        "keyword": "島原温泉 旅館"
+      },
+      "regionTheme": "ocean"
+    },
+    {
+      "id": "kumamoto",
+      "name": "熊本",
+      "kana": "くまもと",
+      "prefecture": "熊本",
+      "x": 397.7,
+      "y": 310.2,
+      "labelDir": "top",
+      "connections": [
+        "hakata",
+        "kagoshima-chuo",
+        "aso",
+        "misumi",
+        "hitoyoshi",
+        "shimabara"
+      ],
+      "assetValue": 4800,
+      "rivals": [
+        {
+          "id": "asaichi",
+          "amount": 11500
+        },
+        {
+          "id": "hitou",
+          "amount": 6700
+        },
+        {
+          "id": "yakou",
+          "amount": 3600
+        }
+      ],
+      "propertyType": "名産品物件",
+      "tagline": "石垣の城と、阿蘇の水の都",
+      "memo": "駅前から路面電車に揺られて城下へ。熊本城の石垣は、上へいくほど反り返る「武者返し」の曲線を描き、震災を越えて積み直されてきた石の一つひとつに、町の人の思いが重なる。阿蘇の伏流水に恵まれた水の都でもあり、水前寺成趣園の池は底の小石まで光るほど澄みきっている。夜は、からし蓮根のつんとした辛さで一杯。",
+      "products": [
+        {
+          "name": "からし蓮根",
+          "desc": "蓮根の穴に辛子みそ。衣をまとわせて揚げた熊本名物。",
+          "keyword": "からし蓮根"
+        },
+        {
+          "name": "いきなり団子",
+          "desc": "さつまいもとあんを生地で包んだ、素朴な蒸し菓子。",
+          "keyword": "いきなり団子 冷凍"
+        }
+      ],
+      "gateway": "阿蘇くまもと空港・熊本駅",
+      "plan": {
+        "minutes": 150,
+        "day": "路面電車で熊本城と城下の街並み、水前寺成趣園へ",
+        "evening": "繁華街で、馬刺しとからし蓮根で一杯",
+        "morning": "城を望む公園を、澄んだ朝の空気の中で散歩"
+      },
+      "stay": {
+        "name": "城下の眺望ホテル",
+        "kind": "シティホテル",
+        "desc": "窓の向こうに城の灯り。朝は路面電車で街歩きへ。",
+        "keyword": "熊本市 ホテル"
+      },
+      "regionTheme": "volcano"
     },
     {
       "id": "aso",
@@ -995,7 +1466,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "y": 273.9,
       "labelDir": "right",
       "connections": [
-        "hakata",
+        "kumamoto",
         "kurokawa-onsen",
         "beppu",
         "takachiho"
@@ -1041,7 +1512,8 @@ window.YOKATABI_FALLBACK_DATA = {
         "kind": "高原リゾート",
         "desc": "朝は雲海、夜は満天の星。カルデラを独り占め。",
         "keyword": "阿蘇 リゾート ホテル"
-      }
+      },
+      "regionTheme": "volcano"
     },
     {
       "id": "kurokawa-onsen",
@@ -1097,7 +1569,120 @@ window.YOKATABI_FALLBACK_DATA = {
         "kind": "秘境の離れ宿",
         "desc": "客室ごとの露天風呂で、谷の音だけを聴く夜。",
         "keyword": "黒川温泉 離れ 旅館"
-      }
+      },
+      "regionTheme": "onsen"
+    },
+    {
+      "id": "hitoyoshi",
+      "name": "人吉",
+      "kana": "ひとよし",
+      "prefecture": "熊本",
+      "x": 411.2,
+      "y": 451.4,
+      "labelDir": "right",
+      "connections": [
+        "kumamoto"
+      ],
+      "assetValue": 3000,
+      "rivals": [
+        {
+          "id": "yukemuri",
+          "amount": 7200
+        },
+        {
+          "id": "ekiben",
+          "amount": 4200
+        },
+        {
+          "id": "sketch",
+          "amount": 2200
+        }
+      ],
+      "propertyType": "湯けむり物件",
+      "tagline": "球磨川の瀬音と、国宝の社",
+      "memo": "山あいの盆地に、球磨川の瀬音と湯の香りが満ちている。駅から歩けば、茅葺きの楼門が迎える青井阿蘇神社。国宝の社殿の華やかな彫りと彩りが、緑の境内に静かに浮かぶ。夕暮れ、川沿いの温泉宿で湯につかったあとは、米から造る球磨焼酎をちびりと。ふくよかな米の香りが、谷の夜をやわらかくほどいていく。",
+      "note": "JR肥薩線の八代〜人吉〜吉松は2020年7月の豪雨から不通（八代〜人吉は2033年度の鉄道復旧をめざして工事準備中）。熊本からは高速バスで連絡。人吉温泉駅のくま川鉄道は2026年9月に全線再開",
+      "products": [
+        {
+          "name": "球磨焼酎",
+          "desc": "米から造る、人吉球磨の地の焼酎。ふくよかな香り。",
+          "keyword": "球磨焼酎"
+        },
+        {
+          "name": "鮎の甘露煮",
+          "desc": "清流の鮎を骨までやわらかく炊いた、川の町の味。",
+          "keyword": "鮎 甘露煮 熊本"
+        }
+      ],
+      "plan": {
+        "minutes": 150,
+        "day": "青井阿蘇神社と人吉城跡、球磨川沿いの温泉街を散策",
+        "evening": "川沿いの宿で、鮎料理と球磨焼酎を味わう",
+        "morning": "盆地の朝霧を眺めながら、朝湯でひと息"
+      },
+      "stay": {
+        "name": "球磨川沿いの温泉旅館",
+        "kind": "温泉旅館",
+        "desc": "瀬音を聞きながら湯につかり、地の焼酎で夜を締めくくる。",
+        "keyword": "人吉温泉 旅館"
+      },
+      "regionTheme": "volcano"
+    },
+    {
+      "id": "misumi",
+      "name": "三角",
+      "kana": "みすみ",
+      "prefecture": "熊本",
+      "x": 352,
+      "y": 355,
+      "labelDir": "left",
+      "connections": [
+        "kumamoto"
+      ],
+      "assetValue": 2600,
+      "rivals": [
+        {
+          "id": "minato",
+          "amount": 6200
+        },
+        {
+          "id": "touge",
+          "amount": 3600
+        },
+        {
+          "id": "asaichi",
+          "amount": 1900
+        }
+      ],
+      "propertyType": "名産品物件",
+      "tagline": "線路の終わりは、天草への港",
+      "memo": "線路が海の手前でふっと途切れる終着駅。南欧風の駅舎を出ると、目の前に港と、ピラミッドの形をした港の建物が現れる。少し足を延ばせば、明治の石積みの埠頭がそのまま残る三角西港。世界遺産の岸壁に腰かけると、潮の香りと波音がやさしく寄せてくる。ここから天草の島々へ、橋と船が旅をつないでいく。",
+      "note": "JR三角線の終着駅（天草へはここから船・バスで）",
+      "products": [
+        {
+          "name": "デコポン",
+          "desc": "熊本で育てられてきた「不知火」から。甘くて香り高い柑橘。",
+          "keyword": "デコポン 熊本"
+        },
+        {
+          "name": "天草の車えび",
+          "desc": "ぷりっと甘い身。天草の海で育つ車えび。",
+          "keyword": "天草 車えび"
+        }
+      ],
+      "plan": {
+        "minutes": 120,
+        "day": "三角西港の石積み埠頭を歩き、天草の島々を望む",
+        "evening": "海辺の宿で、不知火海の夕日と海の幸を",
+        "morning": "港の朝の光の中、海沿いをのんびり散歩"
+      },
+      "stay": {
+        "name": "不知火海を望む海辺の宿",
+        "kind": "海辺の宿",
+        "desc": "天草の島影と夕日を、湯上がりに眺める。",
+        "keyword": "三角 天草 宿"
+      },
+      "regionTheme": "ocean"
     },
     {
       "id": "beppu",
@@ -1155,7 +1740,8 @@ window.YOKATABI_FALLBACK_DATA = {
         "kind": "老舗旅館",
         "desc": "別府湾を見下ろす露天風呂で、湯けむりの夜景を。",
         "keyword": "別府温泉 旅館 露天風呂"
-      }
+      },
+      "regionTheme": "onsen"
     },
     {
       "id": "yufuin",
@@ -1164,9 +1750,9 @@ window.YOKATABI_FALLBACK_DATA = {
       "prefecture": "大分",
       "x": 536.6,
       "y": 193.8,
-      "labelDir": "left",
+      "labelDir": "bottom",
       "connections": [
-        "hakata",
+        "hita",
         "beppu",
         "kurokawa-onsen"
       ],
@@ -1211,7 +1797,64 @@ window.YOKATABI_FALLBACK_DATA = {
         "kind": "高級離れ宿",
         "desc": "全室離れ・源泉露天。霧の朝を部屋で迎える。",
         "keyword": "由布院 離れ 高級旅館"
-      }
+      },
+      "regionTheme": "onsen"
+    },
+    {
+      "id": "hita",
+      "name": "日田",
+      "kana": "ひた",
+      "prefecture": "大分",
+      "x": 449.8,
+      "y": 180.4,
+      "labelDir": "bottom",
+      "connections": [
+        "hakata",
+        "yufuin"
+      ],
+      "assetValue": 3100,
+      "rivals": [
+        {
+          "id": "hitou",
+          "amount": 7400
+        },
+        {
+          "id": "yakou",
+          "amount": 4300
+        },
+        {
+          "id": "yukemuri",
+          "amount": 2300
+        }
+      ],
+      "propertyType": "名産品物件",
+      "tagline": "水郷の天領と、川面のかがり火",
+      "memo": "山々に抱かれた盆地の町は、杉の香りと川霧の匂いがする。天領の面影を残す豆田町では、白壁と格子の町家が軒を連ね、古い蔵から醤油や酒の香りがこぼれてくる。夏の宵には三隈川に屋形船が浮かび、鵜飼のかがり火が川面を赤く揺らす。山あいの小鹿田の里では、唐臼が陶土をつくごとんという音がのどかに響く。",
+      "products": [
+        {
+          "name": "小鹿田焼",
+          "desc": "飛び鉋の模様が素朴でやさしい、山里の民陶。",
+          "keyword": "小鹿田焼 皿"
+        },
+        {
+          "name": "日田焼きそば",
+          "desc": "鉄板でパリッと焼きつけた麺ともやしの香ばしさ。",
+          "keyword": "日田焼きそば"
+        }
+      ],
+      "plan": {
+        "minutes": 150,
+        "day": "豆田町の町家と酒蔵・醤油蔵めぐり。ランチは日田焼きそば",
+        "evening": "屋形船に揺られて、三隈川の鵜飼を眺める（夏）",
+        "morning": "川霧の立つ三隈川沿いを朝さんぽ"
+      },
+      "stay": {
+        "name": "三隈川沿いの温泉旅館",
+        "kind": "温泉旅館",
+        "desc": "屋形船の灯りを眺め、川風に吹かれる夜。",
+        "keyword": "日田温泉 旅館"
+      },
+      "regionTheme": "forest"
     },
     {
       "id": "miyazaki",
@@ -1224,7 +1867,8 @@ window.YOKATABI_FALLBACK_DATA = {
       "connections": [
         "beppu",
         "takachiho",
-        "kagoshima-chuo"
+        "aoshima",
+        "kirishima-onsen"
       ],
       "assetValue": 3800,
       "rivals": [
@@ -1268,7 +1912,8 @@ window.YOKATABI_FALLBACK_DATA = {
         "kind": "南国リゾートホテル",
         "desc": "朝日が海から昇るオーシャンビューの客室へ。",
         "keyword": "宮崎 リゾートホテル"
-      }
+      },
+      "regionTheme": "ocean"
     },
     {
       "id": "takachiho",
@@ -1324,7 +1969,63 @@ window.YOKATABI_FALLBACK_DATA = {
         "kind": "和風旅館",
         "desc": "夜神楽の帰り道、星空の下で湯に浸かる。",
         "keyword": "高千穂 旅館"
-      }
+      },
+      "regionTheme": "forest"
+    },
+    {
+      "id": "aoshima",
+      "name": "青島",
+      "kana": "あおしま",
+      "prefecture": "宮崎",
+      "x": 560,
+      "y": 553.9,
+      "labelDir": "right",
+      "connections": [
+        "miyazaki"
+      ],
+      "assetValue": 3300,
+      "rivals": [
+        {
+          "id": "ekiben",
+          "amount": 7900
+        },
+        {
+          "id": "sketch",
+          "amount": 4600
+        },
+        {
+          "id": "minato",
+          "amount": 2400
+        }
+      ],
+      "propertyType": "名産品物件",
+      "tagline": "鬼の洗濯板と、南国の島の社",
+      "memo": "南国の日差しがまぶしい小さな駅を降りると、潮の香りがまっすぐ届く。弥生橋を渡った先の青島は、島ごと神社の杜。ビロウの木々が濃い影を落とし、朱の社殿へ続く道を包んでいる。島を囲むのは、波が刻んだ「鬼の洗濯板」。引き潮の岩場をそっと歩けば、ざらついた岩肌に、日向灘のまぶしい光がはね返る。",
+      "products": [
+        {
+          "name": "日向夏",
+          "desc": "白いわたごと食べる、さわやかな宮崎の柑橘。",
+          "keyword": "日向夏"
+        },
+        {
+          "name": "宮崎の冷や汁",
+          "desc": "焼き味噌と魚のだしを冷たくのばした、夏の郷土料理。",
+          "keyword": "宮崎 冷や汁"
+        }
+      ],
+      "plan": {
+        "minutes": 120,
+        "day": "青島神社に参拝し、鬼の洗濯板の海岸を散策",
+        "evening": "海辺のカフェで、日向灘の夕暮れを",
+        "morning": "朝の砂浜で、海から昇る朝日を眺める"
+      },
+      "stay": {
+        "name": "日南海岸のオーシャンビューホテル",
+        "kind": "海辺のリゾートホテル",
+        "desc": "波音で目覚め、海から昇る朝日を客室から。",
+        "keyword": "青島 ホテル 宮崎"
+      },
+      "regionTheme": "ocean"
     },
     {
       "id": "kagoshima-chuo",
@@ -1335,10 +2036,11 @@ window.YOKATABI_FALLBACK_DATA = {
       "y": 607.1,
       "labelDir": "left",
       "connections": [
-        "hakata",
-        "miyazaki",
+        "kumamoto",
+        "kirishima-onsen",
         "ibusuki",
-        "yakushima"
+        "yakushima",
+        "sakurajima"
       ],
       "assetValue": 4600,
       "rivals": [
@@ -1382,7 +2084,123 @@ window.YOKATABI_FALLBACK_DATA = {
         "kind": "シティホテル",
         "desc": "錦江湾越しの桜島を、朝焼けとともに眺める。",
         "keyword": "鹿児島 桜島 眺望 ホテル"
-      }
+      },
+      "regionTheme": "city"
+    },
+    {
+      "id": "kirishima-onsen",
+      "name": "霧島温泉",
+      "kana": "きりしまおんせん",
+      "prefecture": "鹿児島",
+      "x": 407.2,
+      "y": 537.1,
+      "labelDir": "top",
+      "connections": [
+        "kagoshima-chuo",
+        "miyazaki"
+      ],
+      "assetValue": 4000,
+      "rivals": [
+        {
+          "id": "touge",
+          "amount": 9600
+        },
+        {
+          "id": "asaichi",
+          "amount": 5600
+        },
+        {
+          "id": "hitou",
+          "amount": 3000
+        }
+      ],
+      "propertyType": "湯けむり物件",
+      "tagline": "硫黄の香る、山あいの湯けむり郷",
+      "memo": "山あいの小さな駅から、バスで温泉郷へ登っていく。窓を開ければ、ほのかな硫黄の匂い。霧島の山すそでは湯けむりがあちこちで立ちのぼり、乳白色の湯、透きとおった湯と、宿ごとに違う泉質がそろう。湯上がりには、山の冷たい空気が火照った頬に心地いい。足を延ばせば、杉の巨木に囲まれて霧島神宮の朱の社殿が浮かぶ。",
+      "note": "JR肥薩線の駅（温泉郷へは駅から路線バスで。肥薩線の吉松〜隼人は2026年7月に運転再開）",
+      "products": [
+        {
+          "name": "壺造りの黒酢",
+          "desc": "陶器の壺で長く寝かせる、まろやかな鹿児島の黒酢。",
+          "keyword": "鹿児島 黒酢 壺造り"
+        },
+        {
+          "name": "霧島茶",
+          "desc": "山あいの寒暖差が育む、香りのよい鹿児島茶。",
+          "keyword": "霧島茶"
+        }
+      ],
+      "gateway": "鹿児島空港・霧島温泉駅",
+      "plan": {
+        "minutes": 150,
+        "day": "温泉郷の湯めぐりと、霧島神宮への参拝",
+        "evening": "山の宿で、泉質の違う湯を思うぞんぶん",
+        "morning": "湯けむりの立つ朝の温泉郷を、ゆっくり散歩"
+      },
+      "stay": {
+        "name": "湯けむりの山あいの温泉宿",
+        "kind": "山の温泉宿",
+        "desc": "泉質の違う湯船をめぐり、山の静けさに浸る。",
+        "keyword": "霧島温泉 旅館"
+      },
+      "regionTheme": "onsen"
+    },
+    {
+      "id": "sakurajima",
+      "name": "桜島",
+      "kana": "さくらじま",
+      "prefecture": "鹿児島",
+      "x": 378.5,
+      "y": 605.1,
+      "labelDir": "right",
+      "connections": [
+        "kagoshima-chuo"
+      ],
+      "assetValue": 3600,
+      "rivals": [
+        {
+          "id": "yakou",
+          "amount": 8600
+        },
+        {
+          "id": "yukemuri",
+          "amount": 5000
+        },
+        {
+          "id": "ekiben",
+          "amount": 2700
+        }
+      ],
+      "propertyType": "名産品物件",
+      "tagline": "フェリーで渡る、煙たなびく火山島",
+      "memo": "鹿児島港からフェリーで錦江湾を渡ると、目の前にそびえる山肌がぐんぐん近づいてくる。島に降り立てば、足もとには黒い溶岩と、さらりとした火山灰。海沿いの溶岩なぎさ遊歩道には長い足湯があり、湯にひたりながら対岸の街並みを眺められる。島の畑では、ずっしり大きな桜島大根と、ひと口で食べられる小みかんが育つ。",
+      "note": "ゲーム上の駅（桜島港。鹿児島港からフェリーで渡る）",
+      "special": "ferry",
+      "products": [
+        {
+          "name": "桜島小みかん",
+          "desc": "ひと口サイズで香り高い、島の冬の味覚。",
+          "keyword": "桜島小みかん"
+        },
+        {
+          "name": "桜島大根の漬物",
+          "desc": "大きな大根を甘めに漬けた、やさしい歯ざわり。",
+          "keyword": "桜島大根 漬物"
+        }
+      ],
+      "plan": {
+        "minutes": 120,
+        "day": "フェリーで渡り、溶岩なぎさ遊歩道の足湯と湯之平展望所へ",
+        "evening": "対岸の街の灯りと、夕暮れの火山を眺める",
+        "morning": "朝の海辺から、そびえる火山を見上げて深呼吸"
+      },
+      "stay": {
+        "name": "錦江湾と火山を望む島の宿",
+        "kind": "島の温泉宿",
+        "desc": "噴煙の山を背に、夕暮れの湾を湯船から。",
+        "keyword": "桜島 宿"
+      },
+      "regionTheme": "volcano"
     },
     {
       "id": "ibusuki",
@@ -1437,7 +2255,8 @@ window.YOKATABI_FALLBACK_DATA = {
         "kind": "温泉ホテル",
         "desc": "浴衣のまま砂むし会館へ。湯上がりは海を眺めて。",
         "keyword": "指宿 砂むし ホテル"
-      }
+      },
+      "regionTheme": "onsen"
     },
     {
       "id": "yakushima",
@@ -1494,7 +2313,374 @@ window.YOKATABI_FALLBACK_DATA = {
         "kind": "コテージ・ロッジ",
         "desc": "雨音と鳥の声で目覚める、森に抱かれた一棟貸し。",
         "keyword": "屋久島 コテージ"
-      }
+      },
+      "regionTheme": "forest"
+    }
+  ],
+  "postcards": [
+    {
+      "stationId": "hakata",
+      "rivalId": "ekiben",
+      "comment": "博多駅で買った駅弁、明太子の色に元気をもらった。",
+      "scene": "food",
+      "likes": 42
+    },
+    {
+      "stationId": "hakata",
+      "rivalId": "yakou",
+      "comment": "屋台ののれんをくぐると、夜の川風に頬がゆるんだ。",
+      "scene": "night",
+      "likes": 57
+    },
+    {
+      "stationId": "mojiko",
+      "rivalId": "minato",
+      "comment": "焼きカレーの香ばしさと汽笛。港町の昼は最高。",
+      "scene": "food",
+      "likes": 33
+    },
+    {
+      "stationId": "mojiko",
+      "rivalId": "touge",
+      "comment": "海峡に沈む夕日が、レンガの街を茜色に染めた。",
+      "scene": "sunset",
+      "likes": 48
+    },
+    {
+      "stationId": "karatsu",
+      "rivalId": "asaichi",
+      "comment": "呼子の朝市で、透きとおったイカに見とれた朝。",
+      "scene": "food",
+      "likes": 29
+    },
+    {
+      "stationId": "karatsu",
+      "rivalId": "sketch",
+      "comment": "車窓に虹の松原。緑の帯がどこまでも続いていく。",
+      "scene": "train",
+      "likes": 21
+    },
+    {
+      "stationId": "ureshino-onsen",
+      "rivalId": "yukemuri",
+      "comment": "とろとろの湯に肌がつるり。湯豆腐も絶品だった。",
+      "scene": "steam",
+      "likes": 38
+    },
+    {
+      "stationId": "ureshino-onsen",
+      "rivalId": "ekiben",
+      "comment": "嬉野茶の一服で、旅の疲れがすっとほどけた。",
+      "scene": "food",
+      "likes": 14
+    },
+    {
+      "stationId": "nagasaki",
+      "rivalId": "yakou",
+      "comment": "稲佐山の夜景に、ため息しか出なかった。",
+      "scene": "night",
+      "likes": 60
+    },
+    {
+      "stationId": "nagasaki",
+      "rivalId": "minato",
+      "comment": "ちゃんぽんの湯気と港の潮風。坂の町が好きになる。",
+      "scene": "food",
+      "likes": 36
+    },
+    {
+      "stationId": "huis-ten-bosch",
+      "rivalId": "sketch",
+      "comment": "運河と風車をスケッチ。色鉛筆が足りないくらい。",
+      "scene": "city",
+      "likes": 27
+    },
+    {
+      "stationId": "huis-ten-bosch",
+      "rivalId": "yakou",
+      "comment": "夜の運河に光の粒。歩くだけで物語の中みたい。",
+      "scene": "night",
+      "likes": 44
+    },
+    {
+      "stationId": "aso",
+      "rivalId": "touge",
+      "comment": "中岳の噴煙と広い空。カルデラの大きさに言葉をなくす。",
+      "scene": "volcano",
+      "likes": 55
+    },
+    {
+      "stationId": "aso",
+      "rivalId": "asaichi",
+      "comment": "あか牛丼をほおばって、草原の風に吹かれた昼。",
+      "scene": "food",
+      "likes": 31
+    },
+    {
+      "stationId": "kurokawa-onsen",
+      "rivalId": "hitou",
+      "comment": "入湯手形を鳴らして、露天風呂を三軒はしご。",
+      "scene": "steam",
+      "likes": 52
+    },
+    {
+      "stationId": "kurokawa-onsen",
+      "rivalId": "yukemuri",
+      "comment": "杉木立の谷に湯けむり。昔話の中にいるみたい。",
+      "scene": "forest",
+      "likes": 24
+    },
+    {
+      "stationId": "beppu",
+      "rivalId": "yukemuri",
+      "comment": "街じゅうが湯けむり。駅前の手湯で旅が始まった。",
+      "scene": "steam",
+      "likes": 58
+    },
+    {
+      "stationId": "beppu",
+      "rivalId": "ekiben",
+      "comment": "地獄蒸しの湯気の香り。プリンのほろ苦さが忘れられない。",
+      "scene": "food",
+      "likes": 34
+    },
+    {
+      "stationId": "yufuin",
+      "rivalId": "sketch",
+      "comment": "車窓いっぱいの由布岳。描き終えるころ駅に着いた。",
+      "scene": "train",
+      "likes": 40
+    },
+    {
+      "stationId": "yufuin",
+      "rivalId": "asaichi",
+      "comment": "早起きして金鱗湖へ。白い霧が湖面をなでていた。",
+      "scene": "steam",
+      "likes": 46
+    },
+    {
+      "stationId": "miyazaki",
+      "rivalId": "minato",
+      "comment": "炭火焼きの煙に誘われて、地頭鶏で乾杯した夜。",
+      "scene": "food",
+      "likes": 26
+    },
+    {
+      "stationId": "miyazaki",
+      "rivalId": "touge",
+      "comment": "日向灘から昇る朝日。南の空はひときわ高い。",
+      "scene": "sea",
+      "likes": 19
+    },
+    {
+      "stationId": "takachiho",
+      "rivalId": "touge",
+      "comment": "峡谷の滝にボートで近づくと、冷たい霧が頬に。",
+      "scene": "forest",
+      "likes": 50
+    },
+    {
+      "stationId": "takachiho",
+      "rivalId": "yakou",
+      "comment": "夜神楽の笛と太鼓。山の闇が神話の時間に戻る。",
+      "scene": "shrine",
+      "likes": 37
+    },
+    {
+      "stationId": "kagoshima-chuo",
+      "rivalId": "ekiben",
+      "comment": "黒豚しゃぶと芋焼酎のお湯割り。南の終点で乾杯。",
+      "scene": "food",
+      "likes": 30
+    },
+    {
+      "stationId": "kagoshima-chuo",
+      "rivalId": "sketch",
+      "comment": "観覧車のてっぺんから、煙たなびく桜島を描いた。",
+      "scene": "volcano",
+      "likes": 22
+    },
+    {
+      "stationId": "ibusuki",
+      "rivalId": "yukemuri",
+      "comment": "砂むし温泉で、波音を聞きながらじんわり汗。",
+      "scene": "steam",
+      "likes": 41
+    },
+    {
+      "stationId": "ibusuki",
+      "rivalId": "minato",
+      "comment": "開聞岳を眺めながら、潮風の中で食べたさつま揚げ。",
+      "scene": "sea",
+      "likes": 17
+    },
+    {
+      "stationId": "yakushima",
+      "rivalId": "hitou",
+      "comment": "苔むす森の水音だけが道しるべ。深呼吸が止まらない。",
+      "scene": "forest",
+      "likes": 53
+    },
+    {
+      "stationId": "yakushima",
+      "rivalId": "touge",
+      "comment": "雨上がりの森で、苔の緑がひときわ鮮やかだった。",
+      "scene": "forest",
+      "likes": 45
+    },
+    {
+      "stationId": "dazaifu",
+      "rivalId": "asaichi",
+      "comment": "焼きたての梅ヶ枝餅は、参道で頬張るのがいちばん。",
+      "scene": "food",
+      "likes": 39
+    },
+    {
+      "stationId": "dazaifu",
+      "rivalId": "sketch",
+      "comment": "朱の太鼓橋と楠の大木を、ゆっくりスケッチ。",
+      "scene": "shrine",
+      "likes": 18
+    },
+    {
+      "stationId": "saga",
+      "rivalId": "touge",
+      "comment": "秋空いっぱいの熱気球。バーナーの音に胸が高鳴る。",
+      "scene": "city",
+      "likes": 35
+    },
+    {
+      "stationId": "saga",
+      "rivalId": "ekiben",
+      "comment": "有明海の海苔の香り。おにぎりが急にごちそうに。",
+      "scene": "food",
+      "likes": 12
+    },
+    {
+      "stationId": "arita",
+      "rivalId": "sketch",
+      "comment": "トンバイ塀の赤い路地。れんがの模様を写しとった。",
+      "scene": "pottery",
+      "likes": 28
+    },
+    {
+      "stationId": "arita",
+      "rivalId": "asaichi",
+      "comment": "窯元で出会った藍の豆皿。毎朝の食卓が楽しみ。",
+      "scene": "pottery",
+      "likes": 23
+    },
+    {
+      "stationId": "shimabara",
+      "rivalId": "minato",
+      "comment": "島原の港から見た有明海、きらきらまぶしかった。",
+      "scene": "sea",
+      "likes": 16
+    },
+    {
+      "stationId": "shimabara",
+      "rivalId": "hitou",
+      "comment": "湧水で冷やしたかんざらし。蜜の甘さが体にしみる。",
+      "scene": "food",
+      "likes": 25
+    },
+    {
+      "stationId": "kumamoto",
+      "rivalId": "touge",
+      "comment": "武者返しの石垣を見上げる。反りの美しさに息をのむ。",
+      "scene": "city",
+      "likes": 47
+    },
+    {
+      "stationId": "kumamoto",
+      "rivalId": "ekiben",
+      "comment": "からし蓮根のつんとした辛さ。熊本の夜に乾杯。",
+      "scene": "food",
+      "likes": 20
+    },
+    {
+      "stationId": "hitoyoshi",
+      "rivalId": "yakou",
+      "comment": "球磨川の瀬音を聞きながら、地の焼酎をちびりと。",
+      "scene": "night",
+      "likes": 15
+    },
+    {
+      "stationId": "hitoyoshi",
+      "rivalId": "hitou",
+      "comment": "盆地の朝霧の中、静かな湯にひとりで浸かった。",
+      "scene": "steam",
+      "likes": 11
+    },
+    {
+      "stationId": "misumi",
+      "rivalId": "sketch",
+      "comment": "線路の終わりに港。南欧風の駅舎を描いてみた。",
+      "scene": "train",
+      "likes": 13
+    },
+    {
+      "stationId": "misumi",
+      "rivalId": "minato",
+      "comment": "石積みの埠頭に腰かけて、潮風と波音を聞いた。",
+      "scene": "sea",
+      "likes": 9
+    },
+    {
+      "stationId": "hita",
+      "rivalId": "yukemuri",
+      "comment": "三隈川の屋形船。かがり火が川面に揺れていた。",
+      "scene": "night",
+      "likes": 21
+    },
+    {
+      "stationId": "hita",
+      "rivalId": "asaichi",
+      "comment": "豆田町の醤油蔵。香ばしい香りに足が止まる。",
+      "scene": "city",
+      "likes": 8
+    },
+    {
+      "stationId": "aoshima",
+      "rivalId": "minato",
+      "comment": "鬼の洗濯板を歩く。波が刻んだ模様がふしぎ。",
+      "scene": "sea",
+      "likes": 32
+    },
+    {
+      "stationId": "aoshima",
+      "rivalId": "touge",
+      "comment": "島の社へ続く道。ビロウの葉陰が南国そのもの。",
+      "scene": "shrine",
+      "likes": 14
+    },
+    {
+      "stationId": "kirishima-onsen",
+      "rivalId": "hitou",
+      "comment": "硫黄の香る湯けむりの里。泉質の違いに夢中になる。",
+      "scene": "steam",
+      "likes": 43
+    },
+    {
+      "stationId": "kirishima-onsen",
+      "rivalId": "yukemuri",
+      "comment": "山の冷たい空気と熱い湯。湯上がりの頬が心地いい。",
+      "scene": "mountain",
+      "likes": 10
+    },
+    {
+      "stationId": "sakurajima",
+      "rivalId": "yakou",
+      "comment": "フェリーで渡ると、火山の山肌がぐんぐん近づいた。",
+      "scene": "volcano",
+      "likes": 29
+    },
+    {
+      "stationId": "sakurajima",
+      "rivalId": "ekiben",
+      "comment": "溶岩なぎさの足湯で、対岸の街を眺めてひと休み。",
+      "scene": "steam",
+      "likes": 6
     }
   ]
 };

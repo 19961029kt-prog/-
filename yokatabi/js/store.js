@@ -5,19 +5,25 @@
   const YT = (window.YT = window.YT || {});
 
   const KEY = 'yokatabi.kyushu.v1';
-  const VERSION = 2;
+  const VERSION = 3;
 
   function blank() {
     return {
       version: VERSION,
       currentStationId: null,
       visited: {},   // { stationId: ISO日時（初到着） }
+      // いちばん最近その駅に止まった日（その端末の日付 YYYY-MM-DD）。レシートの「到着日＝注文日」の確かめに使う
+      arrivals: {},  // { stationId: 'YYYY-MM-DD' }
       // いまトップオーナー（購入実績1位）の駅。順位から計算して書き戻す（js/ownership.js）。称号・旅しおり・地図の金色が使う
       acquired: {},  // { stationId: { at（1位になった日時）, via, provider, item } }
       // 駅ごとの購入実績（レシートで立候補した記録）。ランキングはこれとライバル旅人の実績から計算する
       purchases: {}, // { stationId: [{ id, at, amount（読み取った金額・円）, scored（ランキングに入れた額）, upset（下克上ボーナス）, shop, via, item, imageId, hash }] }
       legacyStamps: {}, // 旧版（ボタンと刻印シートで取れた頃）のオーナー刻印。記念としてアルバムにだけ残す
       profile: { name: '' }, // ランキングに出る自分の旅人名（空なら「あなた」）
+      // 旅の便り（自分が投函したポストカード）。1駅に1枚（投函し直すと写真と一言を差し替える）。画像は IndexedDB
+      postcards: {}, // { stationId: { id, at, memo, imageId, postedAt（最初に投函した日時。いいねの数はここから数える） } }
+      liked: {},     // { 旅人のポストカードID: ISO日時 } … 自分が押した「素敵ね」
+      shareDays: [], // シェアカードの発信ボーナスを受け取った日（YYYY-MM-DD）。1日1回
       actions: {},   // { stationId: { product?: ISO, stay?: ISO } } … ジャーニー「購入する」「訪れる」
       favorites: {}, // { stationId: true }  … 「つづく」：推し駅登録
       itineraries: [], // マイ旅しおり：[{ id, savedAt, departDate, title, seq: { g1, day1, day2, g2 } }]
@@ -40,7 +46,7 @@
   // 購入実績がないので順位には入れず、記念の刻印としてアルバムに残す。パーツは持ったまま、使った額は0に戻す
   // （配当の計算が変わって残高がマイナスにならないように）。
   function normalize(parsed) {
-    if (!parsed || ![1, VERSION].includes(parsed.version)) return null;
+    if (!parsed || ![1, 2, VERSION].includes(parsed.version)) return null;
     const b = blank();
     const s = Object.assign(b, parsed);
     s.equipped = Object.assign(blank().equipped, parsed.equipped || {}); // 新しく増えた装備欄は初期装備で埋める
@@ -51,9 +57,20 @@
       s.spent = 0;
       s.pendingOwner = null;
       s.rankSeen = null; // 称号は購入実績から数え直すので、カットインの段階も今の称号にそろえ直す
+    }
+    // version 2 まで：到着日の記録がないので、初到着の日を到着日として入れておく（今日の注文は、今日もう一度止まれば確かめられる）
+    if (parsed.version < 3) {
+      s.arrivals = Object.fromEntries(Object.entries(s.visited || {}).map(([id, iso]) => [id, localDate(iso)]));
       s.version = VERSION;
     }
     return s;
+  }
+
+  // その端末の暦での日付（YYYY-MM-DD）。UTC にすると日本の朝9時前が前の日になってしまう
+  function localDate(v = new Date()) {
+    const d = new Date(v);
+    if (isNaN(d)) return '';
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
   let state = blank();
@@ -84,6 +101,7 @@
   const progress = (s) =>
     Object.values(s.purchases || {}).reduce((n, l) => n + l.length, 0) * 100 +
     Object.keys(s.legacyStamps || {}).length * 50 +
+    Object.keys(s.postcards || {}).length * 20 +
     (s.itineraries || []).length * 10 +
     Object.keys(s.visited || {}).length;
 
@@ -132,19 +150,24 @@
       state.currentStationId = id;
       save();
     },
-    // 初到着なら true を返す
+    // ダイスで止まった：到着日を今日にする。初到着なら true を返す
     visit(id) {
       const first = !state.visited[id];
       if (first) state.visited[id] = new Date().toISOString();
+      state.arrivals[id] = localDate();
       state.currentStationId = id;
       save();
       return first;
     },
     isVisited: (id) => !!state.visited[id],
+    arrivalDate: (id) => state.arrivals[id] || null,
+    localDate,
     // ショップ・宿のボタンを押した：ジャーニー（購入する／訪れる）の一歩として記録する
-    recordAction(id, via) {
+    // providerId（押したショップ）も残す：レシートの厳格チェック①で「押したショップのレシートか」を確かめる
+    recordAction(id, via, providerId) {
       state.actions[id] = state.actions[id] || {};
       if (!state.actions[id][via]) state.actions[id][via] = new Date().toISOString();
+      if (providerId) (state.actions[id].shops ||= {})[providerId] = new Date().toISOString();
       save();
     },
     // 手配中の記録（レシートで立候補するまで、再読み込みしても残す）
@@ -179,6 +202,35 @@
     isAcquired: (id) => !!state.acquired[id],
     getAcquisition: (id) => state.acquired[id] || null,
     getActions: (id) => state.actions[id] || {},
+    // 旅の便り：投函（同じ駅なら差し替え。最初に投函した日時といいねの数え始めは残す）
+    putPostcard(id, { memo, imageId }) {
+      const prev = state.postcards[id];
+      const now = new Date().toISOString();
+      state.postcards[id] = { id: prev ? prev.id : `pc-${Date.now().toString(36)}`, at: now, memo, imageId, postedAt: prev ? prev.postedAt : now };
+      save();
+      return { card: state.postcards[id], first: !prev, oldImageId: prev && prev.imageId };
+    },
+    getPostcards: () => state.postcards,
+    // ひらいたときに「新しく届いたいいね」をお知らせするため、見せ終えた数を覚えておく
+    markPostcardSeen(id, n) {
+      if (!state.postcards[id]) return;
+      state.postcards[id].seenLikes = n;
+      write();
+    },
+    like(cardId) {
+      if (state.liked[cardId]) return false;
+      state.liked[cardId] = new Date().toISOString();
+      save();
+      return true;
+    },
+    hasLiked: (cardId) => !!state.liked[cardId],
+    // シェアカードの発信ボーナス：今日まだなら記録して true
+    claimShareDay(today) {
+      if (state.shareDays.includes(today)) return false;
+      state.shareDays.push(today);
+      save();
+      return true;
+    },
     setProfileName(name) {
       state.profile.name = String(name || '').trim().slice(0, 12);
       save();
@@ -248,7 +300,7 @@
       state.muted = !!v;
       save();
     },
-    // 旅の記録をリセット（購入実績・レシートの記録も消す。画像は呼び出し側で IndexedDB から消す）
+    // 旅の記録をリセット（購入実績・レシート・ポストカードの記録も消す。画像は呼び出し側で IndexedDB から消す）
     reset() {
       const { muted, itineraries, profile } = state;
       state = blank();

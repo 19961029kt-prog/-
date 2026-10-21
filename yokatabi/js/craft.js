@@ -13,20 +13,29 @@
   const isFree = (slot, id) => item(slot, id).price === 0;
   const owns = (slot, id) => isFree(slot, id) || YT.Store.isOwned(slot, id);
 
-  // 稼いだ額：初到着ごとの発見ボーナス ＋ 共同株主（上位3名）としての配当（js/ownership.js）。残高はそこから使った額を引く
-  function earned() {
+  // 稼いだ額（残高はそこから使った額を引く。保存せず毎回数える）
+  //   初到着ごとの発見ボーナス ＋ オーナー・共同株主の配当（js/ownership.js）
+  //   ＋ 旅の便りの投函・いいね（js/postcards.js）＋ シェアカードの発信ボーナス（js/sharecard.js）
+  function breakdown() {
     const st = YT.Store.get();
     const visited = D.stations.filter((s) => st.visited[s.id]).length;
-    return visited * D.meta.craft.discoveryBonus + YT.Ownership.totalDividends();
+    const pc = YT.Postcards ? YT.Postcards.earnings() : { post: 0, given: 0, received: 0 };
+    return {
+      discovery: visited * D.meta.craft.discoveryBonus,
+      dividends: YT.Ownership.totalDividends(),
+      post: pc.post,
+      likesGiven: pc.given,
+      likesReceived: pc.received,
+      share: (st.shareDays || []).length * D.meta.craft.shareBonus,
+    };
   }
+  const earned = () => Object.values(breakdown()).reduce((a, b) => a + b, 0);
   const balance = () => Math.max(0, earned() - YT.Store.get().spent);
 
-  // よりみち切符：高級車両・連結車両（ticket: true）を1つアンロックするごとに1日1枚ずつ増え、最大 ticketMax 枚
+  // よりみち切符：高級車両・連結車両（ticket: true）を1つでもアンロックすると、1日 ticketMax（3）回まで使える
   function ticketsPerDay() {
-    const n = D.meta.craft.train
-      .flatMap((s) => s.items.filter((i) => i.ticket && YT.Store.isOwned(s.slot, i.id)))
-      .length;
-    return Math.min(D.meta.craft.ticketMax, n);
+    const has = D.meta.craft.train.some((s) => s.items.some((i) => i.ticket && YT.Store.isOwned(s.slot, i.id)));
+    return has ? D.meta.craft.ticketMax : 0;
   }
   const today = () => {
     const d = new Date();
@@ -396,6 +405,7 @@
     item,
     owns,
     earned,
+    breakdown,
     balance,
     buy,
     equipped,

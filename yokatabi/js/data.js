@@ -30,7 +30,9 @@
       })
     );
     const totalAsset = data.stations.reduce((n, s) => n + s.assetValue, 0);
-    return { ...data, source, byId, adj, edges, overrides, totalAsset };
+    const edgeByKey = Object.fromEntries(edges.map((e) => [e.key, e]));
+    const edgeOf = (a, b) => edgeByKey[edgeKey(a, b)] || null;
+    return { ...data, source, byId, adj, edges, overrides, totalAsset, edgeOf };
   }
 
   function edgeKey(a, b) {
