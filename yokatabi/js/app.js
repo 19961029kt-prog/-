@@ -191,7 +191,7 @@
         <div class="cutin-inner">
           <div class="cutin-emblem"><div class="cutin-rays" aria-hidden="true"></div>${emblemHtml(rank, 'xl')}</div>
           <div class="cutin-text">
-            <p class="cutin-kicker">RANK UP!!　称号ランクアップ</p>
+            <p class="cutin-kicker">称号がひとつ上がりました</p>
             <p class="cutin-from">${esc(from.title)} <i>➔</i></p>
             <h2 id="cutin-title" class="cutin-title" aria-label="${esc(rank.title)}">${chars}</h2>
             <p id="cutin-flavor" class="cutin-flavor">${esc(rank.flavor)}</p>
@@ -580,7 +580,7 @@
         `<i style="--i:${i};--x:${Math.random() * 100}%;--d:${(Math.random() * 0.8).toFixed(2)}s;--h:${Math.floor(Math.random() * 360)}"></i>`
       ).join('')}</div>
       <div class="celebrate-box" role="alertdialog" aria-labelledby="celebrate-title">
-        <p class="celebrate-kicker">ACQUISITION COMPLETE</p>
+        <p class="celebrate-kicker">おめでとうございます</p>
         <h2 id="celebrate-title" class="celebrate-title">買収完了！</h2>
         ${holoCard(s, Store.getAcquisition(id), 'big')}
         <p class="celebrate-msg"><b>${esc(s.name)}駅</b>の正式オーナーになりました。<br>総資産に <b>${yen(s.assetValue)}</b> が加算されます。</p>
@@ -637,8 +637,9 @@
           <p class="holo-tagline">${esc(s.tagline)}</p>
           <div class="holo-value"><span>資産評価額</span><b>${yen(s.assetValue)}</b></div>
           <p class="holo-via">${esc(via)}</p>
-          <div class="holo-foot"><span>KYUSHU OWNER'S CERTIFICATE</span><span>No.${String(D.stations.indexOf(s) + 1).padStart(3, '0')}</span></div>
+          <div class="holo-foot"><span>九州 物件オーナー証</span><span>第${String(D.stations.indexOf(s) + 1).padStart(3, '0')}号</span></div>
         </div>
+        <span class="holo-art" aria-hidden="true">${s.propertyType === '湯けむり物件' ? '♨️' : '🎁'}</span>
         <div class="holo-foil" aria-hidden="true"></div>
         <div class="holo-glare" aria-hidden="true"></div>
       </article>`;
@@ -873,7 +874,7 @@
     if (!plan && !saved && r.reason === 'few') {
       root.innerHTML = `
         <div class="booklet booklet-locked">
-          <p class="booklet-kicker">MY TRAVEL BOOKLET</p>
+          <p class="booklet-kicker">マイ旅しおり</p>
           <h2 class="booklet-title">マイ旅しおり</h2>
           <p class="mt-2">買収した駅が <b>${cfg.minAcquired}駅</b> になると、その駅を巡る<b>リアル九州旅行モデルコース（1泊2日）</b>を自動でつくり、宿をまとめて比較できます。</p>
           <div class="lock-progress"><i style="width:${pct(ids.length, cfg.minAcquired)}%"></i></div>
@@ -909,7 +910,7 @@
       ${tabs}
       <article class="booklet" id="booklet">
         <div class="booklet-ribbon" aria-hidden="true">1泊2日</div>
-        <p class="booklet-kicker">MY TRAVEL BOOKLET ── 買収した駅を巡るリアル九州旅行モデルコース</p>
+        <p class="booklet-kicker">マイ旅しおり ── 買収した駅を巡るリアル九州旅行モデルコース</p>
         <h2 class="booklet-title">${esc(plan.title)}</h2>
         <p class="booklet-route">${plan.visits
           .map((id) => `<span class="${id === plan.overnight ? 'is-night' : ''}">${esc(D.byId[id].name)}${id === plan.overnight ? '<small>泊</small>' : ''}</span>`)
