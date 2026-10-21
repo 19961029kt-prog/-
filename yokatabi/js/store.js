@@ -24,6 +24,32 @@
   let state = blank();
   const listeners = [];
 
+  // 旧URL（19961029kt-prog.github.io/-/yokatabi/）から移ってきた人の記録の引き継ぎ。
+  // localStorage はドメインごとに別なので、旧URLの転送ページ（tools/build-redirect.mjs）が
+  // 記録を URL の # に載せて渡す（# の後ろはサーバーに送られない）。
+  const CARRY = '#carry=';
+  function takeCarried() {
+    if (!location.hash.startsWith(CARRY)) return null;
+    let data = null;
+    try {
+      const b64 = location.hash.slice(CARRY.length).replace(/-/g, '+').replace(/_/g, '/');
+      const json = new TextDecoder().decode(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)));
+      const parsed = JSON.parse(json);
+      if (parsed && parsed.version === 1) data = parsed;
+    } catch (e) {
+      /* 壊れていたら引き継がない */
+    }
+    try {
+      history.replaceState(null, '', location.pathname + location.search); // 再読み込みやURLの共有で記録が出回らないように消す
+    } catch (e) {
+      /* 消せなくても続行 */
+    }
+    return data;
+  }
+  // 旅の進み具合。新しいURLで先に遊んでいた場合は、進んでいるほうを残す
+  const progress = (s) =>
+    Object.keys(s.acquired || {}).length * 100 + (s.itineraries || []).length * 10 + Object.keys(s.visited || {}).length;
+
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
@@ -33,6 +59,15 @@
       }
     } catch (e) {
       /* 読めなくても初期状態で続行 */
+    }
+    const carried = takeCarried();
+    if (carried && progress(carried) > progress(state)) {
+      state = Object.assign(blank(), carried);
+      try {
+        localStorage.setItem(KEY, JSON.stringify(state));
+      } catch (e) {
+        /* 保存できない環境ではセッション中のみ保持 */
+      }
     }
     return state;
   }

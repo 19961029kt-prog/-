@@ -68,6 +68,8 @@ yokatabi/
     ├── build-fallback.mjs   stations.json の検証とフォールバックの生成
     ├── fetch-geo-data.sh    地図の元データ（国土数値情報 N03・station_database）のダウンロード
     ├── build-geo.mjs        元データ → js/geo.js と各駅の x / y（投影・間引き・駅と線路の検証）
+    ├── publish-site.sh      公開用リポジトリ（<組織>.github.io）に公開するファイルだけを並べる
+    ├── build-redirect.mjs   旧URLに置く転送ページ（記録の引き継ぎつき）を作る
     └── test-trip.mjs        モデルコース生成の検証（全2駅組み合わせ・時間割・速度）
 ```
 
@@ -253,7 +255,13 @@ python3 -m http.server 8000     # → http://localhost:8000/
 
 ## 11. デプロイ
 
-リポジトリ直下の `.github/workflows/deploy-pages.yml` が、Vite のビルド結果に `yokatabi/` を丸ごとコピーして公開する（公開URL：`https://<user>.github.io/<repo>/yokatabi/`）。`tools/` と `CLAUDE.md` は公開物から除く。
+**いま**：リポジトリ直下の `.github/workflows/deploy-pages.yml` が、Vite のビルド結果に `yokatabi/` を丸ごとコピーして公開している（公開URL：`https://19961029kt-prog.github.io/-/yokatabi/`）。`tools/` と `CLAUDE.md` は公開物から除く。
+
+**移転の予定**：アプリ名の入った URL（GitHub の組織のサイト `https://<組織>.github.io/`）へ移す。手順：
+1. 組織のリポジトリ `<組織>.github.io` を作る（このリポジトリの名前なら、既定のブランチに置いたファイルがそのまま公開される）
+2. `bash yokatabi/tools/publish-site.sh <そのチェックアウト>` で公開するファイルだけを並べ、commit → push
+3. `index.html` の `<head>` の URL を新しい URL に書き換える（検索・共有の節）。`robots.txt`・`sitemap.xml` も新しい URL で置く
+4. 旧URLには転送ページを置く：`deploy-pages.yml` の yokatabi のコピーを `node yokatabi/tools/build-redirect.mjs <新しいURL> dist/yokatabi` に置き換える。転送ページは遊んだ記録を URL の # に載せて渡し、`js/store.js` が受け取る（新しい URL で先に進んでいた場合は、進んでいるほうを残す）
 
 ## 12. コーディング規約
 
