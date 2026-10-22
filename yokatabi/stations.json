@@ -9,10 +9,10 @@
     "currencyUnit": "万円",
     "shareHashtags": ["九州よりみちダイス", "QTRIP", "九州旅"],
     "ranks": [
-      { "id": "traveler", "title": "九州旅人", "min": 0, "icon": "🎒", "metal": "bronze", "flavor": "サイコロ片手に、九州の旅が始まった。" },
-      { "id": "pioneer", "title": "九州開拓使", "min": 10000, "icon": "🧭", "metal": "silver", "flavor": "まだ見ぬ駅へ。あなたの足跡が、九州の地図を塗り替えていく。" },
-      { "id": "daimyo", "title": "九州大名", "min": 30000, "icon": "🏯", "metal": "gold", "flavor": "城下に湯けむり、領地に名産。九州じゅうにあなたの名がとどろく。" },
-      { "id": "railking", "title": "九州鉄道王", "min": 55000, "icon": "🚂", "metal": "platinum", "flavor": "九州のレールは、すべてあなたの王国へ通じている。" }
+      { "id": "traveler", "title": "九州旅人", "min": 0, "icon": "bag", "metal": "bronze", "flavor": "サイコロ片手に、九州の旅が始まった。" },
+      { "id": "pioneer", "title": "九州開拓使", "min": 10000, "icon": "compass", "metal": "silver", "flavor": "まだ見ぬ駅へ。あなたの足跡が、九州の地図を塗り替えていく。" },
+      { "id": "daimyo", "title": "九州大名", "min": 30000, "icon": "castle", "metal": "gold", "flavor": "城下に湯けむり、領地に名産。九州じゅうにあなたの名がとどろく。" },
+      { "id": "railking", "title": "九州鉄道王", "min": 55000, "icon": "locomotive", "metal": "platinum", "flavor": "九州のレールは、すべてあなたの王国へ通じている。" }
     ],
     "trip": {
       "minAcquired": 2,
@@ -44,49 +44,49 @@
       {
         "id": "yukemuri",
         "name": "湯けむり探訪人",
-        "icon": "♨",
+        "icon": "onsen",
         "avatar": { "hat": "tenugui", "outfit": "yukata", "buddy": "none", "livery": "hidamari" }
       },
       {
         "id": "ekiben",
         "name": "駅弁ハンター",
-        "icon": "🍱",
+        "icon": "bento",
         "avatar": { "hat": "conductor", "outfit": "canvas", "buddy": "bento", "livery": "caldera" }
       },
       {
         "id": "sketch",
         "name": "車窓スケッチ部",
-        "icon": "✏",
+        "icon": "pencil",
         "avatar": { "hat": "straw", "outfit": "blazer", "buddy": "camera", "livery": "forest" }
       },
       {
         "id": "minato",
         "name": "港町の食いしん坊",
-        "icon": "🐟",
+        "icon": "fish",
         "avatar": { "hat": "straw", "outfit": "canvas", "buddy": "bento", "livery": "gullwing" }
       },
       {
         "id": "touge",
         "name": "峠の写真家",
-        "icon": "📷",
+        "icon": "camera",
         "avatar": { "hat": "conductor", "outfit": "canvas", "buddy": "camera", "livery": "caldera" }
       },
       {
         "id": "asaichi",
         "name": "朝市の常連さん",
-        "icon": "🧺",
+        "icon": "basket",
         "avatar": { "hat": "tenugui", "outfit": "yukata", "buddy": "bento", "livery": "hidamari" }
       },
       {
         "id": "hitou",
         "name": "秘湯めぐり隊",
-        "icon": "🏔",
+        "icon": "mountain",
         "avatar": { "hat": "straw", "outfit": "yukata", "buddy": "none", "livery": "forest" }
       },
       {
         "id": "yakou",
         "name": "夜汽車の旅人",
-        "icon": "🌙",
+        "icon": "moon",
         "avatar": { "hat": "kinghat", "outfit": "tuxedo", "buddy": "cat", "livery": "royal" }
       }
     ],
@@ -95,10 +95,10 @@
       "deckMax": 5,
       "arrivalTicketChance": 0.2,
       "tickets": [
-        { "id": "express2", "name": "二連ダイス急行切符", "icon": "🚃", "dice": 2, "price": 800, "weight": 6, "desc": "木のダイスを2個いっしょに振れる（2〜12マス）。" },
-        { "id": "super3", "name": "三連ダイス超特急切符", "icon": "🚄", "dice": 3, "price": 1800, "weight": 3, "desc": "木のダイスを3個いっしょに振れる（3〜18マス）。九州を一気に縦断。" },
-        { "id": "cruise4", "name": "四連ダイス・クルーズ周遊切符", "icon": "✨", "dice": 4, "turns": 3, "price": 5000, "weight": 1, "rare": true, "desc": "4個のダイスを、使ってから3回のあいだ毎回振れる（4〜24マス）。" },
-        { "id": "pinpoint", "name": "ピタリ指定切符", "icon": "🎯", "pick": true, "price": 3000, "weight": 1, "rare": true, "desc": "1〜6の好きな出目を選べる。スポットライト駅にピタッと止まる切り札。" }
+        { "id": "express2", "name": "二連ダイス急行切符", "icon": "dice2", "dice": 2, "price": 800, "weight": 6, "desc": "木のダイスを2個いっしょに振れる（2〜12マス）。" },
+        { "id": "super3", "name": "三連ダイス超特急切符", "icon": "dice3", "dice": 3, "price": 1800, "weight": 3, "desc": "木のダイスを3個いっしょに振れる（3〜18マス）。九州を一気に縦断。" },
+        { "id": "cruise4", "name": "四連ダイス・クルーズ周遊切符", "icon": "sparkle", "dice": 4, "turns": 3, "price": 5000, "weight": 1, "rare": true, "desc": "4個のダイスを、使ってから3回のあいだ毎回振れる（4〜24マス）。" },
+        { "id": "pinpoint", "name": "ピタリ指定切符", "icon": "target", "pick": true, "price": 3000, "weight": 1, "rare": true, "desc": "1〜6の好きな出目を選べる。スポットライト駅にピタッと止まる切り札。" }
       ],
       "settleEvery": 7,
       "tourismRate": 0.2,
@@ -127,7 +127,7 @@
         {
           "slot": "livery",
           "label": "車体フォルム＆塗装",
-          "icon": "🚃",
+          "icon": "locomotive",
           "items": [
             { "id": "hidamari", "name": "ひだまりローカル気動車", "price": 0, "desc": "テラコッタとクリームの、ぽかぽか温かい1両編成。" },
             { "id": "forest", "name": "フォレスト・ハイランド号", "price": 1500, "ticket": true, "desc": "深いフォレストグリーンに金の帯。高原を渡るクラシカルな気動車。" },
@@ -140,7 +140,7 @@
         {
           "slot": "carriage",
           "label": "2両目・連結車両",
-          "icon": "🔗",
+          "icon": "coupler",
           "items": [
             { "id": "none", "name": "連結なし（1両ワンマン運行）", "price": 0, "desc": "身軽な1両で、どこへでも。" },
             { "id": "chaya", "name": "木組みの茶屋・食堂車", "price": 2500, "ticket": true, "desc": "木組みの格子とのれん。湯気の立つお茶と駅弁の香りがする食堂車。" },
@@ -151,7 +151,7 @@
         {
           "slot": "trail",
           "label": "走行トレイル",
-          "icon": "☁",
+          "icon": "cloud",
           "items": [
             { "id": "puff", "name": "白い綿雲のパフ", "price": 0, "desc": "ぽわん、ぽわんと浮かぶ白い蒸気。" },
             { "id": "leaves", "name": "新緑の木の葉と風", "price": 800, "desc": "若葉がくるくる舞う、高原の風。発見ボーナスだけでも手が届くお試し枠。" },
@@ -164,7 +164,7 @@
         {
           "slot": "hat",
           "label": "帽子・頭",
-          "icon": "👒",
+          "icon": "hat",
           "items": [
             { "id": "straw", "name": "旅の麦わら帽子", "price": 0, "desc": "日ざしをやさしくさえぎる、旅のはじまりの帽子。" },
             { "id": "conductor", "name": "レトロ車掌キャップ", "price": 600, "desc": "つばの光る、昔ながらの車掌さんの帽子。" },
@@ -175,7 +175,7 @@
         {
           "slot": "outfit",
           "label": "衣装",
-          "icon": "🧥",
+          "icon": "coat",
           "items": [
             { "id": "canvas", "name": "キャンバスの旅リュック姿", "price": 0, "desc": "生成りのシャツに帆布のリュック。どこへでも歩いていける。" },
             { "id": "blazer", "name": "観光列車の深緑ブレザー制服", "price": 2000, "desc": "金ボタンの深緑ブレザー。観光列車のアテンダント気分。" },
@@ -186,7 +186,7 @@
         {
           "slot": "buddy",
           "label": "旅の相棒",
-          "icon": "🐾",
+          "icon": "paw",
           "items": [
             { "id": "none", "name": "なし", "price": 0, "desc": "ひとり旅も、また気楽。" },
             { "id": "camera", "name": "二眼レフカメラ", "price": 400, "desc": "上からのぞく、四角いファインダーのクラシックカメラ。" },

@@ -25,7 +25,7 @@ window.YOKATABI_FALLBACK_DATA = {
         "id": "traveler",
         "title": "九州旅人",
         "min": 0,
-        "icon": "🎒",
+        "icon": "bag",
         "metal": "bronze",
         "flavor": "サイコロ片手に、九州の旅が始まった。"
       },
@@ -33,7 +33,7 @@ window.YOKATABI_FALLBACK_DATA = {
         "id": "pioneer",
         "title": "九州開拓使",
         "min": 10000,
-        "icon": "🧭",
+        "icon": "compass",
         "metal": "silver",
         "flavor": "まだ見ぬ駅へ。あなたの足跡が、九州の地図を塗り替えていく。"
       },
@@ -41,7 +41,7 @@ window.YOKATABI_FALLBACK_DATA = {
         "id": "daimyo",
         "title": "九州大名",
         "min": 30000,
-        "icon": "🏯",
+        "icon": "castle",
         "metal": "gold",
         "flavor": "城下に湯けむり、領地に名産。九州じゅうにあなたの名がとどろく。"
       },
@@ -49,7 +49,7 @@ window.YOKATABI_FALLBACK_DATA = {
         "id": "railking",
         "title": "九州鉄道王",
         "min": 55000,
-        "icon": "🚂",
+        "icon": "locomotive",
         "metal": "platinum",
         "flavor": "九州のレールは、すべてあなたの王国へ通じている。"
       }
@@ -108,7 +108,7 @@ window.YOKATABI_FALLBACK_DATA = {
       {
         "id": "yukemuri",
         "name": "湯けむり探訪人",
-        "icon": "♨",
+        "icon": "onsen",
         "avatar": {
           "hat": "tenugui",
           "outfit": "yukata",
@@ -119,7 +119,7 @@ window.YOKATABI_FALLBACK_DATA = {
       {
         "id": "ekiben",
         "name": "駅弁ハンター",
-        "icon": "🍱",
+        "icon": "bento",
         "avatar": {
           "hat": "conductor",
           "outfit": "canvas",
@@ -130,7 +130,7 @@ window.YOKATABI_FALLBACK_DATA = {
       {
         "id": "sketch",
         "name": "車窓スケッチ部",
-        "icon": "✏",
+        "icon": "pencil",
         "avatar": {
           "hat": "straw",
           "outfit": "blazer",
@@ -141,7 +141,7 @@ window.YOKATABI_FALLBACK_DATA = {
       {
         "id": "minato",
         "name": "港町の食いしん坊",
-        "icon": "🐟",
+        "icon": "fish",
         "avatar": {
           "hat": "straw",
           "outfit": "canvas",
@@ -152,7 +152,7 @@ window.YOKATABI_FALLBACK_DATA = {
       {
         "id": "touge",
         "name": "峠の写真家",
-        "icon": "📷",
+        "icon": "camera",
         "avatar": {
           "hat": "conductor",
           "outfit": "canvas",
@@ -163,7 +163,7 @@ window.YOKATABI_FALLBACK_DATA = {
       {
         "id": "asaichi",
         "name": "朝市の常連さん",
-        "icon": "🧺",
+        "icon": "basket",
         "avatar": {
           "hat": "tenugui",
           "outfit": "yukata",
@@ -174,7 +174,7 @@ window.YOKATABI_FALLBACK_DATA = {
       {
         "id": "hitou",
         "name": "秘湯めぐり隊",
-        "icon": "🏔",
+        "icon": "mountain",
         "avatar": {
           "hat": "straw",
           "outfit": "yukata",
@@ -185,7 +185,7 @@ window.YOKATABI_FALLBACK_DATA = {
       {
         "id": "yakou",
         "name": "夜汽車の旅人",
-        "icon": "🌙",
+        "icon": "moon",
         "avatar": {
           "hat": "kinghat",
           "outfit": "tuxedo",
@@ -206,7 +206,7 @@ window.YOKATABI_FALLBACK_DATA = {
         {
           "id": "express2",
           "name": "二連ダイス急行切符",
-          "icon": "🚃",
+          "icon": "dice2",
           "dice": 2,
           "price": 800,
           "weight": 6,
@@ -215,7 +215,7 @@ window.YOKATABI_FALLBACK_DATA = {
         {
           "id": "super3",
           "name": "三連ダイス超特急切符",
-          "icon": "🚄",
+          "icon": "dice3",
           "dice": 3,
           "price": 1800,
           "weight": 3,
@@ -224,7 +224,7 @@ window.YOKATABI_FALLBACK_DATA = {
         {
           "id": "cruise4",
           "name": "四連ダイス・クルーズ周遊切符",
-          "icon": "✨",
+          "icon": "sparkle",
           "dice": 4,
           "turns": 3,
           "price": 5000,
@@ -235,7 +235,7 @@ window.YOKATABI_FALLBACK_DATA = {
         {
           "id": "pinpoint",
           "name": "ピタリ指定切符",
-          "icon": "🎯",
+          "icon": "target",
           "pick": true,
           "price": 3000,
           "weight": 1,
@@ -336,7 +336,7 @@ window.YOKATABI_FALLBACK_DATA = {
         {
           "slot": "livery",
           "label": "車体フォルム＆塗装",
-          "icon": "🚃",
+          "icon": "locomotive",
           "items": [
             {
               "id": "hidamari",
@@ -384,7 +384,7 @@ window.YOKATABI_FALLBACK_DATA = {
         {
           "slot": "carriage",
           "label": "2両目・連結車両",
-          "icon": "🔗",
+          "icon": "coupler",
           "items": [
             {
               "id": "none",
@@ -418,7 +418,7 @@ window.YOKATABI_FALLBACK_DATA = {
         {
           "slot": "trail",
           "label": "走行トレイル",
-          "icon": "☁",
+          "icon": "cloud",
           "items": [
             {
               "id": "puff",
@@ -451,7 +451,7 @@ window.YOKATABI_FALLBACK_DATA = {
         {
           "slot": "hat",
           "label": "帽子・頭",
-          "icon": "👒",
+          "icon": "hat",
           "items": [
             {
               "id": "straw",
@@ -482,7 +482,7 @@ window.YOKATABI_FALLBACK_DATA = {
         {
           "slot": "outfit",
           "label": "衣装",
-          "icon": "🧥",
+          "icon": "coat",
           "items": [
             {
               "id": "canvas",
@@ -513,7 +513,7 @@ window.YOKATABI_FALLBACK_DATA = {
         {
           "slot": "buddy",
           "label": "旅の相棒",
-          "icon": "🐾",
+          "icon": "paw",
           "items": [
             {
               "id": "none",
