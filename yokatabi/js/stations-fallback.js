@@ -353,7 +353,7 @@ window.YOKATABI_FALLBACK_DATA = {
             },
             {
               "id": "gullwing",
-              "name": "ホワイト・ガルウィング号",
+              "name": "白磁ストリームライン号",
               "price": 3000,
               "ticket": true,
               "desc": "白磁のように白いボディに茜色のライン。海沿いを駆ける流線形の特急。"

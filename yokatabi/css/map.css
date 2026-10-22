@@ -195,7 +195,7 @@
 /* ---------- 列車とトレイル ---------- */
 .train-car { pointer-events: none; }
 /* 紙の上に置いた模型のような、ごく控えめな影 */
-.train-car1, .train-car2 { filter: drop-shadow(0 .8px .6px rgba(44, 37, 35, .22)); }
+/* 列車の影は絵の中の淡い楕円だけにする（drop-shadow のフィルタは、走るあいだ毎フレームの描き直しを重くするので使わない） */
 .tr-steam path { animation: steam-wave 1.8s ease-in-out infinite; }
 .fx { transform-box: fill-box; transform-origin: center; animation: fx-rise 1.5s var(--ease) forwards; }
 .fx-leaves { animation: fx-leaf 1.6s var(--ease) forwards; }

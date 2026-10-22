@@ -118,7 +118,7 @@
     hidamari: { body: '#8E4A33', upper: '#EFE6D4', roof: '#6E5D4F', edge: '#2C2523', line: '#C59B27', glass: '#3A4446', light: false },
     // フォレスト・ハイランド号：深緑に金の二本線
     forest: { body: '#234236', upper: '#234236', roof: '#182E25', edge: '#14251E', line: '#C59B27', glass: '#E2D3AE', light: true },
-    // ホワイト・ガルウィング号：白磁の車体に茜の帯、真鍮の細線
+    // 白磁ストリームライン号：白磁の車体に茜の帯、真鍮の細線
     gullwing: { body: '#F6F3EC', upper: '#F6F3EC', roof: '#D9D2C4', edge: '#6E5D4F', line: '#B8860B', glass: '#2F3A3E', band: '#A8382B', light: false },
     // カルデラ・スチーム号：漆黒の黒鉄と真鍮
     caldera: { body: '#1E1A18', upper: '#1E1A18', roof: '#14110F', edge: '#0E0C0B', line: '#C59B27', glass: '#E2D3AE', light: true },
