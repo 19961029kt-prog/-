@@ -303,7 +303,7 @@
 .route:not(.is-gold) .gold-glow { display: none; }
 .route.is-gold .trunk-case, .route.is-gold .shin-case { stroke: #5c4512; }
 
-/* ---------- 王座奪還：自分の王冠とアバターが駅にすっと降りる ---------- */
+/* ---------- 王座奪還：自分の王冠と旅の紋章が駅にすっと降りる ---------- */
 .crown-drop-body { animation: crown-drop .85s var(--ease) both; }
 .crown-drop.is-landed .crown-drop-body { animation: crown-settle .6s var(--ease); }
 .crown-drop-disc { fill: var(--ivory); stroke: var(--brass); stroke-width: 1.6; }
@@ -397,39 +397,61 @@
 .station.is-spotlight .station-token, .station.is-candidate .station-token { opacity: 1; }
 .station.is-spotlight .st-fog, .station.is-candidate .st-fog { opacity: .45; }
 
-/* ---------- 走行中：残り駅の札・通過駅の波紋・蒸気と真鍮の粒 ---------- */
-.run-badge { pointer-events: none; transition: opacity .7s var(--ease); }
-.run-badge.is-gone { opacity: 0; }
-.run-badge-plate { fill: var(--antique); stroke: var(--brass); stroke-width: .9; }
-.run-badge-inner { fill: none; stroke: var(--brass); stroke-width: .35; }
-.run-badge-tip { fill: var(--brass); }
-.run-badge-text { font-family: var(--font-mincho); font-weight: 700; font-size: 7.4px; letter-spacing: .08em; fill: var(--ink); }
-.run-badge-num { font-family: var(--font-serif); font-style: italic; font-weight: 600; font-size: 10px; fill: var(--akane); }
-.run-badge-body { transform-box: fill-box; transform-origin: 50% 100%; }
-.run-badge-body.is-tick { animation: badge-tick .5s var(--ease); }
+/* ---------- 走行中：通過駅の波紋 ---------- */
 .pass-ripple { fill: none; stroke: var(--gold-leaf); stroke-width: 1.4; pointer-events: none; animation: pass-ripple 1.4s var(--ease) forwards; animation-delay: calc(var(--i) * .22s); opacity: 0; }
-.steam-puff { fill: #fbf8f2; stroke: rgba(44, 37, 35, .28); stroke-width: .35; pointer-events: none; transform-box: fill-box; transform-origin: center; animation: steam-puff 1.6s var(--ease) forwards; }
-.gold-dust { fill: var(--gold-2); pointer-events: none; animation: gold-dust 1.3s var(--ease) forwards; animation-delay: calc(var(--d) * .08s); opacity: 0; }
 
-/* ---------- オートナビの進路の札（分かれ道の駅の、進む路線の少し先） ---------- */
-.nav-arrow { cursor: pointer; outline: none; }
-.nav-hit { fill: transparent; }
-.nav-disc { fill: var(--antique); stroke: var(--brass); stroke-width: .9; transition: fill .3s var(--ease); }
-.nav-ring { fill: none; stroke: var(--brass); stroke-width: .35; }
-.nav-chev { fill: none; stroke: var(--ink); stroke-width: 1.25; stroke-linecap: round; stroke-linejoin: round; }
-.nav-pin { fill: var(--akane); }
-.nav-arrow.is-locked .nav-disc { fill: var(--gold-3); stroke: var(--akane); }
-.nav-arrow.is-locked .nav-chev { stroke: var(--akane); }
-.nav-arrow:hover .nav-disc, .nav-arrow:focus-visible .nav-disc { fill: var(--gold-3); }
-.nav-arrow:focus-visible .nav-ring { stroke: var(--akane); stroke-width: .8; }
-.is-busy .layer-nav { opacity: 0; pointer-events: none; transition: opacity .3s var(--ease); }
 
 @keyframes pass-ripple { 0% { r: 8; opacity: .95; stroke-width: 1.6; } 100% { r: 34; opacity: 0; stroke-width: .3; } }
-@keyframes steam-puff { 0% { opacity: .9; transform: scale(.6); } 100% { opacity: 0; transform: translate(var(--dx), -10px) scale(2.6); } }
-@keyframes gold-dust { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(var(--dy)); } }
-@keyframes badge-tick { 0% { transform: scale(1); } 35% { transform: scale(1.14); } 100% { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) {
-  .pass-ripple, .steam-puff, .gold-dust { animation: none; display: none; }
-}
+  .pass-ripple, }
 .pass-ripple.is-unveil { stroke: var(--brass); animation-duration: 1.8s; animation-delay: calc(var(--i) * .3s); }
 .station.is-unveiling .st-fog { transition: opacity 1.4s var(--ease); }
+
+/* ---------- 列車（2両編成のトークン。大きさは画面の px。線は non-scaling で細さをそろえる）---------- */
+.train-car { pointer-events: none; }
+.tk-shell { fill: #1E3A2F; stroke: #0f1f19; stroke-width: .8; }
+.tk-nose, .tk-obs { fill: #1E3A2F; stroke: #0f1f19; stroke-width: .8; }
+.tk-obs { fill: rgba(255, 232, 163, .55); }
+.tk-roof { fill: #16302a; stroke: var(--tk-accent, #C5A059); stroke-width: .5; }
+.tk-vent { fill: #2a2a2a; stroke: #C5A059; stroke-width: .35; }
+.tk-win { fill: #FFE8A3; stroke: #C5A059; stroke-width: .45; }
+.tk-band { fill: #C5A059; }
+.tk-pin { stroke: #C5A059; stroke-width: .45; fill: none; }
+.tk-lamp { fill: #FFE8A3; stroke: #C5A059; stroke-width: .4; }
+.tk-wheel { fill: #2A2A2A; stroke: #C5A059; stroke-width: .5; }
+/* 前照灯の扇形の光：先頭から前へ、半透明の暖色が広がって薄れる */
+.tk-cone { fill: url(#g-cone); }
+.tk-coupler { stroke: #2A2A2A; stroke-width: 5px; stroke-linecap: round; vector-effect: non-scaling-stroke; pointer-events: none; }
+/* 粒子（位置・大きさ・透明度は rAF で毎フレーム書く） */
+.fx-steam { fill: #fbf8f2; stroke: rgba(44, 37, 35, .22); stroke-width: .6px; vector-effect: non-scaling-stroke; pointer-events: none; }
+.fx-spark { fill: #E5C158; pointer-events: none; }
+/* 通りすぎた直後の区間に残る金の光（1.2秒で消える） */
+.seg-glow { fill: none; stroke: #D4AF37; stroke-width: 4.5px; stroke-linecap: round; vector-effect: non-scaling-stroke; pointer-events: none; }
+/* 頭上のカウンター「あと N 駅」：真鍮の枠のピル */
+.run-count { pointer-events: none; transition: opacity .7s var(--ease); }
+.run-count.is-gone { opacity: 0; }
+.rc-pill { fill: var(--antique); stroke: #C5A059; stroke-width: 1.2; }
+.rc-in { fill: none; stroke: #C5A059; stroke-width: .5; }
+.rc-text { font-family: var(--font-mincho); font-weight: 700; font-size: 10px; letter-spacing: .06em; fill: var(--ink); }
+
+/* ---------- 分かれ道：選べる線路の金の破線（流れる）と、方面の真鍮のボタン ---------- */
+.branch-hl { fill: none; stroke: rgba(212, 175, 55, .35); stroke-width: 7px; stroke-linecap: round; vector-effect: non-scaling-stroke; pointer-events: none; }
+.branch-hl.branch-flow { stroke: #D4AF37; stroke-width: 3px; stroke-dasharray: 7 7; animation: branch-flow .9s linear infinite; }
+.map-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
+.dir-btn {
+  position: absolute; transform: translate(-50%, -50%); pointer-events: auto; display: inline-flex; align-items: center; gap: 5px; max-width: 200px;
+  padding: 4px 10px 4px 4px; border-radius: 999px; font-family: var(--font-mincho); font-weight: 700; font-size: 11.5px; line-height: 1.3; letter-spacing: .04em; color: var(--ink); white-space: nowrap;
+  background: var(--ivory); box-shadow: 0 0 0 1.25px #C5A059, inset 0 0 0 3px var(--ivory), inset 0 0 0 3.8px rgba(197, 160, 89, .7), 0 8px 16px -10px rgba(44, 37, 35, .6);
+  animation: dir-pulse 1.8s var(--ease) infinite;
+}
+.dir-btn small { font-family: var(--font-ui); font-weight: 500; font-size: 10px; color: var(--ink-3); margin-left: 2px; }
+.dir-arrow { display: inline-grid; place-items: center; width: 24px; height: 24px; flex: none; border-radius: 50%; color: #8a6a1c; box-shadow: inset 0 0 0 1.25px #C5A059; background: var(--gold-3); }
+.dir-arrow .ico { width: 14px; height: 14px; }
+.dir-text { overflow: hidden; text-overflow: ellipsis; }
+.dir-rec { position: absolute; left: 50%; top: -11px; transform: translateX(-50%); padding: 0 8px; font-family: var(--font-ui); font-weight: 700; font-size: 9.5px; line-height: 1.7; letter-spacing: .06em; color: var(--ivory); background: var(--akane); white-space: nowrap; }
+.dir-rec::after { content: ''; position: absolute; left: 50%; bottom: -3px; width: 6px; height: 6px; background: var(--akane); transform: translateX(-50%) rotate(45deg); z-index: -1; }
+.dir-btn.is-rec { box-shadow: 0 0 0 1.25px var(--akane), inset 0 0 0 3px var(--ivory), inset 0 0 0 3.8px rgba(168, 56, 43, .5), 0 8px 16px -10px rgba(44, 37, 35, .6); }
+.dir-btn:hover, .dir-btn:focus-visible { background: var(--gold-3); outline: none; }
+@keyframes branch-flow { to { stroke-dashoffset: -14; } }
+@keyframes dir-pulse { 0%, 100% { box-shadow: 0 0 0 1.25px #C5A059, inset 0 0 0 3px var(--ivory), inset 0 0 0 3.8px rgba(197, 160, 89, .7), 0 0 0 0 rgba(212, 175, 55, .45); } 50% { box-shadow: 0 0 0 1.25px #C5A059, inset 0 0 0 3px var(--ivory), inset 0 0 0 3.8px rgba(197, 160, 89, .7), 0 0 0 7px rgba(212, 175, 55, 0); } }
+@media (prefers-reduced-motion: reduce) { .dir-btn, .branch-flow { animation: none; } }

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- 検索・共有用の情報。公開URLを変えるときは、このブロックの URL（canonical・og:url・og:image・JSON-LD）をまとめて書き換える -->
   <title>Q-TRIP 九州よりみちダイス｜KYUSHU ROUTES &amp; ROOTS　サイコロで巡る九州の美食と秘湯の旅</title>
-  <meta name="description" content="Q-TRIP（九州よりみちダイス）は、実際の地図と線路で描いた九州の路線図をすごろく盤にした、無料のブラウザ旅ゲーム。よりみちダイスを振って駅をめぐり、車窓とまちの寄り道ノート・名産品・温泉宿に出会い、旅のお買い物の実績で駅のトップオーナーを目指して、列車を改造しよう。スマホでもPCでも遊べます。">
+  <meta name="description" content="Q-TRIP（九州よりみちダイス）は、実際の地図と線路で描いた九州の路線図をすごろく盤にした、無料のブラウザ旅ゲーム。よりみちダイスを振って駅をめぐり、車窓とまちの寄り道ノート・名産品・温泉宿に出会い、旅で貯めた資金で駅のトップオーナーを目指して、列車を改造しよう。スマホでもPCでも遊べます。">
   <link rel="canonical" href="https://q-trip.github.io/">
   <meta name="application-name" content="Q-TRIP 九州よりみちダイス">
   <meta name="apple-mobile-web-app-title" content="Q-TRIP">
@@ -60,201 +60,141 @@
   <link rel="stylesheet" href="css/garage.css">
 </head>
 <body>
-  <a href="#main" class="skip-link">本文へスキップ</a>
-
-  <!-- ヘッダー：手帖の表紙のような深緑。ロゴ／アバター／ミュート、その下に称号・踏破率・総資産額・クラフト資金 -->
-  <header class="site-header">
-    <div class="hdr wrap">
-      <div class="brand">
+  <!-- 画面はスクロールしない3層：上の固定バー（44px の帯＋68px の車窓）／真ん中の地図（ほかのタブは中だけスクロール）／下のタブ（60px）。
+       ダイスは右下の親指の位置に常駐させる -->
+  <div id="app" class="app">
+  <header class="topbar">
+    <div class="tb-row">
+      <div class="tb-brand">
         <span class="brand-die" aria-hidden="true">
           <svg viewBox="0 0 64 64"><g transform="rotate(-8 32 32)"><rect x="11" y="11" width="42" height="42" rx="3" fill="#4a3525" stroke="#c59b27" stroke-width="1.2"/><rect x="14.5" y="14.5" width="35" height="35" rx="1.5" fill="none" stroke="#c59b27" stroke-width=".6" opacity=".7"/><g fill="#c59b27"><circle cx="22" cy="22" r="2.6"/><circle cx="42" cy="22" r="2.6"/><circle cx="22" cy="42" r="2.6"/><circle cx="42" cy="42" r="2.6"/></g><circle cx="32" cy="32" r="3.4" fill="#a8382b" stroke="#c59b27" stroke-width=".6"/></g></svg>
         </span>
-        <div class="brand-text">
-          <h1 class="logo-title"><span class="logo-brand">Q-TRIP</span> <span class="logo-name"><b>九州</b>よりみちダイス</span></h1>
-          <p class="logo-sub">KYUSHU ROUTES &amp; ROOTS</p>
-        </div>
+        <h1 class="logo-title"><span class="logo-brand">Q-TRIP</span><span class="logo-name" data-i18n="appName"><b>九州</b>よりみちダイス</span></h1>
+        <button id="btn-lang" class="lang-btn" aria-label="表示の言語を切り替える（日本語／英語）"><b data-lang="ja">JP</b><i>/</i><b data-lang="en">EN</b></button>
       </div>
-      <div class="hdr-actions">
-        <button id="btn-avatar" class="avatar-btn" data-tab-jump="garage" aria-label="旅人アバター（着せ替え）をひらく"><span id="hdr-avatar"></span><span class="hdr-name"><small>旅人</small><b id="hdr-name">あなた</b></span></button>
-        <button id="btn-sharecard" class="hdr-share" aria-label="手帖シェアカードを発行する"><i data-ico="camera"></i><span class="hdr-share-text">手帖カード</span></button>
-        <button id="btn-mute" class="icon-btn" aria-pressed="false" aria-label="サウンドをミュートする"></button>
-      </div>
-    </div>
-    <div class="hdr-stats wrap">
-      <button id="rank-chip" class="rank-chip" data-tab-jump="collection" aria-label="称号">
-        <span id="rank-chip-emblem"></span>
-        <span class="rank-chip-text">
-          <small>称号</small>
-          <b id="rank-chip-title">九州旅人</b>
-          <span class="rank-chip-bar"><i id="rank-chip-bar"></i></span>
-        </span>
-      </button>
-      <dl class="stats">
-        <div class="stat">
-          <dt>九州踏破率</dt>
-          <dd><b id="stat-visited">0%</b><small id="stat-visited-sub"></small></dd>
-          <div class="stat-bar"><i id="stat-visited-bar"></i></div>
-        </div>
-        <div class="stat">
-          <dt>総資産額</dt>
-          <dd><b id="stat-assets">0</b><small>万円</small></dd>
-        </div>
-        <div class="stat stat-funds">
-          <dt>クラフト資金</dt>
-          <dd><b id="stat-funds">0</b><small>万円</small></dd>
-        </div>
+      <dl class="tb-stats">
+        <div class="tb-stat"><dt data-i18n="funds">クラフト資金</dt><dd><b id="stat-funds">0</b><small data-i18n="man">万円</small></dd></div>
+        <div class="tb-stat"><dt data-i18n="tickets">切符</dt><dd><b id="stat-tickets">0</b><small data-i18n="sheets">枚</small></dd></div>
       </dl>
+      <button id="btn-compass" class="compass-btn" aria-label="旅の巻頭言をひらく（真鍮の羅針盤）">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14.6" class="cb-ring"/><circle cx="16" cy="16" r="12.4" class="cb-ring cb-thin"/>
+          <path d="M16,2.6 V5 M16,27 V29.4 M2.6,16 H5 M27,16 H29.4" class="cb-tick"/><path d="M16,6.4 L18.2,16 L16,25.6 L13.8,16 Z" class="cb-needle"/><path d="M16,6.4 L18.2,16 H13.8 Z" class="cb-north"/>
+          <path d="M8.4,16 L16,14.2 L23.6,16 L16,17.8 Z" class="cb-needle cb-ew"/><circle cx="16" cy="16" r="1.4" class="cb-pin"/></svg>
+      </button>
     </div>
+    <div id="scenery" class="scenery" aria-label="車窓パノラマ"></div>
   </header>
 
-  <nav class="tabs-nav" role="tablist" aria-label="表示切替">
-    <div class="wrap tabs">
-      <button class="tab is-active" role="tab" data-tab="map" aria-selected="true"><i class="tab-icon" data-ico="map"></i><span class="tab-text"><span class="tab-no"><i>01</i>/ ROUTE MAP</span><span class="tab-ja">すごろくマップ</span></span></button>
-      <button class="tab" role="tab" data-tab="collection" aria-selected="false"><i class="tab-icon" data-ico="ledger"></i><span class="tab-text"><span class="tab-no"><i>02</i>/ LEDGER</span><span class="tab-ja">オーナー<wbr>刻印手帖</span></span></button>
-      <button class="tab" role="tab" data-tab="garage" aria-selected="false"><i class="tab-icon" data-ico="locomotive"></i><span class="tab-text"><span class="tab-no"><i>03</i>/ LOCOMOTIVE</span><span class="tab-ja">車両クラフト＆<wbr>アバター</span></span></button>
-      <button class="tab" role="tab" data-tab="letters" aria-selected="false"><i class="tab-icon" data-ico="postcard"></i><span class="tab-text"><span class="tab-no"><i>04</i>/ POSTCARD</span><span class="tab-ja">旅の便り＆<wbr>フォト地図</span></span></button>
-    </div>
-  </nav>
-
-  <main id="main" class="wrap main">
-    <!-- すごろくマップ -->
+  <main id="main" class="app-stage">
+    <!-- すごろくマップ：盤面いっぱい。上にスポットライト駅の帯、下に「いまいる駅」と案内の札 -->
     <section data-view="map" class="map-view">
-      <div class="atlas">
-        <div class="atlas-head">
-          <h2 class="atlas-title"><span class="eyebrow"><i>No. 01</i>Route Map of Kyushu</span>九州よりみち路線図</h2>
-          <p class="atlas-sub">海岸線・山地・線路・駅は、実際の地図データから描いています</p>
-        </div>
+      <div class="map-board">
+        <svg id="map" class="map-svg" role="group" aria-label="九州すごろく路線図。よりみちダイスを振ると列車が線路を走ります。駅をタップすると望遠鏡でのぞけます"></svg>
+        <div id="map-overlay" class="map-overlay" hidden></div>
+        <div id="map-scope" class="map-scope" role="dialog" aria-label="望遠鏡" hidden></div>
         <div id="spotlight-bar" class="spotlight-bar" aria-live="polite"></div>
-        <div id="scenery" class="scenery" aria-label="ご当地の車窓"></div>
-        <div class="map-board">
-          <svg id="map" class="map-svg" role="group" aria-label="九州すごろく路線図。よりみちダイスを振ると列車が線路を1駅ずつ走ります。駅をタップすると望遠鏡でのぞけます"></svg>
-          <div id="map-scope" class="map-scope" role="dialog" aria-label="望遠鏡" hidden></div>
-          <button id="btn-compass" class="compass-btn" aria-label="旅の巻頭言をひらく（真鍮の羅針盤）">
-            <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14.6" class="cb-ring"/><circle cx="16" cy="16" r="12.4" class="cb-ring cb-thin"/>
-              <path d="M16,2.6 V5 M16,27 V29.4 M2.6,16 H5 M27,16 H29.4" class="cb-tick"/><path d="M16,6.4 L18.2,16 L16,25.6 L13.8,16 Z" class="cb-needle"/><path d="M16,6.4 L18.2,16 H13.8 Z" class="cb-north"/>
-              <path d="M8.4,16 L16,14.2 L23.6,16 L16,17.8 Z" class="cb-needle cb-ew"/><circle cx="16" cy="16" r="1.4" class="cb-pin"/></svg>
-          </button>
-          <div id="dice-badge" class="dice-badge" hidden></div>
-          <div id="course-chip" class="course-chip" hidden>
-            <span><i data-ico="suitcase"></i> <b id="course-chip-title"></b></span>
-            <button id="btn-course-trip" class="link-btn">しおりへ</button>
-            <button id="btn-clear-course" class="course-chip-x" aria-label="ルート表示を消す"><i data-ico="close"></i></button>
-          </div>
+        <div id="dice-badge" class="dice-badge" hidden></div>
+        <!-- 振っているあいだだけ、盤面の真ん中に胡桃のダイスのトレイを出す -->
+        <div class="dice-stage" id="dice-stage" aria-hidden="true">
+          <div id="die" class="dice-tray"></div>
+          <p class="dice-result"><span id="dice-result">–</span></p>
+          <div id="dice-confetti" class="confetti-anchor"></div>
         </div>
-        <div class="map-legend" aria-hidden="true">
-          <span><i class="lg lg-shin"></i>新幹線</span>
-          <span><i class="lg lg-trunk"></i>特急幹線</span>
-          <span><i class="lg lg-local"></i>ローカル線</span>
-          <span><i class="lg lg-scenic"></i>観光列車</span>
-          <span><i class="lg lg-ferry"></i>航路</span>
-          <span><i class="lg lg-bus"></i>バス</span>
-          <span><i class="lg lg-way"></i>経由駅</span>
-          <span><i class="lg lg-seal"></i>トップオーナー（王冠）</span>
-          <span><i class="lg lg-share"></i>共同株主</span>
+        <div id="course-chip" class="course-chip" hidden>
+          <span><i data-ico="suitcase"></i> <b id="course-chip-title"></b></span>
+          <button id="btn-course-trip" class="link-btn">しおりへ</button>
+          <button id="btn-clear-course" class="course-chip-x" aria-label="ルート表示を消す"><i data-ico="close"></i></button>
+        </div>
+        <!-- いまいる駅と、ダイスの案内（親指のダイスの左に置く） -->
+        <div class="hud">
+          <div id="ticket-deck" class="ticket-deck" aria-label="特別切符の手札"></div>
+          <div class="hud-card">
+            <div class="hud-station">
+              <h2 id="current-name" class="current-name">–</h2>
+              <span id="current-pref" class="chip chip-pref"></span>
+              <span id="current-status" class="current-status"></span>
+              <button id="btn-open-current" class="link-btn hud-open" data-i18n="openTecho">寄り道手帖</button>
+            </div>
+            <p id="current-tagline" class="current-tagline"></p>
+            <div id="ticket-bar" class="ticket-bar"></div>
+            <p id="guide" class="guide" aria-live="polite">読み込み中…</p>
+          </div>
         </div>
       </div>
-
-      <aside class="side">
-        <div class="panel dice-panel">
-          <p class="card-kicker"><span class="eyebrow">The Dice</span><span>よりみちダイス</span></p>
-          <div class="dice-row">
-            <div id="die" class="dice-tray" aria-hidden="true"></div>
-            <div class="dice-out">
-              <p class="dice-out-label">出た目</p>
-              <p class="dice-result"><span id="dice-result">–</span></p>
-            </div>
-          </div>
-          <div id="ticket-deck" class="ticket-deck" aria-label="特別切符の手札"></div>
-          <button id="btn-dice" class="dice-btn"><i data-ico="dice"></i> よりみちダイスを振る</button>
-          <div id="ticket-bar" class="ticket-bar"></div>
-          <p id="guide" class="guide" aria-live="polite">読み込み中…</p>
-          <div id="dice-confetti" class="confetti-anchor" aria-hidden="true"></div>
-        </div>
-
-        <div class="panel current-panel">
-          <p class="card-kicker"><span class="eyebrow">Now Stopping</span><span>いまいる駅</span></p>
-          <div class="current-row">
-            <h2 id="current-name" class="current-name">–</h2>
-            <span id="current-pref" class="chip chip-pref"></span>
-          </div>
-          <p id="current-status" class="current-status"></p>
-          <p id="current-tagline" class="current-tagline"></p>
-          <button id="btn-open-current" class="ghost-btn wide">この駅の寄り道手帖をひらく</button>
-        </div>
-
-        <div class="panel mini-collection">
-          <p class="card-kicker"><span class="eyebrow">Ledger</span><span>旅の手帖</span></p>
-          <div class="mini-head">
-            <h3 class="mini-title"><i data-ico="ledger"></i> オーナー刻印手帖</h3>
-            <span id="mini-count" class="chip chip-gold">0 / 15</span>
-          </div>
-          <p class="mini-sub">総資産 <b id="mini-assets">0万円</b></p>
-          <div id="mini-grid" class="mini-grid"></div>
-          <button class="ghost-btn wide" data-tab-jump="collection">手帖をひらく</button>
-          <button id="btn-trip-cta" class="trip-cta wide" disabled><i data-ico="suitcase"></i> 旅しおり</button>
-        </div>
-
-        <div class="panel how">
-          <p class="card-kicker"><span class="eyebrow">How to Travel</span><span>あそびかた</span></p>
-          <p class="how-lead"><b>Q-TRIP 九州よりみちダイス</b>は、九州の路線図をすごろく盤にした旅の手帖。よりみちしながら、駅ごとの名物と秘湯に出会えます。</p>
-          <ol class="how-list">
-            <li><b>よりみちダイス</b>を振ると、出た目の数だけ列車が線路を走ります。分かれ道は<b>オートナビ</b>がスポットライト駅の方へ選び、止まらずに通過（振る前に地図の分かれ道の真鍮の矢印をタップすると、進む路線を切り替えられます）。駅をタップしても移動はせず、望遠鏡でのぞくだけ。</li>
-            <li>止まった駅で<b>寄り道手帖</b>と現地スナップが解放され、車窓とまちの寄り道ノート・名産品・宿がわかります。</li>
-            <li>旅で貯めた<b>クラフト資金</b>で、停車中の駅に<b>出資</b>できます（お買い物はいりません）。名産品・宿のカードの<b>「逸品を覗いて急行切符を受け取る」</b>を押してショップを15秒覗くと、特別切符と資金がもらえます（1駅1日1回）。</li>
-            <li>駅ごとの<b>累計出資額の1位がトップオーナー</b>。追う側は<b>下克上ボーナス×1.3</b>、上位3名は<b>共同株主</b>として配当を受け取れます。</li>
-            <li>いつも1駅が<b>スポットライト駅</b>。ピタリと止まると一番乗りのご祝儀とレア切符。<b>特別切符</b>でダイスを2〜4個同時に振ったり、出目を選んだりできます。ダイス7回ごとに<b>週末の大精算まつり</b>、ラインの全駅で株主になると<b>ライン制覇</b>で配当2倍。</li>
-            <li>配当や<b>旅の便り</b>（写真のポストカード）・いいね・手帖カードのシェアで貯まった<b>クラフト資金</b>（ゲームの中だけのもの）で、列車の改造やアバターの着せ替えができます。</li>
-          </ol>
-        </div>
-      </aside>
     </section>
 
-    <!-- オーナー刻印手帖（旅の巻頭言／トップオーナーの切手／マイ旅しおり） -->
-    <section data-view="collection" class="techo" hidden>
+    <!-- 手帖：00 巻頭言の栞・オーナーの切手・旅しおり・工房へ。ここだけ中でスクロールする -->
+    <section data-view="collection" class="techo view-scroll" hidden>
       <div class="techo-head">
         <div id="techo-owner"></div>
         <div class="techo-stats">
           <h2 class="techo-title">オーナー刻印手帖</h2>
-          <p class="techo-lead">出資額で1位になった駅が、トップオーナーの切手になって並びます。</p>
+          <div class="techo-rank">
+            <button id="rank-chip" class="rank-chip" aria-label="称号">
+              <span id="rank-chip-emblem"></span>
+              <span class="rank-chip-text"><small>称号</small><b id="rank-chip-title">九州旅人</b><span class="rank-chip-bar"><i id="rank-chip-bar"></i></span></span>
+            </button>
+            <dl class="stats">
+              <div class="stat"><dt>九州踏破率</dt><dd><b id="stat-visited">0%</b><small id="stat-visited-sub"></small></dd><div class="stat-bar"><i id="stat-visited-bar"></i></div></div>
+              <div class="stat"><dt>総資産額</dt><dd><b id="stat-assets">0</b><small>万円</small></dd></div>
+            </dl>
+          </div>
           <dl class="techo-nums">
             <div><dt>オーナー率</dt><dd id="col-kingdom">0%</dd></div>
             <div><dt>トップオーナー</dt><dd id="col-count">0 / 15</dd></div>
             <div><dt>総資産額</dt><dd id="col-assets">0万円</dd></div>
           </dl>
-          <p class="techo-share"><a id="col-share" class="share-btn" target="_blank" rel="noopener"><span class="x-logo">𝕏</span>手帖をシェア</a><span class="techo-max">全駅の評価額合計 <span id="col-max"></span></span></p>
+          <p class="techo-share">
+            <a id="col-share" class="share-btn" target="_blank" rel="noopener"><span class="x-logo">𝕏</span>手帖をシェア</a>
+            <button id="btn-sharecard" class="ghost-btn ghost-light"><i data-ico="camera"></i> 手帖カード</button>
+            <button id="btn-avatar" class="ghost-btn ghost-light" data-tab-jump="garage"><span id="hdr-avatar" class="hdr-avatar"></span> <span id="hdr-name">あなた</span>・工房へ</button>
+            <button id="btn-mute" class="icon-btn" aria-pressed="false" aria-label="サウンドをミュートする"></button>
+            <span class="techo-max">全駅の評価額合計 <span id="col-max"></span></span>
+          </p>
         </div>
       </div>
       <div class="seg" role="tablist" aria-label="手帖の切り替え">
         <button class="seg-btn seg-preface" role="tab" data-sub-tab="preface"><span class="seg-no">00 /</span> 旅の巻頭言</button>
         <button class="seg-btn is-active" role="tab" data-sub-tab="stamps"><i data-ico="stamp"></i> <span class="seg-more">オーナーの</span>切手</button>
         <button class="seg-btn" role="tab" data-sub-tab="trip"><i data-ico="suitcase"></i> <span class="seg-more">マイ</span>旅しおり</button>
+        <button class="seg-btn" data-tab-jump="garage"><i data-ico="locomotive"></i> 工房</button>
       </div>
       <div data-sub="stamps">
+        <div class="panel mini-collection">
+          <div class="mini-head">
+            <h3 class="mini-title"><i data-ico="ledger"></i> トップオーナーの駅</h3>
+            <span id="mini-count" class="chip chip-gold">0 / 15</span>
+          </div>
+          <p class="mini-sub">総資産 <b id="mini-assets">0万円</b></p>
+          <div id="mini-grid" class="mini-grid"></div>
+          <button id="btn-trip-cta" class="trip-cta wide" disabled><i data-ico="suitcase"></i> 旅しおり</button>
+        </div>
         <section id="rank-ladder" class="rank-ladder" aria-label="称号の道"></section>
         <div id="collection-grid" class="collection-grid"></div>
         <p class="reset-row"><button id="btn-reset" class="ghost-btn small">旅の記録をリセット</button></p>
       </div>
       <div data-sub="preface" hidden>
         <div id="preface-root" class="preface-page"></div>
+        <div class="panel how">
+          <p class="card-kicker"><span class="eyebrow">How to Travel</span><span>あそびかた</span></p>
+          <p class="how-lead"><b>Q-TRIP 九州よりみちダイス</b>は、九州の路線図をすごろく盤にした旅の手帖。よりみちしながら、駅ごとの名物と秘湯に出会えます。</p>
+          <ol class="how-list">
+            <li>右下の<b>よりみちダイス</b>を振ると、出た目の数だけ列車が線路を走ります。<b>分かれ道</b>では列車が止まるので、地図の上の真鍮の矢印から進む方面を選びます。駅をタップしても移動はせず、望遠鏡でのぞくだけ。</li>
+            <li>止まった駅で<b>寄り道手帖</b>と現地スナップが解放され、車窓とまちの寄り道ノート・名産品・宿がわかります。</li>
+            <li>旅で貯めた<b>クラフト資金</b>で、停車中の駅に<b>出資</b>できます（お買い物はいりません）。名産品・宿のカードの<b>「逸品を覗いて急行切符を受け取る」</b>を押してショップを15秒覗くと、特別切符と資金がもらえます（1駅1日1回）。</li>
+            <li>駅ごとの<b>累計出資額の1位がトップオーナー</b>。追う側は<b>下克上ボーナス×1.3</b>、上位3名は<b>共同株主</b>として配当を受け取れます。</li>
+            <li>いつも1駅が<b>スポットライト駅</b>。ピタリと止まると一番乗りのご祝儀とレア切符。<b>特別切符</b>でダイスを2〜4個同時に振ったり、出目を選んだりできます。ダイス7回ごとに<b>週末の大精算まつり</b>、ラインの全駅で株主になると<b>ライン制覇</b>で配当2倍。</li>
+            <li>配当や<b>旅の便り</b>（写真のポストカード）・いいね・手帖カードのシェアで貯まった<b>クラフト資金</b>（ゲームの中だけのもの）で、列車の改造や旅の紋章の飾りができます。</li>
+          </ol>
+          <div class="map-legend" aria-hidden="true">
+            <span><i class="lg lg-shin"></i>新幹線</span><span><i class="lg lg-trunk"></i>特急幹線</span><span><i class="lg lg-local"></i>ローカル線</span><span><i class="lg lg-scenic"></i>観光列車</span><span><i class="lg lg-ferry"></i>航路</span><span><i class="lg lg-bus"></i>バス</span><span><i class="lg lg-way"></i>経由駅</span><span><i class="lg lg-seal"></i>トップオーナー（王冠）</span><span><i class="lg lg-share"></i>共同株主</span>
+          </div>
+        </div>
       </div>
       <div data-sub="trip" hidden>
         <div id="trip-root" class="trip-root"></div>
       </div>
-    </section>
-
-    <!-- 車両クラフト＆アバター -->
-    <section data-view="garage" hidden>
-      <div id="garage-root" class="garage"></div>
-      <div id="ticket-shop" class="ticket-shop"></div>
-    </section>
-
-    <!-- 旅の便り＆マイフォト地図 -->
-    <section data-view="letters" hidden>
-      <div id="letters-root" class="letters"></div>
-    </section>
-  </main>
-
-  <footer class="site-footer">
+      <footer class="site-footer">
     <div class="wrap">
       <p>「Q-TRIP 九州よりみちダイス（KYUSHU ROUTES &amp; ROOTS）」はオリジナルの企画・世界観で制作した非公式の旅メディアです。既存のゲーム作品・鉄道事業者とは関係ありません。列車のデザインは九州の観光列車の雰囲気を参考にしたオリジナルで、実在の列車の名前・ロゴ・紋章は使っていません。</p>
       <p>地図の海岸線・県境・山地・線路・駅の位置は、実際の地理データから作っています（バス・航路の線は経路のイメージ）。黒川温泉・高千穂・屋久島・桜島（港）は旅のマスとして「駅」としています。掲載情報はプロトタイプ用で、最新の営業・運行状況は各公式情報をご確認ください。</p>
@@ -262,7 +202,38 @@
       <p>駅のオーナー権ランキングの相手は、ゲームの中の架空の旅人です。ランキング・配当・クラフト資金はゲームの中だけのもので、お金や景品との交換はできません。旅の便りに投函した写真は、この端末の中にだけ保存され、どこにも送信されません（ほかの旅人のポストカード・「ある旅人から届いた記憶」はゲームの中の架空のもので、絵はイラストです）。「逸品を覗いて急行切符を受け取る」で開くのは、紹介料のつかない各ショップの検索ページです（ご褒美はページを覗いたことに対するもので、購入とは関係しません）。</p>
       <p>【PR】寄り道手帖の中の購入・予約ボタンはアフィリエイト（広告）リンクを含みます。<span id="data-source" class="dim"></span></p>
     </div>
-  </footer>
+      </footer>
+    </section>
+
+    <!-- 車両クラフト＆旅の紋章（手帖の「工房」から） -->
+    <section data-view="garage" class="view-scroll" hidden>
+      <p class="view-back"><button class="link-btn" data-tab-jump="collection"><i data-ico="chevron"></i> 手帖にもどる</button></p>
+      <div id="garage-root" class="garage"></div>
+      <div id="ticket-shop" class="ticket-shop"></div>
+    </section>
+
+    <!-- 旅の便り＆わたしの九州フォトマップ -->
+    <section data-view="letters" class="view-scroll" hidden>
+      <div id="letters-root" class="letters"></div>
+    </section>
+  </main>
+
+  <nav class="tabbar" role="tablist" aria-label="表示切替">
+    <button class="tab is-active" role="tab" data-tab="map" aria-selected="true"><i class="tab-icon" data-ico="map"></i><span class="tab-ja" data-i18n="tabMap">マップ</span></button>
+    <button class="tab" role="tab" data-tab="collection" aria-selected="false"><i class="tab-icon" data-ico="ledger"></i><span class="tab-ja" data-i18n="tabTecho">手帖</span><span class="tab-ribbon" aria-hidden="true">00</span></button>
+    <button class="tab" role="tab" data-tab="letters" aria-selected="false"><i class="tab-icon" data-ico="postcard"></i><span class="tab-ja" data-i18n="tabPhoto">フォトマップ</span></button>
+  </nav>
+
+  <!-- 親指のダイス：真鍮の二重リングに深緑の革。どの画面からでもワンタップで振れる -->
+  <button id="btn-dice" class="dice-fab" aria-label="よりみちダイスを振る">
+    <svg class="fab-face" viewBox="0 0 76 76" aria-hidden="true">
+      <circle cx="38" cy="38" r="36.4" class="fab-ring"/><circle cx="38" cy="38" r="33" class="fab-ring fab-thin"/>
+      <g transform="rotate(-10 38 38)"><rect x="25" y="22" width="26" height="26" rx="3" class="fab-die"/><rect x="27.4" y="24.4" width="21.2" height="21.2" rx="1.6" class="fab-die-in"/>
+        <circle cx="31.5" cy="28.5" r="2" class="fab-pip"/><circle cx="44.5" cy="28.5" r="2" class="fab-pip"/><circle cx="38" cy="35" r="2.4" class="fab-pip fab-one"/><circle cx="31.5" cy="41.5" r="2" class="fab-pip"/><circle cx="44.5" cy="41.5" r="2" class="fab-pip"/></g>
+    </svg>
+    <span class="fab-label" id="dice-label" data-i18n="roll">振る</span>
+  </button>
+  </div>
 
   <!-- 寄り道手帖（モーダル） -->
   <div id="modal" class="modal" hidden>

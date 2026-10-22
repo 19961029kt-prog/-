@@ -1,9 +1,9 @@
-// 旅の軌跡・手帖シェアカード：自分の九州フォトマップ・オーナーの駅・改造列車・アバターを、
+// 旅の軌跡・手帖シェアカード：自分の九州フォトマップ・オーナーの駅・改造列車・旅の紋章を、
 // 1200×630 の「大人の旅手帖の見開き／硬券切符／活版印刷の紙面」の1枚絵（PNG）にして、保存・共有できるようにする。
 // 外部のサーバーも画像も使わず <canvas> だけで描く（紙の粒子・朱肉のかすれも Canvas で作る）。
 //   左の半券：古地図・真鍮の路線図の調子の九州（踏破した駅＝茜、トップオーナーの駅＝真鍮の二重リングと金箔の菱形と駅名標、
 //            投函した駅＝金箔の糸でつないだ小さなポラロイド）と、その人の旅から選ぶ縦書きの一文
-//   右上：愛車編成（1両目＋2両目＋トレイル）を車窓の枠に、旅人アバターを楕円の肖像の枠に
+//   右上：愛車編成（1両目＋2両目＋トレイル）を車窓の枠に、旅の紋章（革の旅行鞄と懐中時計）を楕円の枠に
 //   右下：旅人名・二つ名（金箔の字）・総資産額（¥ 150,000,000 の組み）・踏破率・投函したスナップ・トップオーナーの駅
 //   隅：今日の日付の朱の風景印（二重の輪・傾き・かすれ）と、公開URLのクレジット
 // 発行またはシェアすると、1日1回だけ「九州の魅力発信ボーナス」（meta.craft.shareBonus）がクラフト資金に入る。
@@ -712,9 +712,10 @@
     const signed = `${kanjiMonth()}　${v.at}`;
     const prefs = new Set(f.cards.map((id) => D.byId[id].prefecture)).size;
     const ownedLine = f.owned.length ? f.owned.map((s) => s.name).join('・') : 'まだありません（旅の途中）';
-    const avatarParts = f.eq.buddy && f.eq.buddy !== 'none' ? `旅の相棒・${YT.Craft.item('buddy', f.eq.buddy).name}` : '旅人の肖像';
+    // 楕円の枠の下の札：紋章の根付（つけていなければ鞄の革）の名前。幅 230px に収まる長さにする
+    const avatarParts = `旅の紋章・${f.eq.buddy && f.eq.buddy !== 'none' ? YT.Craft.item('buddy', f.eq.buddy).name : YT.Craft.item('outfit', f.eq.outfit).name}`;
     const words = [f.name, nick, f.trainName, v.line, signed, ownedLine, avatarParts, yenBig(f.assets), 'オーナーの駅はこれから', ...D.stations.map((s) => s.name),
-      '旅の軌跡・公式認定手帖カード わたしの九州制覇＆フォトマップ 愛車編成 旅人 総資産額 九州踏破率 トップオーナーの駅 投函したスナップ 枚 駅 県から 踏破した駅 投函した駅 認定 なし まだありません（旅の途中） ・＋『』、。 Q-TRIP 九州よりみちダイス 旅人の肖像'].join('');
+      '旅の軌跡・公式認定手帖カード わたしの九州制覇＆フォトマップ 愛車編成 旅人 総資産額 九州踏破率 トップオーナーの駅 投函したスナップ 枚 駅 県から 踏破した駅 投函した駅 認定 なし まだありません（旅の途中） ・＋『』、。 Q-TRIP 九州よりみちダイス 旅の紋章'].join('');
     const latin = `0123456789.,%¥°NE km/ — ${SITE} Q-TRIP KYUSHU OFFICIAL TRAVELBOOK ROUTE MAP LOCOMOTIVE LEDGER`;
     try {
       await Promise.race([
@@ -918,7 +919,7 @@
     ctx.font = `600 14px ${MINCHO}`;
     ctx.fillText(fitText(ctx, f.trainName, win.w - 74), R0 + 72, 328.5);
 
-    // ---- 右上の右：旅人の肖像（楕円の二重枠） ----
+    // ---- 右上の右：旅の紋章（楕円の二重枠） ----
     const av = { cx: 1034, cy: 220, rx: 74, ry: 86 };
     ctx.save();
     ctx.beginPath();
@@ -929,8 +930,11 @@
     ctx.strokeStyle = 'rgba(110,93,79,.08)';
     ctx.lineWidth = 0.6;
     for (let y = av.cy - av.ry; y < av.cy + av.ry; y += 3.5) line(ctx, av.cx - av.rx, y, av.cx + av.rx, y);
-    const avImg = await svgImage(YT.Craft.avatarSvg(f.eq, { id: 'sc-av' }).replace('<svg ', '<svg width="240" height="280" '), 240, 280);
-    if (avImg) ctx.drawImage(avImg, av.cx - 80, av.cy - 82, 160, 187);
+    // 紋章（viewBox 120×140、丸の中心 60,64・半径52、下にリボン）を 1.15 倍で。丸の中心を楕円の中心より少し上に置き、
+    // 下のリボンの端が楕円の縁で切れないようにする（画像は 2 倍の大きさで作ってにじませない）
+    const EK = 1.15;
+    const avImg = await svgImage(YT.Craft.avatarSvg(f.eq, { id: 'sc-av' }).replace('<svg ', `<svg width="${240 * EK}" height="${280 * EK}" `), 240 * EK, 280 * EK);
+    if (avImg) ctx.drawImage(avImg, av.cx - 60 * EK, av.cy - 6 - 64 * EK, 120 * EK, 140 * EK);
     ctx.restore();
     ctx.strokeStyle = C.brass;
     ctx.lineWidth = 1.25;

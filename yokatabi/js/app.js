@@ -1,4 +1,4 @@
-// UI全体の結線：ヘッダー（称号・踏破率・総資産額・クラフト資金・アバター）・よりみちダイス（オートナビ）・到着の駅名標・
+// UI全体の結線：上の帯（クラフト資金・切符・JP/EN・羅針盤）・親指のよりみちダイス・分かれ道の方面ボタン・到着の駅名標・
 // 寄り道手帖（モーダル）・出資ランキング・王座交代の演出・オーナー刻印手帖（巻頭言・切手・マイ旅しおり）・巻頭言の表紙と羅針盤・Xシェア。
 // 出資と「15秒覗くだけ」の急行切符は owner.js、順位の計算は ownership.js、工房は garage.js。
 (function () {
@@ -29,6 +29,51 @@
     const d = new Date(iso);
     return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
   };
+
+  // ---------- 表示の言語（JP / EN） ----------
+  // 英語にするのは、画面の枠（上の帯・下のタブ・ダイス・案内・駅名標）と駅名だけ。
+  // 駅ごとの寄り道ノート・名産品・宿の文は日本語のまま（推定で決めた範囲）。駅名は stations.json の en を使う
+  const DICT = {
+    ja: {
+      appName: '<b>九州</b>よりみちダイス', funds: 'クラフト資金', man: '万円', tickets: '切符', sheets: '枚',
+      tabMap: 'マップ', tabTecho: '手帖', tabPhoto: 'フォトマップ', openTecho: '寄り道手帖',
+      roll: '振る', rollMany: (n) => `${n}個振る`, pickRoll: '目を選ぶ',
+      idle: 'よりみちダイスを振って旅をつづけましょう。分かれ道では列車が止まるので、地図の上の矢印から進む方面を選びます。駅をタップすると望遠鏡でのぞけます。',
+      remain: (n) => `あと ${n} 駅`, arrived: '到着', toward: (s) => `${s}方面`, spotDir: 'スポットライト駅方面',
+      junction: (st, n) => `<b>${st}駅</b>は分かれ道。あと<b>${n}</b>マス、地図の矢印から進む方面を選んでください。`,
+      running: (st, n) => `<b>${st}</b>方面へ走行中…（あと${n}マス）`,
+    },
+    en: {
+      appName: '<b>Kyushu</b> Yorimichi Dice', funds: 'Funds', man: '×10k¥', tickets: 'Tickets', sheets: '',
+      tabMap: 'Map', tabTecho: 'Notebook', tabPhoto: 'Photo Map', openTecho: 'Notebook',
+      roll: 'ROLL', rollMany: (n) => `ROLL ×${n}`, pickRoll: 'PICK',
+      idle: 'Roll the dice to keep travelling. At a junction the train stops: tap an arrow on the map to choose your line. Tap a station to peek through the telescope.',
+      remain: (n) => `${n} to go`, arrived: 'Arrived', toward: (s) => `for ${s}`, spotDir: 'Spotlight',
+      junction: (st, n) => `<b>${st}</b> is a junction. <b>${n}</b> to go — tap an arrow on the map to choose your line.`,
+      running: (st, n) => `Running for <b>${st}</b>… (${n} to go)`,
+    },
+  };
+  let lang = 'ja';
+  function t(key, ...args) {
+    const v = (DICT[lang] && DICT[lang][key]) ?? DICT.ja[key];
+    return typeof v === 'function' ? v(...args) : v;
+  }
+  // 駅名を言語に合わせて入れ替える（日本語の名前は nameJa に残す）
+  function applyLang(next) {
+    lang = next === 'en' ? 'en' : 'ja';
+    document.documentElement.lang = lang;
+    D.stations.forEach((s) => {
+      if (!s.nameJa) s.nameJa = s.name;
+      s.name = lang === 'en' && s.en ? s.en : s.nameJa;
+    });
+    document.querySelectorAll('[data-i18n]').forEach((el) => {
+      const v = t(el.dataset.i18n);
+      if (typeof v === 'string') el.innerHTML = v;
+    });
+    Map.relabel();
+    renderAll();
+    if (!busy && !move && !choice) setGuide(t('idle'));
+  }
 
   // ---------- 旅の巻頭言（理念）----------
   // 初回の表紙・マップの羅針盤・手帖の「00 / 旅の巻頭言」の3か所から、いつでも読み返せるようにする
@@ -170,6 +215,7 @@
     countTo($('#stat-visited'), s.visitedPct, (v) => `${v}%`);
     countTo($('#stat-assets'), s.assets, num);
     countTo($('#stat-funds'), s.funds, num);
+    $('#stat-tickets').textContent = (Store.get().deck || []).length; // 上の帯：特別切符の手札の枚数
     $('#stat-visited-bar').style.width = `${s.visitedPct}%`;
     $('#stat-visited-sub').textContent = `${s.visited}/${s.n}駅`;
     $('#hdr-avatar').innerHTML = Craft.avatarSvg(undefined, { crop: true });
@@ -180,7 +226,7 @@
     const st = Store.get();
     const s = D.byId[st.currentStationId];
     if (!s) return;
-    $('#current-name').innerHTML = `${esc(s.name)}<small>駅</small>`;
+    $('#current-name').innerHTML = `${esc(s.name)}${lang === 'en' ? '' : '<small>駅</small>'}`;
     $('#current-pref').textContent = s.prefecture;
     $('#current-pref').style.setProperty('--pref', (D.meta.prefectures[s.prefecture] || {}).color);
     $('#current-tagline').textContent = s.tagline;
@@ -203,13 +249,12 @@
   }
   // ダイスのボタンの字：特別切符を使うときは、何個振るかを書く
   function renderDiceHint() {
+    // 親指のダイスの字：特別切符を使うときは、何個振るかを書く（絵はそのまま）
     const plan = Game.nextRoll();
-    $('#btn-dice').innerHTML = plan.pick
-      ? `${I('target')} ピタリ指定切符で出目を選ぶ`
-      : plan.count > 1
-        ? `${I(plan.count === 2 ? 'dice2' : 'dice3')} ダイス${plan.count}個を同時に振る`
-        : `${I('dice')} よりみちダイスを振る`;
-    renderNav(); // 振るダイスの数が変わると、届く分かれ道も変わる
+    const label = plan.pick ? t('pickRoll') : plan.count > 1 ? t('rollMany', plan.count) : t('roll');
+    $('#dice-label').textContent = label;
+    $('#btn-dice').setAttribute('aria-label', plan.pick ? 'ピタリ指定切符で出目を選ぶ' : plan.count > 1 ? `ダイス${plan.count}個を同時に振る` : 'よりみちダイスを振る');
+    $('#btn-dice').classList.toggle('is-ticket', plan.pick || plan.count > 1);
   }
 
   // ---------- 称号（トップオーナーの駅の評価額の合計でランクアップ） ----------
@@ -386,7 +431,7 @@
   function setGuide(html) {
     $('#guide').innerHTML = html;
   }
-  const IDLE_GUIDE = 'よりみちダイスを振って旅をつづけましょう。分かれ道はオートナビにおまかせ。地図の分かれ道の真鍮の矢印をタップすると、進む路線を切り替えられます。';
+  
 
   // ---------- 移動（よりみちダイスで1駅ずつ。駅を直接タップしても列車は動かない） ----------
   // move = { n（出目）, left（残りのマス）, at（列車のいる駅）, seen（この移動で通る駅。同じ駅を二度通らない） }
@@ -410,47 +455,23 @@
     Map.followStart().then(() => advance());
   }
 
-  // カメラは列車を盤面の真ん中に置くので、盤面の真ん中が画面から外れていたら（スマホでダイスの欄まで下りているときなど）そこまで送る
+  // 画面はスクロールしないので、走るときはマップのタブを出しておくだけでよい
   function showBoardCenter() {
-    const r = $('.map-board').getBoundingClientRect();
-    const mid = r.top + r.height / 2, top = 90, bottom = window.innerHeight - 40;
-    if (mid >= top && mid <= bottom) return;
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    window.scrollBy({ top: mid - window.innerHeight / 2, behavior: reduce ? 'auto' : 'smooth' });
+    if ($('[data-view="map"]').hidden) showView('map');
   }
 
-  // ---------- オートナビ（分かれ道で止まらない） ----------
-  // 出目のぶんの道のりを、出発の前にまとめて決める。分かれ道では、地図の進路の札で選んだ路線があればそれ、
-  // なければスポットライト駅にいちばん近づく路線を選ぶ。同じ駅は二度通らず、行き止まりならそこまで。
-  // 返り値：path（出発駅から止まる駅まで）、junctions（通る分かれ道と、選んだ路線・ほかの候補）
-  function planRoute(from, steps, seen = new Set([from])) {
-    const path = [from], junctions = [];
-    let at = from;
-    for (let i = 0; i < steps; i++) {
-      const opts = [...(D.adj[at] || [])].filter((id) => !seen.has(id));
-      if (!opts.length) break;
-      const next = opts.length > 1 ? navPick(at, opts, seen) : opts[0];
-      if (opts.length > 1) junctions.push({ at, to: next, opts, locked: Store.routeLock(at) === next });
-      path.push(next);
-      seen.add(next);
-      at = next;
-    }
-    return { path, junctions };
-  }
-  // 分かれ道で進む路線（ロックがなければ、スポットライト駅までの駅数がいちばん少ない路線）
-  function navPick(at, opts, seen, useLock = true) {
-    const lock = useLock && Store.routeLock(at);
-    if (lock && opts.includes(lock)) return lock;
+  // ---------- 分かれ道：列車が止まって、地図の上の真鍮の矢印から進む方面を選ぶ ----------
+  // スポットライト駅にいちばん近づく路線（おすすめの「スポットライト駅方面」の札をつける）
+  function navPick(at, opts, seen) {
     const goal = (Store.get().spotlight || {}).id;
-    let best = opts[0], bestD = Infinity; // スポットライト駅へ通じないときは、隣の駅の並びの先頭（推定の決め方）
-    if (goal) {
-      const block = new Set([...seen, at]);
-      opts.forEach((id) => {
-        const d = hopsAvoiding(id, goal, block);
-        if (d < bestD) (bestD = d), (best = id);
-      });
-    }
-    return best;
+    if (!goal) return null;
+    let best = null, bestD = Infinity;
+    const block = new Set([...seen, at]);
+    opts.forEach((id) => {
+      const d = hopsAvoiding(id, goal, block);
+      if (d < bestD) (bestD = d), (best = id);
+    });
+    return bestD < Infinity ? best : null;
   }
   // block の駅を通らずに from から to まで行く最短の駅数（BFS。行けなければ Infinity）
   function hopsAvoiding(from, to, block) {
@@ -467,59 +488,137 @@
     }
     return Infinity;
   }
-  // 停車中：次のダイスで通りうる分かれ道に、進む路線を指す真鍮の札を出す（タップで進路を切り替えてロック）
-  function navSteps() {
-    const st = Store.get();
-    const t = st.cruiseLeft > 0 ? { dice: 4 } : (st.deck || []).find((x) => x.uid === st.armed);
-    const def = t && t.kind ? (D.meta.game.tickets || []).find((x) => x.id === t.kind) || {} : t || {};
-    return 6 * (def.dice || 1);
-  }
-  function renderNav() {
-    if (move) return;
-    const { junctions } = planRoute(Store.get().currentStationId, choice ? choice.n : navSteps());
-    Map.setNav(junctions, toggleNav);
-  }
-  function toggleNav(at) {
-    if (busy && !choice) return;
-    const plan = planRoute(Store.get().currentStationId, choice ? choice.n : navSteps());
-    const j = plan.junctions.find((x) => x.at === at);
-    if (!j) return;
-    const next = j.opts[(j.opts.indexOf(j.to) + 1) % j.opts.length];
-    // 切り替えた先が、オートナビがもともと選ぶ路線なら、ロックを外して自動に戻す
-    const auto = navPick(at, j.opts, new Set(plan.path.slice(0, plan.path.indexOf(at) + 1)), false);
-    Store.setRouteLock(at, next === auto ? null : next);
-    Sound.click();
-    toast(`${D.byId[at].name}駅の分かれ道：${directionLabel(at, next)}へ${next === auto ? '（オートナビ）' : 'ロック'}`, '', 'route');
-    renderNav();
-  }
 
-  // オートナビで決めた道のりを、止まらずに1本で走る
-  async function advance() {
-    const { path, junctions } = planRoute(move.at, move.left, move.seen);
-    move.left -= path.length - 1;
-    move.at = path[path.length - 1];
-    move.prev = path.length > 1 ? path[path.length - 2] : null;
-    if (path.length > 1) await run(path, junctions);
-    junctions.forEach((j) => Store.routeLock(j.at) && Store.setRouteLock(j.at, null)); // 通った分かれ道の札は外す
+  // 分かれ道か、残りのマスが0になるか、行き止まりまで、まとめて走る（つながった区間はなめらかに1本で走る）
+  async function advance(first) {
+    const path = [move.at];
+    const stepTo = (id) => {
+      path.push(id);
+      move.prev = move.at;
+      move.at = id;
+      move.seen.add(id);
+      move.left -= 1;
+    };
+    if (first) stepTo(first);
+    while (move.left > 0) {
+      const opts = [...(D.adj[move.at] || [])].filter((id) => !move.seen.has(id));
+      if (!opts.length) break; // 行き止まり：届くところまで
+      if (opts.length > 1) {
+        if (path.length > 1) await run(path, true);
+        return askDirection(opts);
+      }
+      stepTo(opts[0]);
+    }
+    if (path.length > 1) await run(path, false);
     finishMove();
   }
 
-  function run(path, junctions = []) {
-    const last = D.byId[path[path.length - 1]];
-    const via = junctions.length ? `・分かれ道${junctions.length}か所はオートナビ` : '';
-    setGuide(`${I('train')} <b>${esc(last.name)}</b>まで走行中…（${path.length - 1}駅${via}）`);
+  // junction：走った先が分かれ道（そこで一時停止して、方向を選んでもらう）
+  function run(path, junction) {
+    setGuide(`${I('train')} ${t('running', esc(D.byId[path[path.length - 1]].name), move.left)}`);
     return Map.moveTrain(path, {
       onJoint: (k) => Sound.railJoint(k),
       onPass: (id) => {
         Scenery.pass(id);
-        const j = junctions.find((x) => x.at === id);
-        if (j) setGuide(`${I('route')} <b>${esc(D.byId[id].name)}駅</b>の分かれ道を${esc(directionLabel(id, j.to))}へ（${j.locked ? '進路ロック' : 'オートナビ'}）。<b>${esc(last.name)}</b>まで走行中…`);
+        Sound.passBell();
       },
       onFx: (x, y, seg) => Scenery.trainFx(x, y, seg.to),
       onSpeed: (k) => Scenery.setSpeed(k),
-      badge: true,
+      remain: move.left + path.length - 1, // 頭上の札は、この移動で残っている駅の数（分かれ道で止まっても数えつづける）
+      junction,
       follow: true,
+      label: (n) => t('remain', n),
     });
+  }
+
+  // 分かれ道：列車のまわり（画面で70〜90px先の線路の上）に、選べる方面の真鍮の矢印ボタンを出す。全画面のモーダルは出さない
+  function askDirection(opts) {
+    move.waiting = opts;
+    move.recommend = navPick(move.at, opts, move.seen);
+    Map.setCandidates(opts);
+    Map.showBranches(move.at, opts);
+    placeDirButtons();
+    Sound.click();
+    setGuide(`${I('route')} ${t('junction', esc(D.byId[move.at].name), move.left)}`);
+    const btn = $('#map-overlay .dir-btn');
+    if (btn) btn.focus({ preventScroll: true });
+  }
+  // 地図の上の方面ボタン（カメラが動いたら置き直す）。距離は画面の px で決め、盤面の単位に直して線路の上に置く
+  function placeDirButtons() {
+    if (!move || !move.waiting) return;
+    const layer = $('#map-overlay');
+    const upp = Map.unitsPerPx();
+    layer.innerHTML = move.waiting
+      .map((id, i) => {
+        const dist = (70 + 20 * (i % 2)) * upp; // 隣り合う方面がぶつからないよう、70px と 90px を交互に
+        const [x, y] = Map.along(move.at, id, dist);
+        const { left, top } = Map.toBoard(x, y);
+        const e = D.edgeOf(move.at, id);
+        // 路線名は最初の1本だけを短く（「鹿児島本線・西鉄…（二日市で乗り換え）」→「鹿児島本線」）
+        const line = e && e.name ? e.name.split(/[・（(]/)[0] : '';
+        const rec = move.recommend === id;
+        return `<button class="dir-btn${rec ? ' is-rec' : ''}" data-dir="${esc(id)}" style="left:${left.toFixed(0)}px;top:${top.toFixed(0)}px">
+            <span class="dir-arrow" aria-hidden="true">${arrowOf(move.at, id)}</span><span class="dir-text">${esc(t('toward', D.byId[id].name + (lang === 'en' ? '' : '駅')))}${line && lang !== 'en' ? `<small>（${esc(line)}）</small>` : ''}</span>
+            ${rec ? `<span class="dir-rec">${esc(t('spotDir'))}</span>` : ''}
+          </button>`;
+      })
+      .join('');
+    layer.hidden = false;
+    // 列車のしるしは動かない障害物として、ボタンどうし・列車と重ならないよう押しのける
+    const tp = Map.trainXY();
+    const here = tp ? Map.toBoard(tp[0], tp[1]) : Map.toBoard(D.byId[move.at].x, D.byId[move.at].y);
+    // 左下の「いまいる駅」の札と、右下の親指のダイスも避ける
+    const box = layer.getBoundingClientRect();
+    const hud = $('.hud-card').getBoundingClientRect(), fab = $('#btn-dice').getBoundingClientRect();
+    const rect = (r) => ({ x: r.left - box.left + r.width / 2, y: r.top - box.top + r.height / 2, w: r.width, h: r.height });
+    spreadButtons(layer, [{ x: here.left, y: here.top, w: 60, h: 34 }, rect(hud), rect(fab)]);
+  }
+  // 方面ボタンが重なったら、互いに押しのけて離す（盤面の枠からははみ出さない）
+  function spreadButtons(layer, fixed = []) {
+    const W = layer.clientWidth, H = layer.clientHeight;
+    const btns = [...layer.querySelectorAll('.dir-btn')].map((el) => ({ el, x: parseFloat(el.style.left), y: parseFloat(el.style.top), w: el.offsetWidth + 6, h: el.offsetHeight + 14 }));
+    const items = [...btns, ...fixed.map((f) => ({ ...f, fixed: true }))];
+    for (let it = 0; it < 120; it++) {
+      let moved = false;
+      for (let i = 0; i < items.length; i++) {
+        for (let j = i + 1; j < items.length; j++) {
+          const a = items[i], b = items[j];
+          if (a.fixed && b.fixed) continue;
+          const ox = (a.w + b.w) / 2 - Math.abs(a.x - b.x), oy = (a.h + b.h) / 2 - Math.abs(a.y - b.y);
+          if (ox <= 0 || oy <= 0) continue;
+          moved = true;
+          const ka = a.fixed ? 0 : b.fixed ? 2 : 1, kb = b.fixed ? 0 : a.fixed ? 2 : 1;
+          if (oy < ox) {
+            const d = (oy / 2 + 1) * (a.y <= b.y ? -1 : 1);
+            a.y += d * ka;
+            b.y -= d * kb;
+          } else {
+            const d = (ox / 2 + 1) * (a.x <= b.x ? -1 : 1);
+            a.x += d * ka;
+            b.x -= d * kb;
+          }
+        }
+      }
+      btns.forEach((b) => {
+        b.x = Math.max(b.w / 2 + 4, Math.min(W - b.w / 2 - 4, b.x));
+        b.y = Math.max(b.h / 2 + 50, Math.min(H - b.h / 2 - 4, b.y)); // 上のスポットライト駅の帯は避ける
+      });
+      if (!moved) break;
+    }
+    btns.forEach((b) => {
+      b.el.style.left = `${b.x.toFixed(0)}px`;
+      b.el.style.top = `${b.y.toFixed(0)}px`;
+    });
+  }
+  function pickDirection(id) {
+    if (!move || !move.waiting || !move.waiting.includes(id)) return;
+    move.waiting = null;
+    $('#map-overlay').innerHTML = '';
+    $('#map-overlay').hidden = true;
+    Map.setCandidates(null);
+    Map.showBranches(null);
+    Sound.points(); // ポイントが切り替わる「ガシャン！」
+    advance(id); // 選んだ線路へ、すぐに再加速して残りを走る
   }
 
   // 方角の矢印（盤面の上が北）。8方位に丸めた線画の矢印を、その向きに回す
@@ -580,10 +679,31 @@
     renderAll();
     openModal(at);
   }
-  // 到着の駅名標：昔のホームの駅名標のような生成りの板に、漢字の駅名・かな・隣の駅・乗ってきた路線の色の帯。
-  // 停車した瞬間に画面の上からカシャンと下りてきて、しばらくして上へ戻る（操作はさえぎらない）
+  // 到着の駅名標：昔のホームの駅名標のような生成りの板。真鍮の鎖で吊られ、漢字の駅名を大きく、かな・英語の表記、
+  // 乗ってきた路線の色の帯に左右の前の駅と次の駅。停車した瞬間に上から下りてきて、ばねで弾んでカシャンと止まる
   const LINE_COLORS = { shin: 'var(--gold)', trunk: 'var(--ink)', local: 'var(--forest)', scenic: 'var(--akane)', ferry: 'var(--sea-ink)', bus: 'var(--akane)' };
-  let signTimer = 0;
+  let signTimer = 0, signRaf = 0;
+  // 減衰するばね（質量1・ばね定数 k・減衰 c）を、1フレームずつ積分する（半陰的オイラー法）
+  function springTo(el, from, to, { k = 170, c = 15, onSettle } = {}) {
+    cancelAnimationFrame(signRaf);
+    let x = from, v = 0, last = null, settled = false, clacked = false;
+    const step = (now) => {
+      const dt = last === null ? 1 / 60 : Math.min(0.034, (now - last) / 1000);
+      last = now;
+      v += (-k * (x - to) - c * v) * dt;
+      x += v * dt;
+      // 一番下まで来た（最初に行き過ぎた）瞬間に「カシャン」
+      if (!clacked && x >= to) {
+        clacked = true;
+        if (onSettle) onSettle();
+      }
+      el.style.transform = `translate(-50%, ${x.toFixed(2)}px)`;
+      settled = Math.abs(x - to) < 0.3 && Math.abs(v) < 2;
+      if (!settled) signRaf = requestAnimationFrame(step);
+      else el.style.transform = `translate(-50%, ${to}px)`;
+    };
+    signRaf = requestAnimationFrame(step);
+  }
   function stationSign(id, prev) {
     hideSign(true);
     const s = D.byId[id];
@@ -594,27 +714,38 @@
     el.className = 'station-sign';
     el.setAttribute('role', 'status');
     el.style.setProperty('--line', LINE_COLORS[type] || LINE_COLORS.local);
-    el.innerHTML = `<div class="ss-hanger" aria-hidden="true"><i></i><i></i></div>
+    // 真鍮の鎖：楕円の輪を交互に向きを変えて縦につなぐ
+    const chain = `<svg class="ss-chain" viewBox="0 0 8 60" aria-hidden="true">${Array.from({ length: 6 }, (_, i) => i % 2 ? `<rect x="2.6" y="${i * 10 - 1}" width="2.8" height="12" rx="1.4"/>` : `<ellipse cx="4" cy="${i * 10 + 5}" rx="3.2" ry="6"/>`).join('')}</svg>`;
+    el.innerHTML = `<div class="ss-hanger" aria-hidden="true">${chain}${chain}</div>
       <div class="ss-board">
+        <span class="ss-ring ss-ring-l" aria-hidden="true"></span><span class="ss-ring ss-ring-r" aria-hidden="true"></span>
         <p class="ss-top"><span class="ss-no">No. ${String(D.stations.indexOf(s) + 1).padStart(2, '0')}</span>${e && e.name ? `<span class="ss-line">${esc(e.name)}</span>` : ''}<span class="ss-pref">${esc(s.prefecture)}</span></p>
-        <p class="ss-name">${esc(s.name)}</p>
+        <p class="ss-name">${esc(s.nameJa || s.name)}</p>
         <p class="ss-kana">${esc(s.kana)}</p>
+        <p class="ss-en">${esc(s.en || '')}</p>
         <div class="ss-band">
-          <span class="ss-prev">${prev ? `${I('arrow', { rotate: 180 })}${esc(D.byId[prev].name)}` : ''}</span>
-          <span class="ss-next">${next.length ? `${esc(next.slice(0, 2).join('・'))}${I('arrow')}` : '<small>線路の果て</small>'}</span>
+          <span class="ss-prev">${prev ? `${I('arrow', { rotate: 180 })}${esc(D.byId[prev].nameJa || D.byId[prev].name)}` : ''}</span>
+          <span class="ss-next">${next.length ? `${esc(next.slice(0, 2).map((n) => (D.stations.find((x) => x.name === n) || {}).nameJa || n).join('・'))}${I('arrow')}` : '<small>線路の果て</small>'}</span>
         </div>
       </div>`;
     document.body.appendChild(el);
-    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('is-in')));
-    setTimeout(() => Sound.clack(), 380);
-    signTimer = setTimeout(() => hideSign(), 3800);
+    const h = el.offsetHeight || 220;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      el.style.transform = 'translate(-50%, 0px)';
+      Sound.clack();
+    } else {
+      el.style.transform = `translate(-50%, ${-h - 20}px)`;
+      springTo(el, -h - 20, 0, { onSettle: () => Sound.clack() });
+    }
+    signTimer = setTimeout(() => hideSign(), 4000);
   }
   function hideSign(now) {
     clearTimeout(signTimer);
     document.querySelectorAll('.station-sign').forEach((el) => {
       if (now) return el.remove();
-      el.classList.remove('is-in');
+      cancelAnimationFrame(signRaf);
       el.classList.add('is-out');
+      el.style.transform = `translate(-50%, ${-(el.offsetHeight || 220) - 20}px)`;
       setTimeout(() => el.remove(), 700);
     });
   }
@@ -660,6 +791,11 @@
   // 駅をタップ：いまいる駅なら手帖、それ以外は望遠鏡でのぞくだけ（移動しない）
   function onStationClick(id) {
     Sound.unlock();
+    if (move && move.waiting) {
+      if (move.waiting.includes(id)) return pickDirection(id);
+      toast('分かれ道です。地図の真鍮の矢印から、進む方面を選んでください');
+      return;
+    }
     if (busy) return;
     const cur = Store.get().currentStationId;
     if (id === cur) return openModal(id);
@@ -701,7 +837,6 @@
     $('#btn-dice').disabled = busy;
     $('#dice-badge').hidden = true;
     renderTickets();
-    renderNav();
   }
 
   // ---------- よりみちダイス ----------
@@ -723,7 +858,11 @@
     }
     busy = true;
     $('#btn-dice').disabled = true;
+    showBoardCenter();
     $('#dice-result').textContent = '…';
+    // 盤面の真ん中に胡桃のダイスのトレイを出して振り、出目を見せてから下げる
+    clearTimeout(rollDice.hideTimer);
+    $('#dice-stage').classList.add('is-on');
     Sound.diceShake();
     if (values.length > 1) {
       Sound.diceShake();
@@ -733,6 +872,7 @@
     Store.countRoll();
     busy = false;
     confetti($('#dice-confetti'), 24 + values.length * 10);
+    rollDice.hideTimer = setTimeout(() => $('#dice-stage').classList.remove('is-on'), 1300);
     Game.render();
     showResult(values.reduce((a, b) => a + b, 0), values, plan.label);
   }
@@ -750,14 +890,13 @@
     void badge.offsetWidth;
     badge.classList.add('is-pop');
     if (Craft.ticketsLeft() <= 0) {
-      setGuide(`<b>${n}</b>の目！ 線路に沿って進みます。分かれ道はオートナビがスポットライト駅の方へ選びます。`);
+      setGuide(`<b>${n}</b>の目！ 線路に沿って進みます。分かれ道では止まるので、地図の矢印から方面を選んでください。`);
       setTimeout(() => startMove(n), 800);
       return;
     }
     choice = { n, values };
     $('#btn-dice').disabled = true;
     renderTickets();
-    renderNav();
     setGuide(`<b>${n}</b>の目！ よりみち切符で出目を±1できます。 <button class="primary-btn btn-sm" id="btn-depart">${I('train')} ${n}マス進む</button>`);
     $('#btn-depart').addEventListener('click', () => startMove(choice.n));
   }
@@ -1019,7 +1158,7 @@
     document.body.classList.remove('modal-open');
     setTimeout(() => (m.hidden = true), 200);
     modalStationId = null;
-    if (!choice && !busy) setGuide(IDLE_GUIDE);
+    if (!choice && !busy) setGuide(t('idle'));
     if (lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true });
   }
 
@@ -1051,7 +1190,6 @@
       // 王冠が駅に刺さるところが見えるよう、手帖を閉じて地図をその駅まで送ってから
       closeModal();
       if ($('[data-view="map"]').hidden) showView('map');
-      $('.map-board').scrollIntoView({ block: 'center', behavior: 'smooth' });
       await Game.throneSteal(id, Ownership.ranking(id)[1]);
       await Game.celebrateLines();
       return celebrate(id, result);
@@ -1211,10 +1349,12 @@
   function showView(name) {
     document.querySelectorAll('[data-view]').forEach((v) => (v.hidden = v.dataset.view !== name));
     document.querySelectorAll('[data-tab]').forEach((t) => {
-      const on = t.dataset.tab === name;
+      const on = t.dataset.tab === (name === 'garage' ? 'collection' : name); // 工房は手帖の中の章
       t.classList.toggle('is-active', on);
       t.setAttribute('aria-selected', on);
     });
+    document.body.dataset.screen = name; // data-view にすると、上の querySelectorAll で body まで隠してしまう
+    if (name === 'map') Map.fit();
     if (name === 'collection') renderCollection();
     if (name === 'garage') Garage.show();
     if (name === 'letters') Postcards.render();
@@ -1223,7 +1363,9 @@
     } catch (e) {
       /* noop */
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // ページはスクロールしない。中でスクロールするタブは、ひらくたびに上から見せる
+    const v = $(`[data-view="${name}"]`);
+    if (v && v.classList.contains('view-scroll')) v.scrollTop = 0;
   }
 
   // ---------- マイ旅しおり（オーナー刻印手帖の中） ----------
@@ -1560,7 +1702,11 @@
       currentId: () => Store.get().currentStationId,
       spotlightId: () => (Store.get().spotlight || {}).id,
       // カメラが動いたら、望遠鏡の吹き出しは閉じる
-      onCamera: () => hideScope(),
+      // カメラが動いたら：分かれ道の方面ボタンを置き直し、望遠鏡の吹き出しは閉じる
+      onCamera: () => {
+        placeDirButtons();
+        hideScope();
+      },
     });
     Map.placeTrain(Store.get().currentStationId);
     Dice.mount($('#die'));
@@ -1571,7 +1717,8 @@
     ShareCard.init(D, api, $('#sharecard'));
     Game.init(D, { ...api, isBusy: () => busy || !!choice || !!move, renderDiceHint, warpTo });
     renderAll();
-    setGuide(IDLE_GUIDE);
+    applyLang(Store.get().lang);
+    setGuide(t('idle'));
     if (!Store.get().prefaceSeen) openCover();
     $('#btn-compass').addEventListener('click', openCompass);
 
@@ -1599,7 +1746,19 @@
       if (e.target.closest('[data-scope-close]') || (!e.target.closest('#map-scope') && !e.target.closest('.station'))) hideScope();
     });
     // 画面の大きさが変わったら、望遠鏡はいったん閉じる
-    window.addEventListener('resize', () => hideScope());
+    window.addEventListener('resize', () => {
+      hideScope();
+      placeDirButtons();
+    });
+    document.addEventListener('click', (e) => {
+      const b = e.target.closest('#map-overlay [data-dir]');
+      if (b) pickDirection(b.dataset.dir);
+    });
+    $('#btn-lang').addEventListener('click', () => {
+      Store.setLang(lang === 'ja' ? 'en' : 'ja');
+      applyLang(Store.get().lang);
+      Sound.click();
+    });
     $('#collection-grid').addEventListener('keydown', (e) => {
       const c = e.target.closest('[data-station]');
       if (c && (e.key === 'Enter' || e.key === ' ')) {

@@ -1,4 +1,4 @@
-/* 車両クラフト＆アバターの工房（js/garage.js・js/craft.js）。style.css のトークンを使う
+/* 車両クラフト＆旅の紋章の工房（js/garage.js・js/craft.js）。style.css のトークンを使う
  * 箱は角丸＋影の白いカードをやめ、飾り枠（--frame：外枠1px＋内側3pxあけた細線）と硬券切符の切り欠きで組む。
  * 数字・金額は Cormorant Garamond、名前は しっぽり明朝、補助の小さな字は Zen Kaku Gothic New。
  */
@@ -18,13 +18,14 @@
 .garage-wallet dd b { font-size: 26px; font-weight: 600; color: var(--brass); }
 
 /* ---------- プレビューステージ（銅版画の風景） ---------- */
-.stage { position: relative; padding: 6px; margin-bottom: 16px; background: var(--paper); box-shadow: var(--frame); }
+.garage .stage { position: relative; padding: 6px; margin: 0 0 16px; background: var(--paper); box-shadow: var(--frame); }
 .stage-svg { display: block; width: 100%; height: auto; aspect-ratio: 800 / 300; }
 .stage-smoke path { animation: stage-smoke 6s var(--ease) infinite; transform-box: fill-box; transform-origin: center; opacity: 0; }
 .stage-smoke path:nth-child(2) { animation-delay: 2s; }
 .stage-smoke path:nth-child(3) { animation-delay: 4s; }
 .stage-ship { animation: ship-bob 5s ease-in-out infinite; }
-.stage-avatar-bob { animation: avatar-breathe 4.2s ease-in-out infinite; }
+/* 屋根から鎖で吊った旅の紋章：吊り元（上の中央）を軸に、ごくわずかに揺れる */
+.stage-avatar-bob { animation: emblem-sway 5.6s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 0; }
 .stage-caption {
   position: absolute; left: 16px; bottom: 14px; max-width: calc(100% - 32px); padding: 3px 12px;
   font-family: var(--font-mincho); font-weight: 700; font-size: 12.5px; letter-spacing: .06em; color: var(--ink);
@@ -68,7 +69,8 @@
 }
 .part-card.is-locked .part-thumb > svg { filter: grayscale(.25) sepia(.08); opacity: .88; }
 .thumb-svg { width: 88%; height: auto; max-height: 100%; overflow: visible; }
-.part-thumb .avatar-svg { width: auto; height: 104%; margin-top: 8px; }
+/* 旅の紋章のパーツ（鞄の革・札・根付）は、そのパーツだけを大きく。高さで合わせる */
+.part-thumb .thumb-emblem { width: auto; height: 86px; max-width: 92%; overflow: hidden; }
 .thumb-trail { width: 100%; height: 100%; }
 .part-no { position: absolute; top: 4px; right: 7px; font-size: 11px; color: var(--ink-3); letter-spacing: .04em; }
 /* 装備中：朱肉の二重丸の判（少し傾けて押す） */
@@ -119,7 +121,7 @@
   .garage-wallet { width: 100%; }
   .garage-wallet div { flex: 1; min-width: 0; padding: 7px 10px; }
   .garage-wallet dd { font-size: 20px; }
-  .stage { padding: 4px; }
+  .garage .stage { padding: 4px; }
   .stage-svg { aspect-ratio: 800 / 420; } /* 縦を少し足し、右の空と海を切って、列車とホームを大きく見せる */
   .stage-caption { position: static; display: block; margin: 4px 0 0; max-width: none; font-size: 11.5px; text-align: center; white-space: normal; }
   .garage .garage-seg { display: flex; }
@@ -128,6 +130,7 @@
   .part-card { --notch: 101px; padding: 8px 9px 10px; }
   .part-info { margin: 0 -9px; padding: 9px 9px 0; }
   .part-thumb { height: 84px; }
+  .part-thumb .thumb-emblem { height: 70px; }
   .part-seal { width: 34px; height: 34px; font-size: 8px; left: 5px; top: 5px; }
   .part-name { font-size: 13.5px; }
   .part-desc { font-size: 11px; }
@@ -136,7 +139,7 @@
 }
 @keyframes stage-smoke { 0% { opacity: 0; transform: translate(0, 4px) scale(.7); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(16px, -20px) scale(1.35); } }
 @keyframes ship-bob { 50% { transform: translateY(-1.5px) rotate(-1.2deg); } }
-@keyframes avatar-breathe { 50% { transform: translateY(-1.5px); } }
+@keyframes emblem-sway { 0%, 100% { transform: rotate(-.8deg); } 50% { transform: rotate(.8deg); } }
 @media (prefers-reduced-motion: reduce) {
   .stage-smoke path, .stage-ship, .stage-avatar-bob { animation: none; }
   .stage-smoke path { opacity: .8; }

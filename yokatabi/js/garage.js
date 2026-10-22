@@ -1,5 +1,6 @@
-// 「車両クラフト＆アバター」タブ：鉄道クラフト工房（My Train Garage）と旅人アバター着せ替え（Traveler Studio）。
-// 真ん中のプレビューステージ（銅版画の風景）で、改造した列車（1両目＋2両目）が小さな駅に入ってきて、アバターがホームで待つ。
+// 「車両クラフト＆旅の紋章」タブ：鉄道クラフト工房（My Train Garage）と、旅の紋章（革の旅行鞄と懐中時計）の仕立て。
+// 真ん中のプレビューステージ（銅版画の風景）で、改造した列車（1両目＋2両目）が小さな駅に入ってきて、
+// ホームの屋根の下には旅の紋章が真鍮の鎖で吊られている（駅の看板のように。人の姿は描かない）。
 // パーツは硬券の切符のようなカードに並べ、切り替えた瞬間に、見た目と効果音が変わる。絵文字は使わず、アイコンは YT.Icon の線画。
 (function () {
   'use strict';
@@ -10,7 +11,7 @@
   let D = null;
   let api = null; // app.js から：{ esc, yen, yenBig, toast, renderAll, confetti }
   let root = null;
-  let mode = 'train'; // 'train'（鉄道クラフト工房）| 'avatar'（旅人アバター）
+  let mode = 'train'; // 'train'（鉄道クラフト工房）| 'avatar'（旅の紋章。値は保存・テストのため旧名のまま）
   let raf = null;
 
   // ---------- プレビューステージ ----------
@@ -32,6 +33,8 @@
     }
     return `<clipPath id="${id}"><path d="${d}"/></clipPath><path clip-path="url(#${id})" d="${p}" fill="none" stroke="${color}" stroke-width="${w}" opacity="${op}"/>`;
   }
+  // 旅の紋章の吊り位置：ホームの屋根（y 96）の下、駅名標（x 122〜）にかからない左側。縮尺 EMB.s
+  const EMB = { x: 22, y: 108, s: 0.8 };
   function stageSvg() {
     const r = rng(29);
     // 空：上ほど濃い、横の細い彫り線（太陽のまわりはあける）
@@ -79,7 +82,7 @@
       const x = r() * 800, y = 280 + r() * 18;
       return `M${n1(x)},${n1(y)} q1,-4 2.6,-6 M${n1(x + 2)},${n1(y)} q.2,-3 -1,-5`;
     }).join('');
-    return `<svg viewBox="0 0 800 300" preserveAspectRatio="xMinYMax slice" class="stage-svg" role="img" aria-label="いまの列車とアバターのプレビュー">
+    return `<svg viewBox="0 0 800 300" preserveAspectRatio="xMinYMax slice" class="stage-svg" role="img" aria-label="いまの列車と旅の紋章のプレビュー">
       <rect width="800" height="300" fill="#F4EFE6"/>
       ${sky}
       <circle cx="650" cy="70" r="26" fill="#F7EFD9" stroke="${BRASS}" stroke-width=".8"/><circle cx="650" cy="70" r="21" fill="none" stroke="${BRASS}" stroke-width=".4"/>
@@ -144,7 +147,7 @@
           <text x="32" y="21" text-anchor="middle" font-size="3.6" letter-spacing=".6" font-family="'Shippori Mincho', serif" fill="${INK2}">ひだまり　・　たかはら</text>
         </g>
       </g>
-      <g class="stage-avatar" transform="translate(16 104)"></g>
+      <g class="stage-avatar" transform="translate(${EMB.x} ${EMB.y})"></g>
     </svg>`;
   }
 
@@ -211,14 +214,20 @@
     svg.querySelector('.stage-car1').innerHTML = `<g transform="scale(${S})">${Craft.trainSvg()}</g>`;
     const c2 = Craft.carriageSvg();
     svg.querySelector('.stage-car2').innerHTML = c2 ? `<g transform="translate(${-128 * S} 0) scale(${S})">${c2}</g>` : '';
-    svg.querySelector('.stage-avatar').innerHTML = `<g class="stage-avatar-bob">${Craft.avatarSvg(undefined, { id: 'stage' }).replace('<svg ', '<svg width="120" height="140" ')}</g>`;
+    // 紋章の丸の上（紋章の座標で 60,12）から、屋根の梁まで二本の真鍮の鎖。揺れは鎖ごと（.stage-avatar-bob）
+    const w = 120 * EMB.s, h = 140 * EMB.s, top = 12 * EMB.s, hang = EMB.y - 96;
+    const chain = (x) => `<path d="M${x},${-hang} L${(w / 2 + (x - w / 2) * 0.35).toFixed(1)},${(top + 1).toFixed(1)}" stroke="${BRASS}" stroke-width="1.1" stroke-dasharray=".1 2" stroke-linecap="round"/>`;
+    svg.querySelector('.stage-avatar').innerHTML = `<g class="stage-avatar-bob">${chain(w / 2 - 26)}${chain(w / 2 + 26)}
+      <path d="M${w / 2 - 30},${-hang} h8 M${w / 2 + 22},${-hang} h8" stroke="${INK2}" stroke-width="1.2"/>
+      ${Craft.avatarSvg(undefined, { id: 'stage' }).replace('<svg ', `<svg width="${w}" height="${h}" `)}</g>`;
   }
 
   // ---------- パーツの一覧（硬券の切符） ----------
   // 金額は Cormorant の数字に、単位だけ小さな和文で
   const price = (man) => `<span class="num">${Number(man).toLocaleString('ja-JP')}</span><small>万円</small>`;
   // 欄の欧文の見出し（タブの「03 / LOCOMOTIVE」に続く通し番号）
-  const EN = { livery: 'LIVERY', carriage: 'CARRIAGE', trail: 'TRAIL', hat: 'HAT', outfit: 'ATTIRE', buddy: 'COMPANION' };
+  // 旅の紋章の欄は、鞄の札＝TAG・鞄の革＝LEATHER・鞄の根付＝CHARM（スロットの id は着せ替えの頃の hat・outfit・buddy のまま）
+  const EN = { livery: 'LIVERY', carriage: 'CARRIAGE', trail: 'TRAIL', hat: 'TAG', outfit: 'LEATHER', buddy: 'CHARM' };
 
   function itemCard(slot, it, no) {
     const esc = api.esc;
@@ -253,8 +262,8 @@
         <header class="garage-head">
           <div>
             <p class="eyebrow garage-eyebrow"><i>03</i>/ LOCOMOTIVE<span>よりみち工房</span></p>
-            <h2 class="garage-title">車両クラフト＆アバター</h2>
-            <p class="garage-lead">貯めたクラフト資金で、列車を改造したり、旅人の装いを着せ替えたりできます。使っても総資産額（栄誉の記録）は減りません。</p>
+            <h2 class="garage-title">車両クラフト＆旅の紋章</h2>
+            <p class="garage-lead">貯めたクラフト資金で、列車を改造したり、旅の紋章（革の旅行鞄と懐中時計）の革・札・根付を仕立て直したりできます。使っても総資産額（栄誉の記録）は減りません。</p>
           </div>
           <dl class="garage-wallet">
             <div><dt>${I('coins')}クラフト資金</dt><dd data-g-funds></dd></div>
@@ -264,7 +273,7 @@
         <div class="stage">${stageSvg()}<p class="stage-caption" data-g-caption></p></div>
         <div class="seg garage-seg" role="tablist" aria-label="工房の切り替え">
           <button class="seg-btn" role="tab" data-mode="train">${I('locomotive')}<span>鉄道クラフト工房</span></button>
-          <button class="seg-btn" role="tab" data-mode="avatar">${I('hat')}<span>旅人アバター</span></button>
+          <button class="seg-btn" role="tab" data-mode="avatar">${I('suitcase')}<span>旅の紋章</span></button>
         </div>
         <div data-g-parts></div>
         <section class="earn-guide">
@@ -280,7 +289,10 @@
     root.querySelector('[data-g-funds]').innerHTML = `${api.yenBig(Craft.balance())}`;
     root.querySelector('[data-g-tickets]').innerHTML = perDay ? `1日 <b>${perDay}</b> 枚<small>（今日はあと ${Craft.ticketsLeft()} 枚）</small>` : '<small>高級車両・連結車両をアンロックすると使えます</small>';
     const eq = Craft.equipped();
-    root.querySelector('[data-g-caption]').textContent = `${Craft.item('livery', eq.livery).name}${eq.carriage !== 'none' ? ` ＋ ${Craft.item('carriage', eq.carriage).name}` : ''} ／ ${Craft.item('trail', eq.trail).name}`;
+    // 札の文言：列車の欄では編成とトレイル、紋章の欄では鞄の革・札・根付の取り合わせ
+    root.querySelector('[data-g-caption]').textContent = mode === 'avatar'
+      ? `旅の紋章：${Craft.item('outfit', eq.outfit).name}・${Craft.item('hat', eq.hat).name}${eq.buddy !== 'none' ? `・${Craft.item('buddy', eq.buddy).name}` : ''}`
+      : `${Craft.item('livery', eq.livery).name}${eq.carriage !== 'none' ? ` ＋ ${Craft.item('carriage', eq.carriage).name}` : ''} ／ ${Craft.item('trail', eq.trail).name}`;
     root.querySelectorAll('[data-mode]').forEach((b) => {
       b.classList.toggle('is-active', b.dataset.mode === mode);
       b.setAttribute('aria-selected', b.dataset.mode === mode);

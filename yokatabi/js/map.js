@@ -92,6 +92,7 @@
       <linearGradient id="g-goldleaf" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="54" y2="34" spreadMethod="reflect">
         <stop offset="0" stop-color="#c59b27"/><stop offset=".38" stop-color="#e6c665"/><stop offset=".55" stop-color="#faf0ca"/><stop offset=".75" stop-color="#d4af37"/><stop offset="1" stop-color="#c59b27"/>
       </linearGradient>
+      <linearGradient id="g-cone" x1="21" y1="0" x2="70" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="rgb(255,232,163)" stop-opacity=".45"/><stop offset="1" stop-color="rgb(255,232,163)" stop-opacity="0"/></linearGradient>
       <radialGradient id="g-fog"><stop offset="0" stop-color="#f4efe6" stop-opacity=".92"/><stop offset=".55" stop-color="#f4efe6" stop-opacity=".55"/><stop offset="1" stop-color="#f4efe6" stop-opacity="0"/></radialGradient>
       <radialGradient id="g-unveil"><stop offset="0" stop-color="#e6c665" stop-opacity=".5"/><stop offset=".6" stop-color="#d4af37" stop-opacity=".16"/><stop offset="1" stop-color="#d4af37" stop-opacity="0"/></radialGradient>`;
     if (GEO) {
@@ -592,30 +593,50 @@
     });
   }
 
-  // ---------- 列車（SVG のミニチュア）----------
-  // 1両目・2両目を線路の向きに回して置く。車両の絵は YT.Craft（クラフト工房で選んだもの）
-  // 拡大しているときは、列車も少し小さくして（倍率^-0.6）線路の上におさめる
-  let trainK = 1;
-  const CAR0 = 0.42; // 車両の絵（長さ120）の縮尺 → 盤面で約50単位
-  const GAP0 = 54; // 1両目と2両目の中心の間隔（盤面の単位）
-  const STOP0 = 30; // 駅の手前で止まる距離（先頭が駅のしるしにかかる位置）
-  let CAR = CAR0, GAP = GAP0, STOP = STOP0;
-  let car1, car2, carG1, carG2, fx;
-  const pose = { segs: null, d: 0, running: false };
-
+  // ---------- 列車（2両編成の SVG トークン）----------
+  // 大きさは画面の px で決める（先頭の動力車 44×20px・2両目の展望客車 40×20px）。毎フレーム「盤面1単位が何 px か」を
+  // 測って（unitsPerPx）、絵を scale(upp) で縮めて置くので、ズームしても画面の上の大きさは変わらない。
+  // 色はクラシカルな深緑（#1E3A2F）に真鍮の飾り帯（#C5A059）、屋根のベンチレーター、暖色（#FFE8A3）に光る4つの窓、
+  // 先頭の前へ広がる前照灯の扇形の光（rgba(255,232,163,.45)）
+  const PX = { car1: 44, car2: 40, gap: 38, stop: 26 }; // gap：2両目は道のりで 38px うしろ（s − 38px）
+  const pose = { segs: null, d: 0, running: false, dive: null };
+  let car1, car2, coupler, carG1, carG2, fx, counter = null;
+  const upp = () => {
+    const m = svg.getScreenCTM();
+    return m && m.a ? 1 / Math.hypot(m.a, m.b) : 1;
+  };
+  function carSvg(kind) {
+    const W = kind === 'car1' ? 44 : 40, h = W / 2;
+    const win = kind === 'car1' ? [-15, -7.5, 0, 7.5] : [-14, -6, 2, 10];
+    const ww = kind === 'car1' ? 5.2 : 6.4;
+    return `${kind === 'car1' ? '<path class="tk-cone" d="M21,-1.6 L66,-14 Q71,0 66,14 L21,1.6 Z"/>' : ''}
+      <g class="tk-body">
+        <rect x="${-h}" y="-6.6" width="${W}" height="12.2" rx="${kind === 'car1' ? 2.4 : 3.6}" class="tk-shell"/>
+        ${kind === 'car1' ? `<path d="M${h - 4},-6.6 Q${h + 1.4},-6 ${h + 1.4},-1 L${h + 1.4},3 Q${h + 1},5.6 ${h - 3},5.6" class="tk-nose"/>` : `<path d="M${h - 5},-6 Q${h + 0.6},-5 ${h + 0.6},0 Q${h + 0.6},5 ${h - 5},5.6" class="tk-obs"/>`}
+        <rect x="${-h + 2}" y="-9.2" width="${W - 4}" height="2.8" rx="1.3" class="tk-roof"/>
+        ${(kind === 'car1' ? [-12, -2, 8] : [-10, 6]).map((x) => `<rect x="${x}" y="-11.2" width="4" height="2.2" rx=".6" class="tk-vent"/>`).join('')}
+        ${win.map((x) => `<rect x="${x - ww / 2}" y="-5" width="${ww}" height="4.4" rx=".7" class="tk-win"/>`).join('')}
+        <rect x="${-h}" y="1.4" width="${W}" height="1.5" class="tk-band"/>
+        <path d="M${-h + 1},-5.8 H${h - 1}" class="tk-pin"/>
+        ${kind === 'car1' ? `<circle cx="${h + 0.4}" cy="-.2" r="1.3" class="tk-lamp"/>` : ''}
+        ${[-h + 6, -h + 11, h - 11, h - 6].map((x) => `<circle cx="${x}" cy="7.2" r="2.3" class="tk-wheel"/>`).join('')}
+      </g>`;
+  }
   function buildTrain() {
     fx = el('g', { class: 'train-fx', 'aria-hidden': 'true' }, layers.train);
+    coupler = el('line', { class: 'tk-coupler', 'aria-hidden': 'true' }, layers.train);
     carG2 = el('g', { class: 'train-car train-car2', 'aria-hidden': 'true' }, layers.train);
     carG1 = el('g', { class: 'train-car train-car1', 'aria-hidden': 'true' }, layers.train);
     car2 = el('g', {}, carG2);
     car1 = el('g', {}, carG1);
     refreshTrain();
   }
+  // 工房の塗装は、盤面では屋根の細い線の色にだけ映す（車体は指定の深緑と真鍮の帯）
   function refreshTrain() {
-    const C = YT.Craft;
-    car1.innerHTML = C.trainSvg();
-    car2.innerHTML = C.carriageSvg();
-    carG2.style.display = car2.innerHTML ? '' : 'none';
+    car1.innerHTML = carSvg('car1');
+    car2.innerHTML = carSvg('car2');
+    const acc = { hidamari: '#c65d3b', forest: '#c5a059', gullwing: '#f6f3ec', caldera: '#1e1a18', patisserie: '#d4af37', royal: '#5e1f2b' }[YT.Craft.equipped().livery];
+    svg.style.setProperty('--tk-accent', acc || '#c5a059');
   }
 
   // 経路の区間をつないだ1本の道のり
@@ -626,73 +647,187 @@
     for (let i = 0; i < path.length - 1; i++) {
       const p = el('path', { d: segmentD(path[i], path[i + 1]), class: 'trail-line' }, layers.trail);
       const len = p.getTotalLength();
-      segs.push({ p, len, start: total, to: path[i + 1] });
+      segs.push({ p, len, start: total, from: path[i], to: path[i + 1] });
       total += len;
     }
     segs.total = total;
     return segs;
   }
-  // 道のりの距離 d の点と向き。d が範囲の外なら、端の向きにまっすぐ延ばす（2両目が出発駅の手前にいるとき）
+  // 道のりの距離 d の点と接線の向き θ = atan2(dy, dx)。d が範囲の外なら、端の向きにまっすぐ延ばす
   function pointAt(segs, d) {
     const clamp = Math.max(0, Math.min(segs.total, d));
     const seg = segs.find((s) => clamp <= s.start + s.len) || segs[segs.length - 1];
     const local = Math.max(0, Math.min(seg.len, clamp - seg.start));
-    const a = seg.p.getPointAtLength(Math.max(0, local - 2));
-    const b = seg.p.getPointAtLength(Math.min(seg.len, local + 2));
+    const a = seg.p.getPointAtLength(Math.max(0, local - 1.5));
+    const b = seg.p.getPointAtLength(Math.min(seg.len, local + 1.5));
     const pt = seg.p.getPointAtLength(local);
     const ang = Math.atan2(b.y - a.y, b.x - a.x);
     const over = d - clamp;
     return { x: pt.x + Math.cos(ang) * over, y: pt.y + Math.sin(ang) * over, ang };
   }
-  // 車両を置く：左へ向かうときは絵を裏返して、上下さかさまにならないようにする。返り値は向き（1 右 / −1 左）
-  function placeCar(g, p, sway = 0, bob = 0) {
+  // 車両を置く：左へ向かうときは絵を裏返して、上下さかさまにしない。bob（px）は上下の揺れ、tilt（度）はブレーキの沈み込み
+  function placeCar(g, p, k, bob = 0, tilt = 0) {
     let deg = (p.ang * 180) / Math.PI;
     const left = Math.abs(deg) > 90;
     if (left) deg += deg > 0 ? -180 : 180;
-    g.setAttribute('transform', `translate(${f1(p.x)} ${f1(p.y + bob)}) rotate(${(deg + sway).toFixed(2)}) scale(${left ? -CAR : CAR} ${CAR})`);
+    g.setAttribute('transform', `translate(${f1(p.x)} ${f1(p.y)}) rotate(${deg.toFixed(2)}) scale(${(left ? -k : k).toFixed(4)} ${k.toFixed(4)}) translate(0 ${bob.toFixed(2)}) rotate(${tilt.toFixed(2)})`);
     return left ? -1 : 1;
   }
-  // 先頭車の煙突の位置（盤面の座標）
-  function chimneyAt(p) {
-    const [lx, ly] = YT.Craft.chimney(YT.Craft.equipped().livery);
-    let ang = p.ang;
-    let x = lx;
-    if (Math.abs(ang) > Math.PI / 2) {
-      ang += ang > 0 ? -Math.PI : Math.PI;
-      x = -lx;
-    }
-    const c = Math.cos(ang), s = Math.sin(ang);
-    return [p.x + (x * c - ly * s) * CAR, p.y + (x * s + ly * c) * CAR];
+  // 車体の上の点（px の座標）→ 盤面の座標
+  function carPoint(p, k, dir, lx, ly) {
+    const c = Math.cos(p.ang), sn = Math.sin(p.ang);
+    // 進む向きは常に接線の +x。左向き（絵を裏返したとき）は、接線の向きから見た上下が入れ替わるので y を反転する
+    const x = lx * k, y = ly * k * (dir < 0 ? -1 : 1);
+    return [p.x + x * c - y * sn, p.y + x * sn + y * c];
   }
-  function setPose(d, now = 0, speedK = 0) {
+  function setPose(d, now = 0, running = false, tilt = 0) {
     pose.d = d;
+    const k = upp();
     const p1 = pointAt(pose.segs, d);
-    const p2 = pointAt(pose.segs, d - GAP);
-    // 走っているあいだは、線路の継ぎ目に合わせて小さく揺れる
-    const sway = Math.sin(now / 95) * 1.4 * speedK;
-    const bob = Math.abs(Math.sin(now / 70)) * -0.8 * speedK;
-    const dir = placeCar(carG1, p1, sway, bob);
-    placeCar(carG2, p2, -sway * 0.8, bob);
-    return { p1, dir };
+    const p2 = pointAt(pose.segs, Math.max(0, d - PX.gap * k)); // 2両目は max(0, s − 38px)
+    // 走っているあいだの小刻みなジョイント振動：translateY(sin(now × 0.035) × 1.6px)
+    const bob = running ? Math.sin(now * 0.035) * 1.6 : 0;
+    const dir = placeCar(carG1, p1, k, bob, tilt);
+    placeCar(carG2, p2, k, running ? Math.sin(now * 0.035 + 1.1) * 1.6 : 0, tilt * 0.6);
+    carG2.style.display = d - PX.gap * k < -PX.car2 * k ? 'none' : '';
+    // 連結幌：1両目の後ろの端と2両目の前の端を、伸び縮みする線で結ぶ（カーブでくの字に折れる）
+    const r1 = pointAt(pose.segs, d - (PX.car1 / 2) * k), f2 = pointAt(pose.segs, Math.max(0, d - PX.gap * k) + (PX.car2 / 2) * k);
+    coupler.setAttribute('x1', f1(r1.x));
+    coupler.setAttribute('y1', f1(r1.y));
+    coupler.setAttribute('x2', f1(f2.x));
+    coupler.setAttribute('y2', f1(f2.y));
+    return { p1, p2, dir, k };
   }
 
   // 駅に止まっている姿：その駅へ入ってくる区間の上、駅の少し手前に置く
-  function park(id) {
-    const from = [...(D.adj[id] || [])][0];
-    if (!from) return;
-    pose.segs = makeSegs([from, id]);
+  function park(id, from) {
+    const prev = from && (D.adj[id] || new Set()).has(from) ? from : [...(D.adj[id] || [])][0];
+    if (!prev) return;
+    pose.segs = makeSegs([prev, id]);
     layers.trail.innerHTML = '';
-    setPose(Math.max(0, pose.segs.total - STOP));
+    setPose(Math.max(0, pose.segs.total - PX.stop * upp()));
   }
 
-  // 停車中も、ときどきふわっとトレイルを浮かべる
+  // ---------- 走行の粒子（requestAnimationFrame でまとめて動かす）----------
+  // steam：煙突からの白い蒸気（半径 3px → 15px にふくらみながら後ろへ流れ、600ms で消える）
+  // spark：車輪のあたりからの真鍮の光の粒（#E5C158。重力で少し落ちながらきらきら消える）
+  // glow：通りすぎた直後の区間に 1.2 秒だけ残る金の光（stroke #D4AF37・4.5px）
+  const parts = [];
+  let partRaf = 0;
+  function addPart(pt) {
+    parts.push(pt);
+    if (!partRaf) partRaf = requestAnimationFrame(tickParts);
+  }
+  function tickParts(now) {
+    partRaf = 0;
+    const k = upp();
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const q = parts[i];
+      const t = (now - q.t0) / q.life;
+      if (t >= 1) {
+        q.el.remove();
+        parts.splice(i, 1);
+        continue;
+      }
+      if (q.kind === 'steam') {
+        const r = 3 + 12 * t; // 3px → 15px
+        q.el.setAttribute('cx', f1(q.x + q.vx * t * k));
+        q.el.setAttribute('cy', f1(q.y + q.vy * t * k));
+        q.el.setAttribute('r', f1(r * k));
+        q.el.setAttribute('opacity', (0.62 * (1 - t) * (1 - t)).toFixed(3));
+      } else if (q.kind === 'spark') {
+        const sec = (now - q.t0) / 1000;
+        q.el.setAttribute('cx', f1(q.x + q.vx * sec * k));
+        q.el.setAttribute('cy', f1(q.y + (q.vy * sec + 0.5 * 160 * sec * sec) * k)); // 重力 160px/s²
+        q.el.setAttribute('opacity', ((1 - t) * (0.55 + 0.45 * Math.abs(Math.sin(now * 0.04 + q.ph)))).toFixed(3));
+      } else if (q.kind === 'glow') {
+        q.el.setAttribute('opacity', (0.9 * (1 - t)).toFixed(3));
+      }
+    }
+    if (parts.length) partRaf = requestAnimationFrame(tickParts);
+  }
+  const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function emit(p1, dir, k, now) {
+    if (reduceMotion()) return;
+    // 煙突（先頭車の前寄りの屋根の上）。進む向きは接線の向き（dir は絵の裏返しだけを表す）
+    const [sx, sy] = carPoint(p1, k, dir, 12, -12);
+    const back = p1.ang + Math.PI;
+    const sc = el('circle', { cx: f1(sx), cy: f1(sy), r: f1(3 * k), class: 'fx-steam' }, fx);
+    addPart({ kind: 'steam', el: sc, x: sx, y: sy, vx: Math.cos(back) * 34 + (Math.random() - 0.5) * 8, vy: Math.sin(back) * 34 - 16, t0: now, life: 600 });
+    const [wx, wy] = carPoint(p1, k, dir, -10 + Math.random() * 20, 8);
+    const sp = el('circle', { cx: f1(wx), cy: f1(wy), r: f1((0.8 + Math.random() * 0.9) * k), class: 'fx-spark' }, fx);
+    addPart({ kind: 'spark', el: sp, x: wx, y: wy, vx: Math.cos(back) * (20 + Math.random() * 30) + (Math.random() - 0.5) * 30, vy: -20 - Math.random() * 40, t0: now, life: 520, ph: Math.random() * 6 });
+  }
+  function glowSeg(seg, now) {
+    const g = el('path', { d: seg.p.getAttribute('d'), class: 'seg-glow' }, layers.trail);
+    addPart({ kind: 'glow', el: g, t0: now, life: 1200 });
+  }
+
+  // ---------- 頭上のカウンター「あと N 駅」（真鍮の枠のピル）----------
+  function makeCounter(n, label) {
+    const g = el('g', { class: 'run-count', 'aria-hidden': 'true' }, layers.train);
+    const body = el('g', {}, g);
+    const rect = el('rect', { x: -26, y: -9, width: 52, height: 18, rx: 9, class: 'rc-pill' }, body);
+    el('rect', { x: -23.6, y: -6.6, width: 47.2, height: 13.2, rx: 6.6, class: 'rc-in' }, body);
+    const t = el('text', { x: 0, y: 3.6, 'text-anchor': 'middle', class: 'rc-text' }, body);
+    const c = { g, body, n, bounce: null, label };
+    c.set = (m, now) => {
+      c.n = m;
+      t.textContent = m > 0 ? label(m) : label(0);
+      const w = Math.max(52, t.getComputedTextLength() + 20);
+      rect.setAttribute('x', f1(-w / 2));
+      rect.setAttribute('width', f1(w));
+      body.lastElementChild.previousElementSibling.setAttribute('x', f1(-w / 2 + 2.4));
+      body.lastElementChild.previousElementSibling.setAttribute('width', f1(w - 4.8));
+      c.bounce = now || performance.now();
+    };
+    c.place = (p1, k, now) => {
+      // 数字が減るたびに、ばねのように弾む（減衰する振動：1 + 0.35·e^(−t/90)·cos(t/28)）
+      let sc = 1;
+      if (c.bounce !== null) {
+        const tt = now - c.bounce;
+        sc = tt > 700 ? 1 : 1 + 0.35 * Math.exp(-tt / 90) * Math.cos(tt / 28);
+      }
+      g.setAttribute('transform', `translate(${f1(p1.x)} ${f1(p1.y - 30 * k)}) scale(${(k * sc).toFixed(4)})`);
+    };
+    c.set(n);
+    c.bounce = null;
+    return c;
+  }
+
+  // 通過した駅：駅のしるしが scale(1.5) に弾けて、二重の金の波紋が広がる（rAF）
+  function popStation(id) {
+    const g = nodes[id];
+    if (!g) return;
+    const tok = g.querySelector('.station-token');
+    [0, 1].forEach((i) => {
+      const c = el('circle', { r: 8, class: 'pass-ripple', style: `--i:${i}` }, g);
+      setTimeout(() => c.remove(), 1500);
+    });
+    if (!tok || reduceMotion()) return;
+    const t0 = performance.now();
+    const step = (now) => {
+      const t = Math.min(1, (now - t0) / 520);
+      const sc = t < 0.25 ? 1 + 0.5 * (t / 0.25) : 1.5 - 0.5 * easeOut((t - 0.25) / 0.75);
+      tok.setAttribute('transform', `scale(${sc.toFixed(3)})`);
+      if (t < 1) requestAnimationFrame(step);
+      else tok.removeAttribute('transform');
+    };
+    requestAnimationFrame(step);
+  }
+  const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+
+  // 停車中も、ときどきふわっと蒸気を浮かべる
   let idleTimer = null;
   function idleFx() {
     clearInterval(idleTimer);
     idleTimer = setInterval(() => {
-      if (pose.running || !pose.segs || document.hidden) return;
-      const [x, y] = chimneyAt(pointAt(pose.segs, pose.d));
-      YT.Craft.spawnTrail(fx, x, y, undefined, 0.7, 1);
+      if (pose.running || !pose.segs || document.hidden || reduceMotion()) return;
+      const k = upp();
+      const p = pointAt(pose.segs, pose.d);
+      const [sx, sy] = carPoint(p, k, 1, 12, -12);
+      const sc = el('circle', { cx: f1(sx), cy: f1(sy), r: f1(3 * k), class: 'fx-steam' }, fx);
+      addPart({ kind: 'steam', el: sc, x: sx, y: sy, vx: (Math.random() - 0.5) * 10, vy: -26, t0: performance.now(), life: 900 });
     }, 1600);
   }
 
@@ -725,7 +860,7 @@
   function drawFrame(cam) {
     if (!frameSvg || !GEO || !cam) return;
     const W = svg.clientWidth, H = svg.clientHeight;
-    if (!W || !H) return;
+    if (W < 40 || H < 40) return; // 隠れている・極端に小さいときは描かない（枠の寸法がマイナスになる）
     const B = baseView();
     const P = GEO.proj;
     const vw = B.w / cam.z, vh = B.h / cam.z, ox = cam.cx - vw / 2, oy = cam.cy - vh / 2, k = W / vw;
@@ -795,18 +930,12 @@
     if (final && Math.abs(s - curScale) > 0.003) {
       curScale = s;
       scalables.forEach((it) => it.el.setAttribute('transform', `translate(${f1(it.x)} ${f1(it.y)}) scale(${s.toFixed(3)})`));
-      placeNav();
       svg.style.setProperty('--lw', Math.pow(cam.z, -0.6).toFixed(3)); // 線の太さ（4倍でも見た目は約1.7倍まで）
       // 海の平行線は、寄っても画面の上でほぼ同じ細かさに見えるよう、模様のほうを縮める
       const hatch = svg.querySelector('#p-sea-hatch');
       if (hatch) hatch.setAttribute('patternTransform', `scale(${Math.pow(cam.z, -0.8).toFixed(3)})`);
-      trainK = Math.pow(cam.z, -0.6);
-      if (!pose.running) {
-        CAR = CAR0 * trainK;
-        GAP = GAP0 * trainK;
-        STOP = STOP0 * trainK;
-        if (pose.segs) setPose(Math.max(0, pose.segs.total - STOP));
-      }
+      // 止まっている列車は、画面の上で同じ大きさ（px）のまま置き直す
+      if (!pose.running && pose.segs) setPose(Math.max(0, pose.segs.total - PX.stop * upp()));
     }
     const l = lodOf(cam.z);
     if (l !== lod) {
@@ -843,82 +972,6 @@
   }
   const centerOf = (b) => ({ cx: b.x + b.w / 2, cy: b.y + b.h / 2 });
 
-  // CSS の cubic-bezier と同じ曲線（x から y を求める。ニュートン法で t を解く）
-  function cubicBezier(x1, y1, x2, y2) {
-    const bz = (t, a, b) => 3 * a * t * (1 - t) ** 2 + 3 * b * t * t * (1 - t) + t ** 3;
-    const dbz = (t, a, b) => 3 * a * (1 - t) ** 2 + 6 * (b - a) * t * (1 - t) + 3 * (1 - b) * t * t;
-    return (x) => {
-      if (x <= 0) return 0;
-      if (x >= 1) return 1;
-      let t = x;
-      for (let i = 0; i < 8; i++) {
-        const dx = bz(t, x1, x2) - x, dd = dbz(t, x1, x2);
-        if (Math.abs(dx) < 1e-5 || !dd) break;
-        t = Math.max(0, Math.min(1, t - dx / dd));
-      }
-      return bz(t, y1, y2);
-    };
-  }
-
-  // 列車の頭上の「残り N 駅」の札（真鍮の細い二重枠）。列車について動き、拡大しても大きくなりすぎない
-  function makeBadge(n) {
-    const g = el('g', { class: 'run-badge', 'aria-hidden': 'true' }, layers.train);
-    const body = el('g', { class: 'run-badge-body' }, g);
-    el('path', { d: 'M0,-7 L-4,-11.5 H4 Z', class: 'run-badge-tip' }, body);
-    el('rect', { x: -27, y: -27, width: 54, height: 16, class: 'run-badge-plate' }, body);
-    el('rect', { x: -25, y: -25, width: 50, height: 12, class: 'run-badge-inner' }, body);
-    const t = el('text', { x: 0, y: -15.6, 'text-anchor': 'middle', class: 'run-badge-text' }, body);
-    const set = (left) => {
-      t.innerHTML = left > 0 ? `残り <tspan class="run-badge-num">${left}</tspan> 駅` : '<tspan class="run-badge-num">到着</tspan>';
-      body.classList.remove('is-tick');
-      void body.getBBox();
-      body.classList.add('is-tick');
-    };
-    set(n);
-    return {
-      place(p) {
-        const s = Math.max(0.55, curScale * 1.05);
-        g.setAttribute('transform', `translate(${f1(p.x)} ${f1(p.y - 10 * trainK)}) scale(${s.toFixed(3)})`);
-      },
-      set,
-      arrive() {
-        set(0);
-        setTimeout(() => g.classList.add('is-gone'), 900);
-        setTimeout(() => g.remove(), 1700);
-      },
-    };
-  }
-  // 通過した駅のしるしから、金の細い波紋が二重に広がる
-  function ripple(id) {
-    const g = nodes[id];
-    if (!g) return;
-    [0, 1].forEach((i) => {
-      const c = el('circle', { r: 8, class: 'pass-ripple', style: `--i:${i}` }, g);
-      setTimeout(() => c.remove(), 1500);
-    });
-  }
-  // 煙突の柔らかな白い蒸気（ふくらみながら薄れる）と、真鍮の光の粒（きらっと光って消える）
-  function steamPuff(x, y, dir) {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const c = el('circle', { cx: f1(x), cy: f1(y), r: f1(3.2 * trainK), class: 'steam-puff' }, fx);
-    c.style.setProperty('--dx', `${(-dir * (8 + Math.random() * 8) * trainK).toFixed(1)}px`);
-    setTimeout(() => c.remove(), 1700);
-  }
-  function goldDust(x, y) {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    for (let i = 0; i < 2; i++) {
-      const c = el('circle', { cx: f1(x + (Math.random() - 0.5) * 10 * trainK), cy: f1(y + (Math.random() - 0.5) * 6 * trainK), r: f1((0.7 + Math.random() * 0.7) * trainK), class: 'gold-dust' }, fx);
-      c.style.setProperty('--dy', `${(-4 - Math.random() * 6).toFixed(1)}px`);
-      c.style.setProperty('--d', `${Math.floor(Math.random() * 3)}`);
-      setTimeout(() => c.remove(), 1400);
-    }
-  }
-  // 進路の札は、倍率の逆数で縮める（駅名標と同じ見え方）
-  const navItems = [];
-  function placeNav() {
-    navItems.forEach((it) => it.el.setAttribute('transform', `translate(${f1(it.x)} ${f1(it.y)}) scale(${Math.max(0.5, curScale).toFixed(3)})`));
-  }
-
   const Map = {
     latLngToSvg,
     init(svgEl, data, h) {
@@ -929,7 +982,7 @@
       svg.innerHTML = '';
       buildDefs();
       layers = {};
-      ['bg', 'routes', 'badges', 'labels', 'course', 'trail', 'nodes', 'nav', 'region', 'train'].forEach((k) => (layers[k] = el('g', { class: `layer-${k}` }, svg)));
+      ['bg', 'routes', 'badges', 'labels', 'course', 'branch', 'trail', 'nodes', 'region', 'train'].forEach((k) => (layers[k] = el('g', { class: `layer-${k}` }, svg)));
       buildBoard();
       buildRoutes();
       buildNodes();
@@ -977,16 +1030,13 @@
       if (!D.byId[id]) return Promise.resolve();
       return camera.set({ cx: D.byId[id].x, cy: D.byId[id].y, z }, ms);
     },
-    // 走り出す瞬間：列車のまわりへズームイン（2.5〜3倍）して、追従を始める
+    // ① 映画のようなカメラ：走り出すと同時に、いまの倍率から ×1.65 へなめらかに寄る（走りはじめを待たせない）。
+    // 走っているあいだは毎フレーム camX += (trainX − camX) × 0.14 の減衰補間で列車を追う（camera.follow）
     followStart() {
       camera.resetUser();
       const p = Map.trainXY() || [camera.get().cx, camera.get().cy];
-      const z = Math.max(2.75, Math.min(3, camera.get().z));
-      return camera.set({ cx: p[0], cy: p[1], z }, 650).then(() => {
-        CAR = CAR0 * trainK;
-        GAP = GAP0 * trainK;
-        STOP = STOP0 * trainK;
-      });
+      camera.set({ cx: p[0], cy: p[1], z: 1.65 }, 650);
+      return Promise.resolve();
     },
     // 分かれ道：いまの駅と行き先の駅がそろって見える角度で止める
     frame(ids, { zMin = 1.6, zMax = 3 } = {}) {
@@ -996,10 +1046,24 @@
       const box = { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
       return camera.set(camera.fit(box, { pad: 70, zMin, zMax }), 600);
     },
-    // 到着の瞬間：少しだけさらに寄って盛り上げる
+    // 最後の駅に止まった瞬間：×1.25 に少し引いて、まわりの駅を見渡す
     arriveZoom(id) {
       if (camera.userMoved()) return Promise.resolve();
-      return Map.focus(id, Math.min(3.4, camera.get().z * 1.18), 700);
+      return Map.focus(id, 1.25, 800);
+    },
+    // 盤面1単位が、いま画面で何 px か（の逆数）。画面の px で大きさを決めたいものを盤面に置くときに使う
+    unitsPerPx: () => upp(),
+    // 言語を切り替えたとき：駅名標を付け直す
+    relabel() {
+      D.stations.forEach((s) => nodes[s.id] && buildLabel(s, nodes[s.id]));
+    },
+    // 分かれ道：選べる線路を、金の破線が流れるように光らせる（ids が null なら消す）
+    showBranches(at, ids) {
+      layers.branch.innerHTML = '';
+      (ids || []).forEach((id) => {
+        el('path', { d: segmentD(at, id), class: 'branch-hl' }, layers.branch);
+        el('path', { d: segmentD(at, id), class: 'branch-hl branch-flow' }, layers.branch);
+      });
     },
 
     // サイコロの行き先候補：波紋のようにやさしく光らせる
@@ -1010,8 +1074,8 @@
     },
     isCandidate: (id) => !!(candidates && candidates.has(id)),
 
-    placeTrain(id) {
-      if (D.byId[id]) park(id);
+    placeTrain(id, from) {
+      if (D.byId[id]) park(id, from);
     },
 
     // 盤面の座標 → 盤面の枠（.map-board）の左上からの画面の位置（px）。行き先ボタンや望遠鏡の吹き出しを重ねるのに使う
@@ -1037,120 +1101,97 @@
       return [p.x, p.y];
     },
 
-    // 経路 [a, b, c, ...] の線路の上を、止まらずに1本で走る（分かれ道はオートナビが先に決めておく）。
-    // 出発でゆっくり加速し、途中の駅の前ではほんの少しだけゆるめ、最後の駅の手前からは var(--ease) と同じ
-    // cubic-bezier(.22, 1, .36, 1) の曲線でブレーキをかけて、すうっと止まる。
-    // opts.onJoint(速さ 0〜1)：レールの継ぎ目を通ったとき（速さが落ちると、継ぎ目の音の間隔も自然に開く）
-    // opts.onPass(駅ID)：途中の駅を通りすぎたとき、opts.onSpeed(速さ 0〜1)：毎フレーム（車窓の景色の流れる速さに使う）
-    // opts.badge：列車の頭上に「残り N 駅」の真鍮の札を出し、通過した駅から金の波紋を広げる
+    // 経路 [a, b, c, ...] の線路の上を走る（つながった区間は1本の道のりで走り、分かれ道か最後の駅で止まる）。
+    // ③ 台形の速度：進み具合 p ∈ [0, 1] に対して、0〜0.2 で力強く加速 → 0.2〜0.75 は最高速 → 0.75〜1 で駅の手前へ
+    //    なめらかにブレーキ。かかる時間は 1駅あたり約 620ms（550〜700ms のあいだ）。道のりは速度の面積を足して出す。
+    // opts.onJoint(速さ 0〜1)：レールの継ぎ目を通ったとき（距離で鳴らすので、速いほど間隔がつまる）
+    // opts.onPass(駅ID)：途中の駅を通りすぎたとき、opts.onSpeed(速さ 0〜1)：毎フレーム（車窓のパララックスに使う）
+    // opts.remain：頭上のカウンターに出す残りの駅数、opts.label(n)：その字、opts.junction：分かれ道で一時停止する
     moveTrain(path, opts = {}) {
       return new Promise((resolve) => {
         if (!path || path.length < 2) return resolve();
-        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const reduce = reduceMotion();
         const segs = makeSegs(path);
         pose.segs = segs;
         pose.running = true;
-        const end = Math.max(0, segs.total - STOP);
-        const stops = segs.slice(0, -1).map((s) => s.start + s.len); // 途中の駅の位置
-        const VMAX = reduce ? 2.2 : 0.42; // 盤面の単位／ミリ秒
-        const RAMP = 70;
-        // ブレーキ：残り BRAKE の距離を、ease の曲線で T ミリ秒かけて進む。曲線の出だしの傾き（1 / .22）と、
-        // そのときの速さがつながるように T を決めるので、ブレーキの入りでがくんとしない
-        const BRAKE = Math.min(end * 0.5, 150 * trainK + 40);
-        const ease = cubicBezier(0.22, 1, 0.36, 1);
-        let d = 0, last = null, nextJoint = 26, passed = 0, fxAcc = 0, brake = null, kPrev = 0;
-        const badge = opts.badge ? makeBadge(path.length - 1) : null;
+        pose.dive = null;
+        const hops = path.length - 1;
+        const T = (reduce ? 160 : 620) * hops; // 1駅あたり約620ms
+        const A = 0.2, B = 0.75; // 加速の終わり・減速の始まり
+        const area = A / 2 + (B - A) + (1 - B) / 2; // 速度の面積（最高速を1としたとき）
+        // 進み具合 p までに進んだ割合（0〜1）
+        const frac = (p) => {
+          if (p <= A) return (p * p) / (2 * A) / area;
+          if (p <= B) return (A / 2 + (p - A)) / area;
+          const q = 1 - p;
+          return (area - (q * q) / (2 * (1 - B))) / area;
+        };
+        const vel = (p) => (p < A ? p / A : p < B ? 1 : (1 - p) / (1 - B)); // 0〜1
+        const stops = segs.map((sg) => sg.start + sg.len); // 各区間の終わり（駅）の位置
+        const counter = makeCounter(opts.remain || hops, opts.label || ((n) => `あと ${n} 駅`));
+        let t0 = null, passed = 0, nextJoint = 26, lastEmit = 0, lastNow = 0;
         carG1.classList.add('is-running');
         carG2.classList.add('is-running');
         const step = (now) => {
-          const dt = last === null ? 16 : Math.min(48, now - last);
-          last = now;
-          let k;
-          if (!brake && d >= end - BRAKE && !reduce) {
-            const v = Math.max(0.08, kPrev) * VMAX;
-            brake = { t0: now, d0: d, len: end - d, T: Math.max(500, ((end - d) / 0.22 / v) * 0.98) };
-          }
-          if (brake) {
-            const t = Math.min(1, (now - brake.t0) / brake.T);
-            const nd = brake.d0 + brake.len * ease(t);
-            k = Math.min(1, Math.max(0.02, (nd - d) / Math.max(1, dt) / VMAX));
-            d = t >= 1 ? end : nd;
-          } else {
-            const kStart = 0.16 + 0.84 * Math.min(1, d / RAMP) ** 0.6;
-            const kEnd = reduce ? 0.06 + 0.94 * Math.min(1, Math.max(0, end - d) / RAMP) ** 0.7 : 1;
-            // ノンストップで通過するので、途中の駅ではほんの少しだけゆるめる（ホームを通りすぎる感じ）
-            const kStop = stops.reduce((m, s) => Math.min(m, 0.72 + 0.28 * Math.min(1, Math.abs(d - s) / 40)), 1);
-            k = Math.max(0.04, Math.min(kStart, kEnd, kStop));
-            d = Math.min(end, d + VMAX * k * dt);
-          }
-          kPrev = k;
-          const { p1, dir } = setPose(d, now, k);
-          if (badge) badge.place(p1);
-          // 走る列車を画面の真ん中に捉えつづける（人がカメラを動かしたら、その回は追わない）
-          if (opts.follow && camera && !camera.userMoved()) camera.follow(p1.x, p1.y);
-          if (opts.onSpeed) opts.onSpeed(d >= end ? 0 : k);
+          if (t0 === null) t0 = now;
+          const p = Math.min(1, (now - t0) / T);
+          const k = upp();
+          const end = Math.max(0, segs.total - PX.stop * k); // 駅のしるしを隠さないよう、少し手前で止まる
+          const d = end * frac(p);
+          const v = vel(p);
+          const { p1, dir } = setPose(d, now, p < 1);
+          counter.place(p1, k, now);
+          // カメラ：列車へ減衰補間で寄せつづける（人がカメラを動かしたら、その回は追わない）
+          if (opts.follow && camera && !camera.userMoved()) camera.follow(p1.x, p1.y, 0.14);
+          if (opts.onSpeed) opts.onSpeed(p >= 1 ? 0 : v);
           if (d >= nextJoint) {
             nextJoint += 26;
-            if (opts.onJoint) opts.onJoint(k);
+            if (opts.onJoint) opts.onJoint(v);
           }
-          while (passed < stops.length && d >= stops[passed]) {
-            const id = segs[passed++].to;
-            if (badge) {
-              ripple(id);
-              badge.set(path.length - 1 - passed);
-            }
-            if (opts.onPass) opts.onPass(id);
+          // 通過した駅：区間に金の光を残し、駅をはじけさせ、カウンターを1つ減らす
+          while (passed < stops.length - 1 && d >= stops[passed]) {
+            glowSeg(segs[passed], now);
+            popStation(segs[passed].to);
+            counter.set(counter.n - 1, now);
+            if (opts.onPass) opts.onPass(segs[passed].to);
+            passed++;
           }
-          // トレイル：速く走っているほど、たくさん浮かぶ。煙突からは柔らかな白い蒸気、車体のうしろからは真鍮の光の粒
-          fxAcc += dt * (0.4 + k);
-          if (fxAcc > 120) {
-            fxAcc = 0;
-            const [x, y] = chimneyAt(p1);
-            YT.Craft.spawnTrail(fx, x, y, undefined, 0.75, dir);
-            if (k > 0.25) steamPuff(x, y, dir);
-            const p2 = pointAt(pose.segs, d - GAP - 18 * trainK);
-            goldDust(p2.x, p2.y);
-            // 走っている区間の地域の演出（湯けむり・噴煙・カモメ…）を、列車のまわりに少しずつ
-            if (opts.onFx) opts.onFx(p1.x, p1.y, segs.find((sg) => d <= sg.start + sg.len) || segs[segs.length - 1]);
+          // ④ 35ms ごとに、蒸気と真鍮の火の粉を出す
+          if (now - lastEmit >= 35 && p < 1) {
+            lastEmit = now;
+            emit(p1, dir, k, now);
           }
-          if (d < end) return requestAnimationFrame(step);
+          lastNow = now;
+          if (p < 1) return requestAnimationFrame(step);
+          // 止まった：最後の区間にも金の光、ブレーキの沈み込み（rotate 2.5deg → 0）
+          glowSeg(segs[segs.length - 1], now);
+          if (!opts.junction) {
+            popStation(segs[segs.length - 1].to);
+            counter.set(0, now);
+          } else counter.set(counter.n - 1, now);
           pose.running = false;
           carG1.classList.remove('is-running');
           carG2.classList.remove('is-running');
-          if (badge) badge.arrive();
-          setTimeout(() => [...layers.trail.children].forEach((c) => c.classList.add('is-fading')), 200);
+          const dive0 = now;
+          const diveStep = (t) => {
+            const q = Math.min(1, (t - dive0) / 460);
+            const tilt = 2.5 * (1 - easeOut(q)) * (q < 0.18 ? q / 0.18 : 1); // さっと沈んで、ゆっくり戻る
+            setPose(pose.d, t, false, dir * tilt);
+            counter.place(pointAt(pose.segs, pose.d), upp(), t);
+            if (q < 1) requestAnimationFrame(diveStep);
+            else {
+              setTimeout(() => {
+                counter.g.classList.add('is-gone');
+                setTimeout(() => counter.g.remove(), 700);
+              }, opts.junction ? 200 : 900);
+            }
+          };
+          if (!reduce) requestAnimationFrame(diveStep);
+          else counter.g.remove();
           resolve();
         };
         requestAnimationFrame(step);
       });
-    },
-
-    // オートナビの進路の札：分かれ道の駅から、選ばれている路線の少し先に真鍮の矢印を置く。
-    // items = [{ at（分かれ道の駅）, to（進む隣の駅）, locked（人が選んだ進路か）, alt（ほかに選べる数） }]。タップで onTap(at)
-    setNav(items, onTap) {
-      layers.nav.innerHTML = '';
-      navItems.length = 0;
-      (items || []).forEach((it) => {
-        const [x, y] = Map.along(it.at, it.to, 30);
-        const [ax, ay] = [D.byId[it.at].x, D.byId[it.at].y];
-        const deg = (Math.atan2(y - ay, x - ax) * 180) / Math.PI;
-        const g = el('g', { class: `nav-arrow${it.locked ? ' is-locked' : ''}`, role: 'button', tabindex: '0', 'data-nav': it.at,
-          'aria-label': `${D.byId[it.at].name}駅の分かれ道：${D.byId[it.to].name}方面へ進む（タップで進路を切り替え）` }, layers.nav);
-        const inner = el('g', { transform: `rotate(${deg.toFixed(1)})` }, g);
-        el('circle', { r: 11, class: 'nav-hit' }, inner);
-        el('circle', { r: 8.2, class: 'nav-disc' }, inner);
-        el('circle', { r: 6.6, class: 'nav-ring' }, inner);
-        el('path', { d: 'M-3.2,-3.6 L1.8,0 L-3.2,3.6', class: 'nav-chev' }, inner);
-        if (it.locked) el('circle', { r: 1.5, cx: -8.2, class: 'nav-pin' }, inner);
-        const tap = (e) => {
-          e.stopPropagation();
-          if (onTap) onTap(it.at);
-        };
-        g.addEventListener('click', tap);
-        g.addEventListener('keydown', (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), tap(e)));
-        navItems.push({ el: g, x, y });
-      });
-      placeNav();
     },
 
     // マイ旅しおりのモデルコースを盤面に重ねる。legs = [[駅ID, ...], ...]（行程ごとの経路）、stops = 巡る順の駅ID
@@ -1209,7 +1250,7 @@
       });
     },
 
-    // 王座奪還：自分の真鍮の王冠とアバターが、上から駅にすっと降りてくる
+    // 王座奪還：自分の真鍮の王冠と旅の紋章が、上から駅にすっと降りてくる
     dropCrown(id, avatarMarkup) {
       const g = nodes[id];
       if (!g) return;

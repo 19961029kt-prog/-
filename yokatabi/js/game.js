@@ -519,7 +519,7 @@
         },
       }
     );
-    // 自分の王冠とアバターが、地図の駅にドスン！
+    // 自分の王冠と旅の紋章が、地図の駅にドスン！
     YT.Map.dropCrown(id, YT.Craft.avatarSvg(undefined, { crop: true, id: 'ts-me' }));
     setTimeout(() => YT.Sound.thud(), reduce() ? 0 : 700);
     await wait(1300);

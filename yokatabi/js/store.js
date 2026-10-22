@@ -53,6 +53,7 @@
       // 停車した駅で「ある旅人から届いた記憶」を受け取った便り { 旅人のポストカードID: ISO日時 }（1通につき1回）
       memories: {},
       prefaceSeen: false, // 初回の表紙（巻頭言）をひらいたか
+      lang: 'ja',         // 表示の言語（'ja'／'en'。画面の枠と駅名だけ切り替える）
     };
   }
 
@@ -283,6 +284,10 @@
     memorySeen: (cardId) => !!state.memories[cardId],
     markMemory(cardId) {
       state.memories[cardId] = new Date().toISOString();
+      save();
+    },
+    setLang(v) {
+      state.lang = v === 'en' ? 'en' : 'ja';
       save();
     },
     markPrefaceSeen() {

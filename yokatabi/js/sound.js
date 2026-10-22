@@ -231,6 +231,19 @@
       hit(0.05, { type: 'highpass', freq: 3200, q: 0.7, gain: 0.05, dur: 0.75, attack: 0.03, curve: 2 });
       note(70, 0.02, 0.3, { type: 'sine', gain: 0.12, attack: 0.004, release: 0.1, slideTo: 46 });
     }),
+    // 通過駅の「チンッ」：澄んだ高いベル（倍音を少し）
+    passBell: play(() => {
+      bell(96, 0, { gain: 0.11, dur: 0.9, send: 0.35 });
+      bell(103, 0.012, { gain: 0.04, dur: 0.6, send: 0.3 });
+    }),
+    // 分かれ道のポイントが切り替わる「ガシャン！」：重い金具の打撃2つと、レールのきしみ
+    points: play(() => {
+      hit(0, { type: 'lowpass', freq: 420, q: 1.4, gain: 0.32, dur: 0.1 });
+      hit(0, { freq: 2200, q: 6, gain: 0.12, dur: 0.05 });
+      hit(0.07, { type: 'lowpass', freq: 300, q: 1.2, gain: 0.26, dur: 0.12 });
+      hit(0.07, { freq: 3100, q: 9, gain: 0.07, dur: 0.08 });
+      note(hz(40), 0, 0.22, { type: 'sine', gain: 0.14, attack: 0.003, release: 0.08, slideTo: 32 });
+    }),
     // 駅名標が下りてきて止まる「カシャン」：金具の高い2打と、板の小さな響き
     clack: play(() => {
       hit(0, { freq: 2600, q: 9, gain: 0.12, dur: 0.035 });

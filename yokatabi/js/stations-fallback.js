@@ -430,94 +430,94 @@ window.YOKATABI_FALLBACK_DATA = {
       "avatar": [
         {
           "slot": "hat",
-          "label": "帽子・頭",
-          "icon": "hat",
+          "label": "鞄の札",
+          "icon": "ticket",
           "items": [
             {
               "id": "straw",
-              "name": "旅の麦わら帽子",
+              "name": "麻ひもの荷札",
               "price": 0,
-              "desc": "日ざしをやさしくさえぎる、旅のはじまりの帽子。"
+              "desc": "生成りの厚紙に麻ひも。行き先を書きこむ、旅のはじまりの荷札。"
             },
             {
               "id": "conductor",
-              "name": "レトロ車掌キャップ",
+              "name": "真鍮の鞄札",
               "price": 600,
-              "desc": "つばの光る、昔ながらの車掌さんの帽子。"
+              "desc": "角の丸い真鍮の板に、細い彫りの枠。小さな鎖で持ち手に下げる。"
             },
             {
               "id": "tenugui",
-              "name": "温泉手ぬぐい乗せ",
+              "name": "手ぬぐいの結び",
               "price": 1500,
-              "desc": "頭にちょこんと手ぬぐい。湯上がりの気分。"
+              "desc": "藍の縞の手ぬぐいを、持ち手にきゅっとひと結び。湯上がりの気分。"
             },
             {
               "id": "kinghat",
-              "name": "黄金の鉄道王ハット",
+              "name": "金の王冠の札",
               "price": 5000,
-              "desc": "金の帯をしめたシルクハット。九州じゅうのレールを見渡す帽子。"
+              "desc": "金箔の荷札に王冠の透かし。九州じゅうのレールを渡り歩いた旅人のしるし。"
             }
           ]
         },
         {
           "slot": "outfit",
-          "label": "衣装",
-          "icon": "coat",
+          "label": "鞄の革",
+          "icon": "suitcase",
           "items": [
             {
               "id": "canvas",
-              "name": "キャンバスの旅リュック姿",
+              "name": "生成りの帆布",
               "price": 0,
-              "desc": "生成りのシャツに帆布のリュック。どこへでも歩いていける。"
+              "desc": "生成りの帆布に焦げ茶の革ベルト。どこへでも連れていける、旅のはじまりの鞄。"
             },
             {
               "id": "blazer",
-              "name": "観光列車の深緑ブレザー制服",
+              "name": "深緑の革",
               "price": 2000,
-              "desc": "金ボタンの深緑ブレザー。観光列車のアテンダント気分。"
+              "desc": "深緑に染めた革に、金糸のステッチ。観光列車の車内に似合う、落ち着いた鞄。"
             },
             {
               "id": "yukata",
-              "name": "温泉街の羽織＆浴衣",
+              "name": "藍染めの革",
               "price": 3500,
-              "desc": "藍の浴衣に羽織をはおって、湯の町をそぞろ歩き。"
+              "desc": "藍に染めた革に、白い刺し子のステッチ。湯の町のそぞろ歩きのお供に。"
             },
             {
               "id": "tuxedo",
-              "name": "クルーズトレインのタキシード",
+              "name": "金縁の漆黒の革",
               "price": 8000,
-              "desc": "蝶ネクタイのタキシード。特別な列車の晩餐会へ。"
+              "desc": "漆黒の革を、金の細い線で縁取って。特別な列車の晩餐会の夜の鞄。"
             }
           ]
         },
         {
           "slot": "buddy",
-          "label": "旅の相棒",
-          "icon": "paw",
+          "label": "鞄の根付",
+          "icon": "link",
           "items": [
             {
               "id": "none",
               "name": "なし",
               "price": 0,
-              "desc": "ひとり旅も、また気楽。"
+              "desc": "根付はつけずに、すっきりと。"
             },
             {
               "id": "camera",
-              "name": "二眼レフカメラ",
+              "name": "二眼レフカメラの根付",
               "price": 400,
-              "desc": "上からのぞく、四角いファインダーのクラシックカメラ。"
+              "desc": "レンズが上下にふたつ並んだ、小さなクラシックカメラの根付。"
             },
             {
               "id": "bento",
-              "name": "曲げわっぱ駅弁",
+              "name": "曲げわっぱの根付",
               "price": 1200,
-              "desc": "杉の香りの曲げわっぱに、ふっくらご飯と旅のおかず。"
+              "desc": "杉の曲げわっぱに茜の掛け紐。駅弁の思い出を、鞄に下げて。"
             },
             {
               "id": "cat",
-              "name": "三毛猫の見習い駅長",
+              "name": "三毛猫の見習い駅長の根付",
               "price": 4000,
-              "desc": "小さな駅長帽をかぶった三毛猫。旅のお供にどこへでもついてくる。"
+              "desc": "小さな駅長帽をかぶった三毛猫のシルエット。旅のお供にどこへでもついてくる。"
             }
           ]
         }
@@ -947,6 +947,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "hakata",
       "name": "博多",
       "kana": "はかた",
+      "en": "Hakata",
       "prefecture": "福岡",
       "stationTier": "hub",
       "x": 341.7,
@@ -1009,6 +1010,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "mojiko",
       "name": "門司港",
       "kana": "もじこう",
+      "en": "Mojikō",
       "prefecture": "福岡",
       "stationTier": "hub",
       "x": 454.5,
@@ -1066,6 +1068,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "dazaifu",
       "name": "太宰府",
       "kana": "だざいふ",
+      "en": "Dazaifu",
       "prefecture": "福岡",
       "stationTier": "local",
       "x": 364.8,
@@ -1123,6 +1126,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "saga",
       "name": "佐賀",
       "kana": "さが",
+      "en": "Saga",
       "prefecture": "佐賀",
       "stationTier": "hub",
       "x": 316.1,
@@ -1183,6 +1187,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "karatsu",
       "name": "唐津",
       "kana": "からつ",
+      "en": "Karatsu",
       "prefecture": "佐賀",
       "stationTier": "tourist",
       "x": 247.4,
@@ -1241,6 +1246,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "ureshino-onsen",
       "name": "嬉野温泉",
       "kana": "うれしのおんせん",
+      "en": "Ureshino Onsen",
       "prefecture": "佐賀",
       "stationTier": "tourist",
       "x": 253.8,
@@ -1298,6 +1304,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "arita",
       "name": "有田",
       "kana": "ありた",
+      "en": "Arita",
       "prefecture": "佐賀",
       "stationTier": "local",
       "x": 229.4,
@@ -1356,6 +1363,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "nagasaki",
       "name": "長崎",
       "kana": "ながさき",
+      "en": "Nagasaki",
       "prefecture": "長崎",
       "stationTier": "hub",
       "x": 226.7,
@@ -1415,6 +1423,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "huis-ten-bosch",
       "name": "ハウステンボス",
       "kana": "はうすてんぼす",
+      "en": "Huis Ten Bosch",
       "prefecture": "長崎",
       "stationTier": "tourist",
       "x": 211.6,
@@ -1472,6 +1481,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "shimabara",
       "name": "島原",
       "kana": "しまばら",
+      "en": "Shimabara",
       "prefecture": "長崎",
       "stationTier": "local",
       "x": 331.3,
@@ -1529,6 +1539,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "kumamoto",
       "name": "熊本",
       "kana": "くまもと",
+      "en": "Kumamoto",
       "prefecture": "熊本",
       "stationTier": "hub",
       "x": 397.7,
@@ -1591,6 +1602,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "aso",
       "name": "阿蘇",
       "kana": "あそ",
+      "en": "Aso",
       "prefecture": "熊本",
       "stationTier": "tourist",
       "x": 479.2,
@@ -1650,6 +1662,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "kurokawa-onsen",
       "name": "黒川温泉",
       "kana": "くろかわおんせん",
+      "en": "Kurokawa Onsen",
       "prefecture": "熊本",
       "stationTier": "tourist",
       "x": 491.9,
@@ -1708,6 +1721,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "hitoyoshi",
       "name": "人吉",
       "kana": "ひとよし",
+      "en": "Hitoyoshi",
       "prefecture": "熊本",
       "stationTier": "local",
       "x": 411.2,
@@ -1765,6 +1779,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "misumi",
       "name": "三角",
       "kana": "みすみ",
+      "en": "Misumi",
       "prefecture": "熊本",
       "stationTier": "local",
       "x": 352,
@@ -1822,6 +1837,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "beppu",
       "name": "別府",
       "kana": "べっぷ",
+      "en": "Beppu",
       "prefecture": "大分",
       "stationTier": "tourist",
       "x": 566.9,
@@ -1882,6 +1898,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "yufuin",
       "name": "由布院",
       "kana": "ゆふいん",
+      "en": "Yufuin",
       "prefecture": "大分",
       "stationTier": "tourist",
       "x": 536.6,
@@ -1940,6 +1957,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "hita",
       "name": "日田",
       "kana": "ひた",
+      "en": "Hita",
       "prefecture": "大分",
       "stationTier": "local",
       "x": 449.8,
@@ -1997,6 +2015,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "miyazaki",
       "name": "宮崎",
       "kana": "みやざき",
+      "en": "Miyazaki",
       "prefecture": "宮崎",
       "stationTier": "hub",
       "x": 552.6,
@@ -2057,6 +2076,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "takachiho",
       "name": "高千穂",
       "kana": "たかちほ",
+      "en": "Takachiho",
       "prefecture": "宮崎",
       "stationTier": "tourist",
       "x": 526.7,
@@ -2115,6 +2135,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "aoshima",
       "name": "青島",
       "kana": "あおしま",
+      "en": "Aoshima",
       "prefecture": "宮崎",
       "stationTier": "local",
       "x": 560,
@@ -2171,6 +2192,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "kagoshima-chuo",
       "name": "鹿児島中央",
       "kana": "かごしまちゅうおう",
+      "en": "Kagoshima-Chūō",
       "prefecture": "鹿児島",
       "stationTier": "hub",
       "x": 367,
@@ -2232,6 +2254,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "kirishima-onsen",
       "name": "霧島温泉",
       "kana": "きりしまおんせん",
+      "en": "Kirishima Onsen",
       "prefecture": "鹿児島",
       "stationTier": "local",
       "x": 407.2,
@@ -2292,6 +2315,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "sakurajima",
       "name": "桜島",
       "kana": "さくらじま",
+      "en": "Sakurajima",
       "prefecture": "鹿児島",
       "stationTier": "local",
       "x": 378.5,
@@ -2350,6 +2374,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "ibusuki",
       "name": "指宿",
       "kana": "いぶすき",
+      "en": "Ibusuki",
       "prefecture": "鹿児島",
       "stationTier": "tourist",
       "x": 388,
@@ -2407,6 +2432,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "id": "yakushima",
       "name": "屋久島",
       "kana": "やくしま",
+      "en": "Yakushima",
       "prefecture": "鹿児島",
       "stationTier": "tourist",
       "x": 373.2,

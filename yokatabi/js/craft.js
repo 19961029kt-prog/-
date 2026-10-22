@@ -1,5 +1,5 @@
-// 鉄道クラフト工房と旅人アバター：パーツの一覧（stations.json の meta.craft）・クラフト資金・SVG の絵。
-// 列車もアバターも、絵文字や画像ではなくこのファイルの SVG で描く（マップの列車トークン・ガレージ・ヘッダー・証明カードで共用）。
+// 鉄道クラフト工房と旅の紋章：パーツの一覧（stations.json の meta.craft）・クラフト資金・SVG の絵。
+// 列車も旅の紋章（革の旅行鞄と懐中時計。関数名は旧名の avatarSvg のまま）も、絵文字や画像ではなくこのファイルの SVG で描く（マップの列車トークン・ガレージ・ヘッダー・証明カードで共用）。
 // 実在の列車の名前・ロゴ・紋章は使わない。色づかいだけを九州の観光列車の雰囲気から借り、形と紋章はオリジナル。
 (function () {
   'use strict';
@@ -63,12 +63,9 @@
   const INK = '#2C2523'; // 万年筆のインク
   const INK2 = '#5A4E45';
   const INK3 = '#8A7D70';
-  const PAPER = '#FBF8F2';
-  const PAPER2 = '#F3ECE1';
-  const PAPER3 = '#E9DFCF';
   const GOLD = '#C59B27'; // 細い金線
   const BRASS = '#B8860B';
-  const AKANE = '#A8382B'; // アバターの差し色はこの1色だけ
+  const AKANE = '#A8382B'; // 茜：紋章の札・根付の組紐の差し色
   // 同じ絵がひとつのページに何枚も並ぶ（ヘッダー・ランキング・サムネイル）ので、clipPath の id は呼ぶたびに新しくする
   let seq = 0;
   const uid = (p) => `${String(p).replace(/[^\w-]/g, '')}-${(++seq).toString(36)}`;
@@ -385,192 +382,201 @@
     setTimeout(() => g.remove(), 1700);
   }
 
-  // ---------- 旅人アバター ----------
-  // 万年筆のインクの線画のポートレート（胸から上）。インクの濃淡とハッチングに、差し色は茜の1色だけ。
-  // viewBox 0 0 120 140。crop: true でヘッダー用に顔まわり（18 8 84 84）だけを切り出す。
-  // ランキングの小さな丸（約26px）でも見分けられるよう、髪・帽子はインクの塊、顔の輪郭は太め（1.7）にする。
-  const FACE = 'M60,27 C74.5,27 83.5,37.5 83,52.5 C82.5,66.5 73.5,78.5 60,79 C46.5,78.5 37.5,66.5 37,52.5 C36.5,37.5 45.5,27 60,27 Z';
-  function avatarSvg(eq = equipped(), { crop = false, id = 'av' } = {}) {
-    const vb = crop ? '18 8 84 84' : '0 0 120 140';
-    return `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" class="avatar-svg" aria-hidden="true" stroke-linecap="round" stroke-linejoin="round">
-      ${outfit(eq.outfit, id)}
-      ${head(id)}
-      ${hat(eq.hat, id)}
-      ${crop ? '' : buddy(eq.buddy, id)}
-    </svg>`;
-  }
-  function head(id) {
-    return `<path d="M53,75 V89 Q60,93 67,89 V75" fill="${PAPER}" stroke="${INK}" stroke-width="1.3"/>
-      ${hatch(`${id}-nk`, 'M53,76 H67 V86 Q60,82 53,86 Z', { step: 1.6, angle: 20, w: 0.4, op: 0.7 })}
-      <path d="M37.6,50 C33,49 32.4,57 35.4,60.4 C36.6,61.8 38.2,62 39,61" fill="${PAPER}" stroke="${INK}" stroke-width="1.2"/>
-      <path d="M82.4,50 C87,49 87.6,57 84.6,60.4 C83.4,61.8 81.8,62 81,61" fill="${PAPER}" stroke="${INK}" stroke-width="1.2"/>
-      <path d="${FACE}" fill="${PAPER}" stroke="${INK}" stroke-width="1.7"/>
-      ${hatch(`${id}-ch`, 'M74,58 C79,58 81.6,62 80.4,67 C78,72 74,75 70,76.6 C74,70 75,64 74,58 Z', { step: 1.5, angle: 60, w: 0.35, op: 0.55 })}
-      <path d="M37.2,50 C35.4,33 46,23.6 60,23.6 C75,23.6 85,33.4 82.8,50 C81,43 77,38.4 70.5,36.4 C64,41.4 50,41 42.4,43.8 C40,45.6 38.4,47.6 37.2,50 Z" fill="${INK}"/>
-      <path d="M45,32 C51,27.6 60,26.6 67,28.4 M47.4,36.4 C54,32.6 62,32 68.6,33.6 M72,30.6 C76,32.6 79,36 80.4,40" fill="none" stroke="${PAPER}" stroke-width=".45" opacity=".7"/>
-      <path d="M43.4,49.2 Q48,46.4 53,48.4 M67,48.4 Q72,46.4 76.6,49.2" fill="none" stroke="${INK}" stroke-width="1.3"/>
-      <path d="M44.2,55.6 Q48,52.8 52,55.4 M68,55.4 Q72,52.8 75.8,55.6" fill="none" stroke="${INK}" stroke-width="1"/>
-      <circle cx="48.2" cy="56.6" r="1.7" fill="${INK}"/><circle cx="71.8" cy="56.6" r="1.7" fill="${INK}"/>
-      <path d="M60.4,56 L58.4,64 Q59.6,65.6 62.4,64.6" fill="none" stroke="${INK}" stroke-width=".9"/>
-      <path d="M54.6,70 Q60,72.8 65.4,70" fill="none" stroke="${INK}" stroke-width="1.15"/>
-      <path d="M57.6,73.6 Q60,74.6 62.4,73.6" fill="none" stroke="${INK}" stroke-width=".55"/>`;
+  // ---------- 旅の紋章（革の旅行鞄と真鍮の懐中時計） ----------
+  // 人の顔や体は描かない（2026年10月の依頼で、旅人の肖像をやめて紋章にした）。
+  // 真鍮の細い二重線の丸の中に、革のトランク（ベルト・留め金・持ち手・角の金具）と、前に重なる懐中時計（文字盤・針・竜頭・鎖）。
+  // 装備スロットの意味：outfit＝鞄の革／hat＝鞄の札（タグ）／buddy＝鞄の根付。id・価格・保存データの形は着せ替えの頃のまま。
+  // 塗りはフラット（グラデーションは使わない）。色は革の色と真鍮・生成り・インクに絞る。
+  // viewBox は 0 0 120 140（丸の中心 60,64・半径52、下に真鍮のリボン）。crop: true は丸だけを切り出し（4 8 112 112）、
+  // ランキングの約24pxの丸でも鞄と時計の形がわかるよう、縫い目・目盛り・ビーズ・文字の線を省いて、輪とふちの線を太くする。
+  const GOLD_DK = '#8A6A12'; // 真鍮の陰の線（金具・時計の縁）
+  const IVORY = '#FAF6F0';
+  const EC = { x: 60, y: 64, r: 52, r2: 48.5 }; // 紋章の丸
+  // 鞄の革：body 胴・lid ふた・belt ベルト・line ふちの線・stitch 縫い目（tuxedo だけ、ふちとふたの継ぎ目を金で縁取る）
+  const LEATHER = {
+    canvas: { body: '#E6DAC0', lid: '#D9CAA8', belt: '#7A5235', line: '#5A4E45', stitch: '#8A7D70', so: 0.9 },
+    blazer: { body: '#2C5142', lid: '#234236', belt: '#4A3525', line: '#16291F', stitch: GOLD, so: 0.75 },
+    yukata: { body: '#2E4A6E', lid: '#253D5D', belt: '#4A3525', line: '#18263A', stitch: '#F3ECE1', so: 0.7 },
+    tuxedo: { body: '#1E1A18', lid: '#2A2420', belt: '#3A322B', line: GOLD, stitch: GOLD, so: 0.85, gilt: true },
+  };
+  const leather = (o) => LEATHER[o] || LEATHER.canvas;
+  // トランクの寸法（紋章の座標）。札は持ち手の左の金具に、根付は底の真鍮の環に、時計の鎖は持ち手の右の金具につなぐ。
+  // 持ち手と札で上に重さが寄るので、胴は丸の中心より少し下に置く
+  const TK = { x0: 22, x1: 90, y0: 44, y1: 86, lid: 56, hx: 56 };
+  const BELTS = [33, 74]; // ベルトの左の端（幅5）
+
+  // 革のトランク。detail＝false で縫い目・ベルトの穴・鍵穴を省く
+  function trunk(o, detail = true) {
+    const p = leather(o);
+    const { x0, x1, y0, y1, lid, hx } = TK;
+    const w = x1 - x0, h = y1 - y0;
+    const sw = detail ? 1 : 1.8;
+    // 角の金具：L字に回りこむ真鍮の当て金（丸い鋲を1つ）
+    const corner = (cx, cy, sx, sy) => `<path d="M${cx},${cy + sy * 7} V${cy + sy * 2.2} Q${cx},${cy} ${cx + sx * 2.2},${cy} H${cx + sx * 7} L${cx + sx * 7},${cy + sy * 2.4} H${cx + sx * 2.4} V${cy + sy * 7} Z" fill="${GOLD}" stroke="${GOLD_DK}" stroke-width=".5"/>${detail ? `<circle cx="${cx + sx * 3.6}" cy="${cy + sy * 3.6}" r=".7" fill="${GOLD_DK}"/>` : ''}`;
+    const belt = (bx) => `<rect x="${bx}" y="${y0}" width="5" height="${h}" fill="${p.belt}"/>
+      <path d="M${bx},${y0} V${y1} M${bx + 5},${y0} V${y1}" stroke="${p.gilt ? GOLD : p.line}" stroke-width=".5" opacity=".8"/>
+      <rect x="${bx - 1.2}" y="${lid + 3}" width="7.4" height="6" rx=".6" fill="none" stroke="${GOLD}" stroke-width="${detail ? 1.1 : 1.6}"/>
+      ${detail ? `<path d="M${bx + 2.5},${lid + 3.6} V${lid + 8.4}" stroke="${GOLD}" stroke-width=".7"/>${[0, 1, 2].map((k) => `<circle cx="${bx + 2.5}" cy="${lid + 14 + k * 4}" r=".55" fill="${p.line === GOLD ? '#14110F' : p.line}" opacity=".8"/>`).join('')}` : ''}`;
+    return `<g class="em-trunk">
+      <path d="M${hx - 8},${y0 + 0.5} V${y0 - 3.6} Q${hx - 8},${y0 - 9} ${hx - 2.6},${y0 - 9} H${hx + 2.6} Q${hx + 8},${y0 - 9} ${hx + 8},${y0 - 3.6} V${y0 + 0.5}" fill="none" stroke="${p.belt}" stroke-width="3"/>
+      ${detail ? `<path d="M${hx - 6.2},${y0 - 4} Q${hx - 6.2},${y0 - 7.4} ${hx - 2.6},${y0 - 7.4} H${hx + 2.6} Q${hx + 6.2},${y0 - 7.4} ${hx + 6.2},${y0 - 4}" fill="none" stroke="${p.gilt ? GOLD : IVORY}" stroke-width=".35" opacity=".55"/>` : ''}
+      <rect x="${hx - 10.4}" y="${y0 - 2.2}" width="4.6" height="2.8" fill="${GOLD}" stroke="${GOLD_DK}" stroke-width=".5"/><rect x="${hx + 5.8}" y="${y0 - 2.2}" width="4.6" height="2.8" fill="${GOLD}" stroke="${GOLD_DK}" stroke-width=".5"/>
+      <rect x="${x0}" y="${y0}" width="${w}" height="${h}" rx="2.4" fill="${p.body}"/>
+      <path d="M${x0},${lid} V${y0 + 2.4} Q${x0},${y0} ${x0 + 2.4},${y0} H${x1 - 2.4} Q${x1},${y0} ${x1},${y0 + 2.4} V${lid} Z" fill="${p.lid}"/>
+      ${detail ? `<rect x="${x0 + 2.2}" y="${y0 + 2.2}" width="${w - 4.4}" height="${lid - y0 - 4.4}" rx="1" fill="none" stroke="${p.stitch}" stroke-width=".45" stroke-dasharray="1.4 1" opacity="${p.so}"/>
+      <rect x="${x0 + 2.2}" y="${lid + 2.2}" width="${w - 4.4}" height="${y1 - lid - 4.4}" rx="1" fill="none" stroke="${p.stitch}" stroke-width=".45" stroke-dasharray="1.4 1" opacity="${p.so}"/>` : ''}
+      ${BELTS.map(belt).join('')}
+      <path d="M${x0},${lid} H${x1}" stroke="${p.line}" stroke-width="${p.gilt ? 0.9 : 0.8}"/>
+      <rect x="${x0}" y="${y0}" width="${w}" height="${h}" rx="2.4" fill="none" stroke="${p.line}" stroke-width="${sw}"/>
+      ${corner(x0, y0, 1, 1)}${corner(x1, y0, -1, 1)}${corner(x0, y1, 1, -1)}${corner(x1, y1, -1, -1)}
+      <rect x="${hx - 3.6}" y="${lid - 3.4}" width="7.2" height="7.4" rx=".8" fill="${GOLD}" stroke="${GOLD_DK}" stroke-width=".55"/>
+      ${detail ? `<circle cx="${hx}" cy="${lid + 0.6}" r=".9" fill="${GOLD_DK}"/><path d="M${hx},${lid + 1} V${lid + 2.6}" stroke="${GOLD_DK}" stroke-width=".7"/>` : ''}
+    </g>`;
   }
 
-  // 衣装：胴の形はどれも同じで、襟・生地の線・ハッチングで見分ける
-  const TORSO = 'M19,140 C20,112 29,97 47,90 L60,95 L73,90 C91,97 100,112 101,140 Z';
-  function outfit(o, id) {
-    if (o === 'blazer') {
-      // 深緑ブレザー：斜めの細いハッチングで中間の調子に。襟の折り返し・茜のタイ・金ボタンは白抜きの丸
-      return `<path d="${TORSO}" fill="${PAPER3}" stroke="${INK}" stroke-width="1.4"/>
-        ${hatch(`${id}-bz`, TORSO, { step: 1.7, angle: 55, w: 0.5, box: [0, 80, 120, 70] })}
-        <path d="M50,90.5 L60,95 L70,90.5 L66,104 L60,110 L54,104 Z" fill="${PAPER}" stroke="${INK}" stroke-width=".9"/>
-        <path d="M57.6,96 L60,99 L62.4,96 L60,94.6 Z M58.6,99 L61.4,99 L62.4,110 L60,113 L57.6,110 Z" fill="${AKANE}" stroke="${INK}" stroke-width=".5"/>
-        <path d="M47,90 L41,96 L47,100 L44,104 L56,124 L60,110 L54,104 L50,90.5 Z" fill="${PAPER}" stroke="${INK}" stroke-width="1"/>
-        <path d="M73,90 L79,96 L73,100 L76,104 L64,124 L60,110 L66,104 L70,90.5 Z" fill="${PAPER}" stroke="${INK}" stroke-width="1"/>
-        ${hatch(`${id}-bl`, 'M47,90 L41,96 L47,100 L44,104 L56,124 L60,110 L54,104 L50,90.5 Z M73,90 L79,96 L73,100 L76,104 L64,124 L60,110 L66,104 L70,90.5 Z', { step: 1.3, angle: -35, w: 0.45, box: [30, 85, 60, 45] })}
-        <path d="M60,110 V140" stroke="${INK}" stroke-width=".9"/>
-        ${[124, 133].map((y) => `<circle cx="63.6" cy="${y}" r="1.8" fill="${PAPER}" stroke="${INK}" stroke-width=".8"/>`).join('')}
-        <path d="M74,111 L84,109.6" stroke="${INK}" stroke-width="1.1"/>
-        <path d="M80,105.6 L81.6,103 L83.2,105.6 L81.6,108 Z" fill="${PAPER}" stroke="${INK}" stroke-width=".6"/>`;
-    }
-    if (o === 'yukata') {
-      // 浴衣に羽織：右前（見る側から、右肩から左下へ上前の襟）。浴衣は井桁の細い柄、羽織は濃いハッチング、帯は茜
-      const haoriL = 'M19,140 C20,112 29,97 47,90 L51,92 L44,140 Z';
-      const haoriR = 'M101,140 C100,112 91,97 73,90 L69,92 L76,140 Z';
-      return `<path d="${TORSO}" fill="${PAPER}" stroke="${INK}" stroke-width="1.4"/>
-        ${[[50, 112], [62, 104], [56, 122], [68, 120], [62, 134], [48, 130], [72, 132]].map(([x, y]) => `<path d="M${x - 2.4},${y - 1} h4.8 M${x - 2.4},${y + 1} h4.8 M${x - 1},${y - 2.4} v4.8 M${x + 1},${y - 2.4} v4.8" stroke="${INK2}" stroke-width=".45"/>`).join('')}
-        <path d="M50,90.6 L60,106 L60,95 Z" fill="${PAPER2}" stroke="${INK}" stroke-width=".8"/>
-        <path d="M70,90.6 L51,126" fill="none" stroke="${INK}" stroke-width="1.6"/><path d="M66.4,91.4 L49,124" fill="none" stroke="${INK}" stroke-width=".6"/>
-        <path d="M44,124 L76,124 L76.6,132 L43.4,132 Z" fill="${AKANE}" stroke="${INK}" stroke-width=".8"/>
-        <path d="M44,128 H76.4" stroke="${PAPER}" stroke-width=".4" opacity=".7"/>
-        <path d="${haoriL}" fill="${INK2}" stroke="${INK}" stroke-width="1.2"/><path d="${haoriR}" fill="${INK2}" stroke="${INK}" stroke-width="1.2"/>
-        ${hatch(`${id}-hl`, haoriL, { step: 1.6, angle: 75, color: INK, w: 0.5, box: [15, 85, 40, 60] })}${hatch(`${id}-hr`, haoriR, { step: 1.6, angle: 105, color: INK, w: 0.5, box: [65, 85, 40, 60] })}
-        <path d="M51,92 L44,140 M69,92 L76,140" stroke="${PAPER}" stroke-width=".6"/>
-        <circle cx="47" cy="110" r="1.5" fill="${PAPER}" stroke="${INK}" stroke-width=".6"/><circle cx="73" cy="110" r="1.5" fill="${PAPER}" stroke="${INK}" stroke-width=".6"/>
-        <path d="M48.4,110.4 Q60,115 71.6,110.4" fill="none" stroke="${INK}" stroke-width=".7"/>`;
-    }
-    if (o === 'tuxedo') {
-      // タキシード：インクの黒、拝絹の襟は白い細線のつやで。胸のひだ・飾りボタン・茜の蝶ネクタイ
-      const lapL = 'M47,90 L42,97 L56,126 L60,113 L51,91.6 Z';
-      const lapR = 'M73,90 L78,97 L64,126 L60,113 L69,91.6 Z';
-      return `<path d="${TORSO}" fill="${INK}" stroke="${INK}" stroke-width="1.4"/>
-        <path d="M51,91.6 L60,95 L69,91.6 L60,122 Z" fill="${PAPER}" stroke="${INK}" stroke-width=".8"/>
-        ${[-3, 3].map((d) => `<path d="M${60 + d},100 L${60 + d * 0.5},115" stroke="${INK3}" stroke-width=".4"/>`).join('')}
-        ${[103, 109].map((y) => `<circle cx="60" cy="${y}" r="1" fill="${INK}"/>`).join('')}
-        <path d="${lapL}" fill="#3A322B" stroke="${PAPER}" stroke-width=".5"/><path d="${lapR}" fill="#3A322B" stroke="${PAPER}" stroke-width=".5"/>
-        <path d="M45.6,96 L56.4,120 M74.4,96 L63.6,120" stroke="${PAPER}" stroke-width=".35" opacity=".6"/>
-        <path d="M52.6,93.2 L59,96.4 L52.6,99.8 Z M67.4,93.2 L61,96.4 L67.4,99.8 Z" fill="${AKANE}" stroke="${INK}" stroke-width=".5"/>
-        <rect x="58.2" y="94.8" width="3.6" height="3.2" rx=".8" fill="${AKANE}" stroke="${INK}" stroke-width=".5"/>
-        <path d="M76,110 L84,108.6 L82.6,112.6 Z" fill="${PAPER}"/>
-        <path d="M60,122 V140" stroke="#3A322B" stroke-width=".8"/>`;
-    }
-    // キャンバスの旅リュック姿（初期）：生成りのシャツの開襟、茜のネッカチーフ、帆布のリュックの肩ひも
-    const strapL = 'M34,101 C37,114 37.6,127 36.4,140 H44 C45.2,127 44.4,113 41.6,98 Z';
-    const strapR = 'M86,101 C83,114 82.4,127 83.6,140 H76 C74.8,127 75.6,113 78.4,98 Z';
-    return `<path d="${TORSO}" fill="${PAPER}" stroke="${INK}" stroke-width="1.4"/>
-      <path d="M52,91.6 L60,104 L68,91.6 Q60,96 52,91.6 Z" fill="${AKANE}" stroke="${INK}" stroke-width=".7"/>
-      <path d="M47,90 L53.6,103 L60,95 M73,90 L66.4,103 L60,95" fill="none" stroke="${INK}" stroke-width="1"/>
-      <path d="M60,104 V140" stroke="${INK}" stroke-width=".6"/>
-      ${[112, 122, 132].map((y) => `<circle cx="61.8" cy="${y}" r=".9" fill="none" stroke="${INK}" stroke-width=".6"/>`).join('')}
-      <path d="M64.6,112 H72.4 V120 H64.6 Z M64.6,114 H72.4" fill="none" stroke="${INK}" stroke-width=".6"/>
-      <path d="M50,118 Q53,124 51,132 M70,126 Q68,132 70,138" fill="none" stroke="${INK3}" stroke-width=".45"/>
-      <path d="${strapL}" fill="${PAPER3}" stroke="${INK}" stroke-width="1"/><path d="${strapR}" fill="${PAPER3}" stroke="${INK}" stroke-width="1"/>
-      ${hatch(`${id}-sl`, strapL, { step: 1.4, angle: 45, w: 0.35, op: 0.8, box: [30, 95, 20, 48] })}${hatch(`${id}-sr`, strapR, { step: 1.4, angle: 135, w: 0.35, op: 0.8, box: [70, 95, 20, 48] })}
-      <rect x="35.6" y="116" width="8" height="5" fill="${PAPER}" stroke="${INK}" stroke-width=".7"/><rect x="76.4" y="116" width="8" height="5" fill="${PAPER}" stroke="${INK}" stroke-width=".7"/>`;
+  // 真鍮の懐中時計（中心 cx,cy・半径 r）。針は10時8分（時計の広告の決まりの、いちばん形の見える角度）
+  function watch(cx, cy, r, detail = true) {
+    const hand = (deg, len, wd) => {
+      const a = ((deg - 90) * Math.PI) / 180;
+      return `<path d="M${cx},${cy} L${n1(cx + Math.cos(a) * len)},${n1(cy + Math.sin(a) * len)}" stroke="${INK}" stroke-width="${wd}" stroke-linecap="round"/>`;
+    };
+    const ticks = detail
+      ? Array.from({ length: 12 }, (_, i) => {
+          const a = (i / 12) * Math.PI * 2, big = i % 3 === 0;
+          const r1 = r * 0.7, r2 = r * (big ? 0.56 : 0.62);
+          return `M${n1(cx + Math.cos(a) * r1)},${n1(cy + Math.sin(a) * r1)}L${n1(cx + Math.cos(a) * r2)},${n1(cy + Math.sin(a) * r2)}`;
+        }).join('')
+      : '';
+    return `<g class="em-watch">
+      <circle cx="${cx}" cy="${n1(cy - r - 3.4)}" r="2.6" fill="none" stroke="${GOLD}" stroke-width="${detail ? 1.3 : 1.8}"/>
+      <rect x="${n1(cx - 2.2)}" y="${n1(cy - r - 1.6)}" width="4.4" height="2.4" rx=".6" fill="${GOLD}" stroke="${GOLD_DK}" stroke-width=".5"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="${GOLD}" stroke="${GOLD_DK}" stroke-width="${detail ? 0.7 : 1.2}"/>
+      <circle cx="${cx}" cy="${cy}" r="${n1(r * 0.8)}" fill="${IVORY}" stroke="${GOLD_DK}" stroke-width=".5"/>
+      ${detail ? `<circle cx="${cx}" cy="${cy}" r="${n1(r * 0.74)}" fill="none" stroke="${INK3}" stroke-width=".3"/><path d="${ticks}" stroke="${INK}" stroke-width=".55" fill="none"/>` : ''}
+      ${hand(300, r * 0.42, detail ? 1.1 : 1.6)}${hand(48, r * 0.6, detail ? 0.75 : 1.2)}
+      <circle cx="${cx}" cy="${cy}" r="${detail ? 0.9 : 1.3}" fill="${INK}"/>
+    </g>`;
   }
+  // 時計の鎖：持ち手の右の金具から竜頭の輪まで、たるんで垂れる真鍮の小さな輪の連なり（点線の丸い端で描く）
+  const chain = (x1, y1, x2, y2, detail = true) => `<path d="M${x1},${y1} C${x1 + 10},${y1 + 4} ${x2 + 7},${y2 - 6} ${x2},${y2}" fill="none" stroke="${GOLD}" stroke-width="${detail ? 1.1 : 1.6}" stroke-dasharray="${detail ? '.1 1.7' : '.1 2.2'}" stroke-linecap="round"/>`;
 
-  function hat(h, id) {
+  // 鞄の札（hat のスロット）。ひもの付け根を原点に、下へ垂れる形（呼ぶ側で傾ける）
+  function tagArt(h, detail = true) {
+    const hole = (fill) => `<circle cx="0" cy="8.6" r="1.7" fill="${fill}" stroke="${GOLD_DK}" stroke-width=".5"/><circle cx="0" cy="8.6" r=".7" fill="#F4EFE6"/>`;
+    const tagPath = 'M-5.4,9 L-2.6,5.6 H2.6 L5.4,9 V24 Q5.4,25 4.4,25 H-4.4 Q-5.4,25 -5.4,24 Z';
     if (h === 'conductor') {
-      // 車掌の制帽：インクの冠に白いつや線、茜のパイピング、白抜きの翼つき車輪の帽章（オリジナルの図柄）
-      return `<path d="M37.6,38.4 C36.4,27 44.6,19.4 60,19.4 C76,19.4 84.6,26 83.4,38 Z" fill="${INK}" stroke="${INK}" stroke-width="1"/>
-        <path d="M44,25.4 C52,22 68,22 77,25.4" fill="none" stroke="${PAPER}" stroke-width=".45" opacity=".7"/>
-        <path d="M37.8,33.4 H83 V38.4 H37.8 Z" fill="#3A322B"/><path d="M37.8,35.6 H83" stroke="${AKANE}" stroke-width="1"/>
-        <path d="M37.4,38.2 C47,44.4 72,44.4 84.2,37.6 C81.4,42.4 70.6,46.4 58.6,46.2 C47.4,46 40.4,42.6 37.4,38.2 Z" fill="${INK}"/>
-        <path d="M44,42.4 C52,44.6 66,44.8 76,42" fill="none" stroke="${PAPER}" stroke-width=".5" opacity=".75"/>
-        <g transform="translate(60 28.6)" fill="none" stroke="${PAPER}" stroke-width=".7">
-          <circle r="2.8"/><path d="M-2.8,0 H2.8 M0,-2.8 V2.8"/>
-          <path d="M-3.4,-.6 C-6,-2.4 -8.6,-2.2 -10.4,-1 M-3.4,.8 C-5.8,-.4 -8,-.2 -9.4,.8 M3.4,-.6 C6,-2.4 8.6,-2.2 10.4,-1 M3.4,.8 C5.8,-.4 8,-.2 9.4,.8"/>
-        </g>`;
+      // 真鍮の札：角を丸めた細長い板に、彫りの細い枠と鋲。小さな輪の鎖で吊る
+      return `<path d="M0,0 V7" stroke="${GOLD}" stroke-width="1" stroke-dasharray=".1 1.5" stroke-linecap="round"/>
+        <rect x="-4.6" y="6" width="9.2" height="19" rx="4.6" fill="${GOLD}" stroke="${GOLD_DK}" stroke-width="${detail ? 0.6 : 1}"/>
+        ${detail ? `<rect x="-3.3" y="11.4" width="6.6" height="11.6" rx="3.3" fill="none" stroke="${GOLD_DK}" stroke-width=".4"/><path d="M-1.8,15.6 H1.8 M-1.8,18 H1.8" stroke="${GOLD_DK}" stroke-width=".45"/>` : ''}
+        <circle cx="0" cy="8.6" r="1.1" fill="#F4EFE6" stroke="${GOLD_DK}" stroke-width=".5"/>`;
     }
     if (h === 'tenugui') {
-      // 手ぬぐい乗せ：たたんだ布の縞（インクの細線と、茜の二本）、右に結び目のはし
-      const cloth = 'M39.4,34 C42,21.6 78,21.6 80.6,34 L78,37.4 C69,31.6 51,31.6 42,37.4 Z';
-      return `<path d="${cloth}" fill="${PAPER}" stroke="${INK}" stroke-width="1.2"/>
-        ${hatch(`${id}-tg`, cloth, { step: 3, angle: 80, color: INK2, w: 0.5, box: [36, 18, 48, 22] })}
-        <path d="M43.6,28.4 C52,24.8 68,24.8 76.4,28.4 M42.2,31 C51,27.4 69,27.4 77.8,31" fill="none" stroke="${AKANE}" stroke-width="1"/>
-        <path d="M78.6,32 L88.6,28.6 L86.6,35.4 Z M79,35 L87.6,40.2 L83,41.4 Z" fill="${PAPER}" stroke="${INK}" stroke-width=".9"/>
-        <path d="M82,31.4 L86,30.4 M82.6,37 L85.6,39" stroke="${INK2}" stroke-width=".5"/>`;
+      // 手ぬぐいの結び：持ち手に結んだ白い木綿の、結び目と二本のはし（藍の細い縞）
+      return `<path d="M-1.2,1.6 C-3.6,7 -5.6,13 -9.4,18.6 L-4.8,20.2 C-2.4,14.4 -0.6,8.6 1.2,2.6 Z" fill="#F6F3EC" stroke="#2E4A6E" stroke-width=".7"/>
+        <path d="M1,1.8 C3,6 4.6,10.6 5.4,15.4 L9.2,13.8 C7.6,9.6 5.2,5.4 2.6,1.2 Z" fill="#F6F3EC" stroke="#2E4A6E" stroke-width=".7"/>
+        ${detail ? '<path d="M-2.2,6 C-4,11 -5.6,14.4 -7.8,18.4 M3.4,5.8 C4.8,8.8 6,11.4 6.8,14.4" fill="none" stroke="#2E4A6E" stroke-width=".55"/><path d="M-9.4,18.6 L-4.8,20.2 M5.4,15.4 L9.2,13.8" stroke="#2E4A6E" stroke-width=".9"/>' : ''}
+        <ellipse cx="0" cy="1.4" rx="3.4" ry="2.6" fill="#F6F3EC" stroke="#2E4A6E" stroke-width=".8"/>
+        ${detail ? '<path d="M-1.8,.4 Q0,2.6 1.8,.4" fill="none" stroke="#2E4A6E" stroke-width=".45"/>' : ''}`;
     }
     if (h === 'kinghat') {
-      // 鉄道王のシルクハット：インクの冠に縦のつや線、反り返ったつば、茜の帯に白抜きの星
-      return `<path d="M42.8,38 L44.4,11 Q60,7.6 75.6,11 L77.2,38 Z" fill="${INK}"/>
-        <path d="M44.4,11 Q60,14.2 75.6,11" fill="none" stroke="${PAPER}" stroke-width=".5" opacity=".8"/>
-        <path d="M49.4,13.4 L48.6,29 M52.6,12.8 L52,29 M70.4,13.4 L71.2,29" stroke="${PAPER}" stroke-width=".45" opacity=".6"/>
-        <path d="M43.4,29.2 Q60,31.4 76.6,29.2 L77,36.6 Q60,38.8 43,36.6 Z" fill="${AKANE}" stroke="${INK}" stroke-width=".6"/>
-        <path d="M60,30.8 l1.1,2.2 2.4,.3 -1.8,1.6 .5,2.3 -2.2,-1.2 -2.2,1.2 .5,-2.3 -1.8,-1.6 2.4,-.3 z" fill="${PAPER}"/>
-        <path d="M28.6,37 Q60,45.6 91.4,37 Q92.6,41.4 87.6,42.6 Q60,48.6 32.4,42.6 Q27.4,41.4 28.6,37 Z" fill="${INK}"/>
-        <path d="M34,41.6 Q60,46.4 86,41.6" fill="none" stroke="${PAPER}" stroke-width=".45" opacity=".7"/>`;
+      // 金の王冠の札：金箔の荷札に、真鍮の陰の色で王冠のシルエット。ひもは茜の組紐
+      return `<path d="M0,0 C-1.6,2.6 1.6,5 0,7.4" fill="none" stroke="${AKANE}" stroke-width="1"/>
+        <path d="${tagPath}" fill="#D4AF37" stroke="${GOLD_DK}" stroke-width="${detail ? 0.6 : 1}"/>
+        ${detail ? `<path d="M-4,10.4 L-2.2,7.2 H2.2 L4,10.4 V23.6 H-4 Z" fill="none" stroke="${GOLD_DK}" stroke-width=".35"/>` : ''}
+        <path d="M-3.4,20.4 V15 L-1.7,17.2 L0,13.8 L1.7,17.2 L3.4,15 V20.4 Z" fill="${GOLD_DK}"/>
+        ${detail ? `<path d="M-3.4,21.8 H3.4" stroke="${GOLD_DK}" stroke-width=".7"/><circle cx="0" cy="13.2" r=".6" fill="${GOLD_DK}"/>` : ''}
+        ${hole('#D4AF37')}`;
     }
-    // 旅の麦わら帽子（初期）：生成りの麦わらに編み目の細線、茜のリボン
-    const crown = 'M41,39 C41,22 48,16.6 60,16.6 C72,16.6 79,22 79,39 Z';
-    return `<ellipse cx="60" cy="37.6" rx="38.6" ry="7.6" fill="${PAPER2}" stroke="${INK}" stroke-width="1.4"/>
-      <ellipse cx="60" cy="37.6" rx="33" ry="6" fill="none" stroke="${INK3}" stroke-width=".4"/>
-      <ellipse cx="60" cy="37.6" rx="27" ry="4.8" fill="none" stroke="${INK3}" stroke-width=".4"/>
-      <path d="${crown}" fill="${PAPER2}" stroke="${INK}" stroke-width="1.3"/>
-      ${hatch(`${id}-sw`, crown, { step: 2.2, angle: 30, color: INK3, w: 0.35, box: [38, 14, 44, 28] })}${hatch(`${id}-sw2`, crown, { step: 2.2, angle: 150, color: INK3, w: 0.35, box: [38, 14, 44, 28] })}
-      <path d="M41,32.6 C50,35.4 70,35.4 79,32.6 L79,38.6 C70,41.2 50,41.2 41,38.6 Z" fill="${AKANE}" stroke="${INK}" stroke-width=".7"/>
-      <path d="M74,36 L79.4,42.6 L76,43 Z M75,36.4 L82.6,41 L79.8,42.8" fill="${AKANE}" stroke="${INK}" stroke-width=".6"/>
-      <path d="M21.6,38.6 Q60,49.4 98.4,38.6" fill="none" stroke="${INK}" stroke-width=".7"/>`;
+    // 麻ひもの荷札（初期）：生成りの厚紙に、ペンの書きつけ2行。ひもは麻の撚り
+    return `<path d="M0,0 C-1.4,2.4 1.4,5 0,7.6" fill="none" stroke="#9C7A4F" stroke-width="1"/>
+      ${detail ? '<path d="M0,0 C1.4,2.6 -1.2,5 .4,7.6" fill="none" stroke="#C4A574" stroke-width=".5"/>' : ''}
+      <path d="${tagPath}" fill="#E9DBBA" stroke="#7A5A2E" stroke-width="${detail ? 0.6 : 1}"/>
+      ${detail ? `<path d="M-3.2,15 H3.2 M-3.2,18 H2 M-3.2,21 H2.6" stroke="${INK3}" stroke-width=".45"/>` : ''}
+      ${hole('#E9DBBA')}`;
   }
 
-  function buddy(b, id) {
+  // 鞄の根付（buddy のスロット）。ベルトの下の付け根を原点に、組紐と玉の下に吊る
+  function charmArt(b, detail = true) {
+    if (!b || b === 'none') return '';
+    const cord = `<path d="M0,0 V5.6" stroke="${AKANE}" stroke-width="${detail ? 0.9 : 1.3}"/><circle cx="0" cy="6.2" r="${detail ? 1.3 : 1.6}" fill="${AKANE}"/>`;
     if (b === 'camera') {
-      // 二眼レフ：箱のかたちに、上下に並んだふたつのレンズ（中はハッチング）、茜のストラップ
-      const lens = (cy, r) => `<circle cx="0" cy="${cy}" r="${r}" fill="${PAPER}" stroke="${INK}" stroke-width="1"/>
-        <circle cx="0" cy="${cy}" r="${n1(r * 0.68)}" fill="${INK}"/>
-        <circle cx="${n1(-r * 0.22)}" cy="${n1(cy - r * 0.22)}" r="${n1(r * 0.16)}" fill="${PAPER}"/>`;
-      return `<g transform="translate(93 108)">
-        <path d="M-6,-14 Q-12,-24 -26,-20" fill="none" stroke="${AKANE}" stroke-width="1.4"/>
-        <rect x="-11" y="-14" width="22" height="34" rx="1.6" fill="${PAPER2}" stroke="${INK}" stroke-width="1.2"/>
-        ${hatch(`${id}-cm`, 'M-11,-14 H11 V20 H-11 Z', { step: 1.8, angle: 90, color: INK3, w: 0.35, box: [-12, -15, 24, 36] })}
-        <path d="M-11,-8.6 H11 M-11,15 H11" stroke="${INK}" stroke-width=".7"/>
-        <path d="M-9,-14 L-7,-19 H7 L9,-14" fill="${PAPER}" stroke="${INK}" stroke-width=".9"/>
-        ${lens(-2.6, 4.6)}${lens(9.4, 5.2)}
-        <circle cx="8" cy="-11.4" r="1.2" fill="none" stroke="${INK}" stroke-width=".6"/></g>`;
+      // 二眼レフ：インクの箱に、上下に並んだふたつのレンズ（真鍮の縁）と、上のフード
+      return `${cord}<rect x="-3.8" y="7.6" width="7.6" height="1.6" fill="${INK2}"/>
+        <rect x="-5" y="9" width="10" height="13.4" rx=".9" fill="${INK}"/>
+        <circle cx="0" cy="12.6" r="2.2" fill="#3A322B" stroke="${GOLD}" stroke-width=".7"/>
+        <circle cx="0" cy="18.2" r="2.8" fill="#3A322B" stroke="${GOLD}" stroke-width=".8"/>
+        ${detail ? `<circle cx="-.7" cy="17.5" r=".6" fill="${IVORY}" opacity=".7"/><circle cx="3.3" cy="10.4" r=".55" fill="${GOLD}"/>` : ''}`;
     }
     if (b === 'bento') {
-      // 曲げわっぱ：楕円のふたと側板に杉の木目、茜の掛け紐、のせた箸
-      return `<g transform="translate(94 122)">
-        <path d="M-18,-6 V5 C-18,10 18,10 18,5 V-6" fill="${PAPER2}" stroke="${INK}" stroke-width="1.1"/>
-        ${hatch(`${id}-wp`, 'M-18,-6 V5 C-18,10 18,10 18,5 V-6 Z', { step: 1.6, angle: 88, color: INK3, w: 0.35, box: [-19, -8, 38, 18] })}
-        <path d="M2,-3 V8.6" stroke="${INK}" stroke-width=".7"/>
-        <ellipse cx="0" cy="-6" rx="18" ry="7" fill="${PAPER}" stroke="${INK}" stroke-width="1.1"/>
-        <ellipse cx="0" cy="-6" rx="13" ry="4.6" fill="none" stroke="${INK3}" stroke-width=".45"/>
-        <path d="M-6,-12.8 C-5,-6 -5,0 -6,8.8 M-4,-12.9 C-3,-6 -3,0 -4,8.9" fill="none" stroke="${AKANE}" stroke-width=".9"/>
-        <path d="M-15,-19 L17,-8 M-13.4,-21 L18,-10.4" stroke="${INK}" stroke-width="1.2"/></g>`;
+      // 曲げわっぱ：杉の側板と楕円のふた、茜の掛け紐
+      return `${cord}<path d="M-7,11.6 V18.4 C-7,21.4 7,21.4 7,18.4 V11.6 Z" fill="#C9A26B" stroke="#7A5A2E" stroke-width=".6"/>
+        ${detail ? '<path d="M-4.4,13.4 V20 M-1.4,13.8 V20.6 M3.6,13.4 V20.2" stroke="#7A5A2E" stroke-width=".3" opacity=".7"/>' : ''}
+        <ellipse cx="0" cy="11.6" rx="7" ry="2.6" fill="#DDBE88" stroke="#7A5A2E" stroke-width=".6"/>
+        <path d="M1.2,9 V20.8" stroke="${AKANE}" stroke-width="${detail ? 0.9 : 1.2}"/>`;
     }
     if (b === 'cat') {
-      // 三毛猫の見習い駅長：座った姿の線画。黒の柄はインク、茶の柄はハッチング、帽子に茜の帯
-      const patch = 'M-9,-13 C-6,-16 -2,-14 -2.4,-10 C-4,-8 -8,-8.4 -9,-13 Z M3,4 C8,1 13,6 12.4,14 C8,15 4,10 3,4 Z';
-      return `<g transform="translate(94 116)">
-        <path d="M13,20 C22,18 24,8 19,4" fill="none" stroke="${INK}" stroke-width="2.4"/>
-        <path d="M-13,22 C-15,8 -9,-1 0,-1 C9,-1 15,8 13,22 Z" fill="${PAPER}" stroke="${INK}" stroke-width="1.2"/>
-        <path d="M-6,22 C-6,16 -3,13 -2,10 M6,22 C6,16 3,13 2,10" fill="none" stroke="${INK}" stroke-width=".7"/>
-        <circle cx="0" cy="-8.4" r="9.6" fill="${PAPER}" stroke="${INK}" stroke-width="1.2"/>
-        <path d="M-8.4,-12 L-8,-21.4 L-2.4,-16.4 Z" fill="${PAPER}" stroke="${INK}" stroke-width="1"/>
-        <path d="M8.4,-12 L8,-21.4 L2.4,-16.4 Z" fill="${INK}" stroke="${INK}" stroke-width="1"/>
-        ${hatch(`${id}-ct`, patch, { step: 1.2, angle: 40, color: INK, w: 0.45, box: [-12, -18, 28, 36] })}
-        <path d="M-5.6,-8.6 Q-3.6,-10 -1.8,-8.6 M1.8,-8.6 Q3.6,-10 5.6,-8.6" fill="none" stroke="${INK}" stroke-width=".8"/>
-        <path d="M-1,-5.6 H1 L0,-4.4 Z" fill="${INK}"/>
-        <path d="M0,-4.4 Q-1.6,-2.6 -3,-3.4 M0,-4.4 Q1.6,-2.6 3,-3.4 M-4,-5 L-11,-6 M-4,-4 L-10.6,-3 M4,-5 L11,-6 M4,-4 L10.6,-3" fill="none" stroke="${INK}" stroke-width=".45"/>
-        <path d="M-7.4,-16.6 Q0,-22.4 7.4,-16.6 L7.4,-14.4 H-7.4 Z" fill="${INK}"/>
-        <path d="M-7.4,-15.4 H7.4" stroke="${AKANE}" stroke-width=".9"/>
-        <path d="M-8.4,-14.4 Q0,-11.4 8.4,-14.4" fill="none" stroke="${INK}" stroke-width="1.2"/></g>`;
+      // 三毛猫の見習い駅長：座った猫のシルエット（インク）に、茜の小さな駅長帽と、胸の白い毛・背の三毛のぶち
+      return `${cord}<g>
+        <path d="M5,22 C9.4,21.8 10,17 7.4,15.4" fill="none" stroke="${INK}" stroke-width="1.3" stroke-linecap="round"/>
+        <path d="M-2.8,14.2 C-6.4,15.6 -6.8,20.4 -5.8,22.6 H5.8 C6.8,20.4 6.4,15.6 2.8,14.2 Z" fill="${INK}"/>
+        <path d="M-3.6,11 L-3.4,7.2 L-1,9.4 Z M3.6,11 L3.4,7.2 L1,9.4 Z" fill="${INK}"/>
+        <circle cx="0" cy="11.6" r="3.7" fill="${INK}"/>
+        ${detail ? `<path d="M-1.6,16.4 Q0,15.4 1.6,16.4 L1,21 H-1 Z" fill="${IVORY}"/><path d="M3.2,16 C5,16.8 5.6,18.6 5.2,20.4 C4,19.6 3.4,18 3.2,16 Z" fill="#B8742F"/>` : ''}
+        <path d="M-2.6,8.6 Q0,6.6 2.6,8.6 V9.4 H-2.6 Z" fill="${AKANE}"/><path d="M-3,9.4 H1.4" stroke="${GOLD}" stroke-width=".6"/>
+      </g>`;
     }
     return '';
   }
 
-  // サムネイル（ガレージの一覧用）：線路の上の車両／止めた絵のトレイル／着せ替えたアバター
+  // 札の吊り位置と傾き（tenugui は持ち手に結ぶので傾けない）
+  const tagAt = (h) => `translate(${TK.hx - 8} ${TK.y0 - 2}) rotate(${h === 'tenugui' ? 0 : 42})`;
+  // 根付は胴の底の左寄り（左のベルトと留め金のあいだ）。丸の内側に収まるよう少し小さく吊る
+  const CHARM = { x: 44, y: TK.y1, s: 0.9 };
+  const charmAt = () => `translate(${CHARM.x} ${CHARM.y}) scale(${CHARM.s})`;
+  const WATCH = { x: 79, y: 85, r: 14.4 };
+
+  function avatarSvg(eq = equipped(), { crop = false, id = 'av' } = {}) {
+    const d = !crop;
+    const clip = uid(`${id}-em`);
+    const vb = crop ? '4 8 112 112' : '0 0 120 140';
+    // 外の輪のビーズ（硬貨のふちのような小さな粒）。小さいときは省く
+    const beads = d
+      ? Array.from({ length: 40 }, (_, i) => {
+          const a = (i / 40) * Math.PI * 2, rr = (EC.r + EC.r2) / 2;
+          return `<circle cx="${n1(EC.x + Math.cos(a) * rr)}" cy="${n1(EC.y + Math.sin(a) * rr)}" r=".5"/>`;
+        }).join('')
+      : '';
+    // 下の真鍮のリボン（全身のときだけ）：生成りの帯に金の細線と、三つの菱形
+    const ribbon = d
+      ? `<g class="em-ribbon">
+        <path d="M30,115 H19 L22.6,120.6 L19,126.2 H32 Z M90,115 H101 L97.4,120.6 L101,126.2 H88 Z" fill="#EDE4D4" stroke="${GOLD}" stroke-width=".8"/>
+        <path d="M30,113 Q60,117.4 90,113 V124.6 Q60,129 30,124.6 Z" fill="${IVORY}" stroke="${GOLD}" stroke-width="1"/>
+        <path d="M32.6,115.6 Q60,119.8 87.4,115.6 M32.6,122.2 Q60,126.4 87.4,122.2" fill="none" stroke="${GOLD}" stroke-width=".4"/>
+        ${[48, 60, 72].map((x) => `<path d="M${x},${x === 60 ? 116.8 : 116.4} l1.8,2.6 -1.8,2.6 -1.8,-2.6 Z" fill="${GOLD}"/>`).join('')}
+        <path d="M38,119.2 H44 M76,119.2 H82" stroke="${GOLD}" stroke-width=".45"/>
+      </g>`
+      : '';
+    return `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" class="avatar-svg emblem-svg" aria-hidden="true" stroke-linecap="round" stroke-linejoin="round">
+      <defs><clipPath id="${clip}"><circle cx="${EC.x}" cy="${EC.y}" r="${EC.r2 - 0.6}"/></clipPath></defs>
+      <circle cx="${EC.x}" cy="${EC.y}" r="${EC.r}" fill="#F4EFE6"/>
+      <circle cx="${EC.x}" cy="${EC.y}" r="${EC.r2}" fill="${IVORY}"/>
+      <g clip-path="url(#${clip})">
+        ${trunk(eq.outfit, d)}
+        ${chain(TK.hx + 8, TK.y0 - 0.6, WATCH.x, n1(WATCH.y - WATCH.r - 6), d)}
+        ${watch(WATCH.x, WATCH.y, WATCH.r, d)}
+        ${eq.buddy && eq.buddy !== 'none' ? `<path d="M${CHARM.x - 1.6},${TK.y1} a1.6,1.6 0 0 0 3.2,0" fill="none" stroke="${GOLD}" stroke-width="${d ? 0.9 : 1.3}"/>` : ''}
+        <g transform="${charmAt()}">${charmArt(eq.buddy, d)}</g>
+        <g transform="${tagAt(eq.hat)}">${tagArt(eq.hat, d)}</g>
+      </g>
+      <circle cx="${EC.x}" cy="${EC.y}" r="${EC.r}" fill="none" stroke="${GOLD}" stroke-width="${d ? 1.25 : 3}"/>
+      <circle cx="${EC.x}" cy="${EC.y}" r="${EC.r2}" fill="none" stroke="${GOLD}" stroke-width="${d ? 0.7 : 1.6}"/>
+      ${d ? `<g fill="${GOLD}">${beads}</g>` : ''}
+      ${ribbon}
+    </svg>`;
+  }
+
+  // サムネイル（ガレージの一覧用）：線路の上の車両／止めた絵のトレイル／紋章のパーツだけを大きく（鞄の革・札・根付）
   function thumb(slot, id) {
     const eq = Object.assign({}, equipped());
     if (['livery', 'carriage'].includes(slot)) {
@@ -581,8 +587,20 @@
       return `<svg viewBox="-66 -60 132 66" class="thumb-svg" aria-hidden="true">${rail}${car}</svg>`;
     }
     if (slot === 'trail') return trailArt(id);
-    eq[slot] = id;
-    return avatarSvg(eq, { id: `th-${slot}-${id}` });
+    const svg = (vb, body) => `<svg viewBox="${vb}" class="thumb-svg thumb-emblem" aria-hidden="true" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
+    // 下に敷く細い二重の罫（棚の板）。札と根付は、上の細い横木（持ち手の革・ベルトの端）から吊る
+    const shelf = (x1, x2, y) => `<path d="M${x1},${y} H${x2}" stroke="#C8B9A6" stroke-width=".6"/><path d="M${x1 + 4},${y + 2} H${x2 - 4}" stroke="#C8B9A6" stroke-width=".35"/>`;
+    if (slot === 'outfit') return svg('10 30 92 64', `${shelf(14, 98, TK.y1 + 3.4)}${trunk(id)}`);
+    if (slot === 'hat') {
+      return svg('-22 -6 44 34', `<path d="M-14,-1.6 H14" stroke="${leather(eq.outfit).belt}" stroke-width="3"/><rect x="-2.6" y="-3.2" width="5.2" height="3.2" fill="${GOLD}" stroke="${GOLD_DK}" stroke-width=".5"/>
+        <g transform="translate(0 .2)${id === 'tenugui' ? ' scale(1.05)' : ''}">${tagArt(id)}</g>`);
+    }
+    const strap = `<rect x="-3" y="-8" width="6" height="8" fill="${leather(eq.outfit).belt}"/><path d="M-3,-8 V0 M3,-8 V0" stroke="${leather(eq.outfit).line}" stroke-width=".4"/><path d="M-15,-8 H15" stroke="#C8B9A6" stroke-width=".6"/>`;
+    if (id === 'none') {
+      return svg('-22 -8 44 32', `${strap}<circle cx="0" cy="2.2" r="2.2" fill="none" stroke="${GOLD}" stroke-width=".9"/>
+        <text x="0" y="16" text-anchor="middle" font-size="5.4" letter-spacing="1.2" fill="#8A7D70" font-family="'Shippori Mincho', serif">根付なし</text>`);
+    }
+    return svg('-22 -8 44 32', `${strap}${charmArt(id)}`);
   }
 
   // トレイルのサムネイル：浮かぶものを止めた絵で（紙の地に、細い風の線）

@@ -487,22 +487,25 @@ body.modal-open { overflow: hidden; }
 .fav-btn.is-on { background: rgba(250, 240, 202, .45); border-color: var(--gold); color: var(--mustard-deep); }
 
 /* ---------- 到着のタイトル（映画のタイトルバックのような全画面の組み） ---------- */
-/* 到着の駅名標：ホームの駅名標のような生成りの板。上の真鍮の吊り金具から下りてきて、カシャンと止まる */
-.station-sign { position: fixed; left: 50%; top: 0; z-index: 75; width: min(440px, calc(100vw - 32px)); transform: translate(-50%, -115%); pointer-events: none; transition: transform .75s var(--ease); }
-.station-sign.is-in { transform: translate(-50%, 0); }
-.station-sign.is-out { transform: translate(-50%, -115%); transition-duration: .6s; }
-.station-sign.is-in .ss-board { animation: ss-settle .9s var(--ease) .45s both; }
-.ss-hanger { display: flex; justify-content: space-between; padding: 0 22%; height: 18px; }
-.ss-hanger i { width: 1.5px; height: 100%; background: linear-gradient(var(--brass), var(--gold-2) 60%, var(--brass)); box-shadow: 0 0 0 .5px rgba(44, 37, 35, .25); }
+/* 到着の駅名標：真鍮の鎖で吊った生成りの板。位置（translateY）は app.js のばねの計算で毎フレーム書く */
+.station-sign { position: fixed; left: 50%; top: 0; z-index: 75; width: min(440px, calc(100vw - 32px)); transform: translate(-50%, -120%); pointer-events: none; }
+.station-sign.is-out { transition: transform .6s var(--ease); }
+.ss-hanger { display: flex; justify-content: space-between; padding: 0 20%; height: 40px; }
+.ss-chain { width: 8px; height: 40px; overflow: visible; }
+.ss-chain ellipse, .ss-chain rect { fill: none; stroke: #C5A059; stroke-width: 1.25; }
 .ss-board {
-  position: relative; padding: 10px 16px 0; text-align: center; transform-origin: 50% 0;
+  position: relative; padding: 10px 16px 0; text-align: center;
   background: var(--fiber), var(--ivory); box-shadow: 0 0 0 1px var(--plate), inset 0 0 0 3px var(--ivory), inset 0 0 0 3.6px rgba(110, 93, 79, .55), 0 18px 34px -22px rgba(30, 24, 20, .7);
 }
+.ss-ring { position: absolute; top: -5px; width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 1.25px #C5A059; background: var(--ivory); }
+.ss-ring-l { left: calc(20% - 1px); }
+.ss-ring-r { right: calc(20% - 1px); }
 .ss-top { display: flex; justify-content: center; align-items: baseline; gap: 12px; font-size: 10.5px; color: var(--ink-3); letter-spacing: .08em; }
 .ss-no { font-family: var(--font-serif); font-style: italic; font-weight: 600; font-size: 13px; color: var(--brass); letter-spacing: .04em; }
 .ss-line { font-family: var(--font-mincho); color: var(--ink-2); }
 .ss-name { font-family: var(--font-mincho); font-weight: 800; font-size: clamp(30px, 8vw, 40px); line-height: 1.15; letter-spacing: .32em; text-indent: .32em; color: var(--ink); margin-top: 2px; }
 .ss-kana { font-family: var(--font-mincho); font-size: 13px; letter-spacing: .5em; text-indent: .5em; color: var(--ink-2); margin-top: 2px; }
+.ss-en { font-family: var(--font-serif); font-weight: 600; font-size: 13px; letter-spacing: .28em; text-indent: .28em; text-transform: uppercase; color: var(--ink-3); margin-top: 1px; }
 .ss-band {
   display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 8px -16px 0; padding: 6px 14px 7px; min-height: 30px;
   font-family: var(--font-mincho); font-weight: 700; font-size: 12.5px; letter-spacing: .1em; color: var(--ivory); background: var(--line, var(--forest));
@@ -511,10 +514,6 @@ body.modal-open { overflow: hidden; }
 .ss-band span { display: inline-flex; align-items: center; gap: 5px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ss-band .ico { width: 14px; height: 14px; color: var(--gold-2); flex: none; }
 .ss-band small { font-weight: 500; font-size: 11px; opacity: .8; }
-@media (prefers-reduced-motion: reduce) {
-  .station-sign, .station-sign.is-out { transition-duration: .01s; }
-  .station-sign.is-in .ss-board { animation: none; }
-}
 .arrival { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 24px; cursor: pointer; background: rgba(26, 21, 18, .9); opacity: 0; transition: opacity .7s var(--ease); overflow: hidden; }
 .arrival.is-open { opacity: 1; }
 .arrival.is-closing { opacity: 0; transition-duration: .5s; }
@@ -1258,7 +1257,7 @@ body.modal-open { overflow: hidden; }
 .lt-submit small { font-family: var(--font-ui); font-weight: 500; font-size: 10.5px; letter-spacing: .04em; opacity: .85; }
 .lt-pass { margin-top: 8px; font-family: var(--font-mincho); font-size: 13px; letter-spacing: .1em; color: var(--brass); text-align: center; }
 /* ある旅人から届いた記憶：右下から、ポラロイドがすっと届く（タップで閉じる） */
-.memory-slide { position: fixed; right: 20px; bottom: 24px; z-index: 58; width: 236px; padding: 12px 12px 10px; cursor: pointer; background: var(--fiber), var(--ivory); box-shadow: var(--frame-gold), 0 20px 40px -22px rgba(30, 24, 20, .75);
+.memory-slide { position: fixed; right: 20px; bottom: 170px; z-index: 58; width: 236px; padding: 12px 12px 10px; cursor: pointer; background: var(--fiber), var(--ivory); box-shadow: var(--frame-gold), 0 20px 40px -22px rgba(30, 24, 20, .75);
   transform: translate(30px, 24px) rotate(4deg); opacity: 0; transition: transform .9s var(--ease), opacity .7s var(--ease); }
 .memory-slide.is-in { transform: rotate(-2deg); opacity: 1; }
 .memory-slide.is-out { transform: translate(40px, 10px) rotate(6deg); opacity: 0; transition-duration: .7s; }
@@ -1270,7 +1269,7 @@ body.modal-open { overflow: hidden; }
 .mem-bonus .ico { color: var(--brass); align-self: center; }
 .mem-bonus b { font-family: var(--font-serif); font-style: italic; font-weight: 600; font-size: 15px; color: var(--akane); }
 .mem-bonus small { font-size: 10.5px; color: var(--ink-3); }
-@media (max-width: 639px) { .memory-slide { right: 12px; bottom: 84px; width: 200px; } }
+@media (max-width: 639px) { .memory-slide { right: 12px; bottom: 166px; width: 190px; } }
 .lt-form { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 22px; margin-top: 16px; align-items: start; }
 .lt-fields { display: grid; gap: 12px; }
 .lt-label { display: grid; gap: 4px; font-size: 12px; font-weight: 500; color: var(--ink-2); }
@@ -1622,4 +1621,130 @@ body.modal-open { overflow: hidden; }
 @keyframes pm-pop { from { opacity: 0; } }
 @keyframes seal-slam { to { opacity: .92; transform: scale(1) rotate(-6deg); } }
 @keyframes peek-wait { 50% { opacity: .35; } }
-@keyframes ss-settle { 0% { transform: rotate(0); } 30% { transform: rotate(1.1deg); } 60% { transform: rotate(-.5deg); } 100% { transform: rotate(0); } }
+
+/* =====================================================================
+   画面の骨格（2026年10月 v6）：ページはスクロールしない 100dvh の3層
+   上の固定バー 112px（44px の帯＋68px の車窓）／真ん中の地図 calc(100dvh - 172px)／下のタブ 60px。
+   ダイスは右下の親指の位置に常駐。ほかのタブ（手帖・フォトマップ・工房）は中だけスクロールする
+   ===================================================================== */
+html, body, #app { margin: 0; padding: 0; width: 100vw; height: 100vh; height: 100dvh; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+body { min-height: 0; overscroll-behavior: none; }
+input, textarea, select, [contenteditable] { user-select: text; -webkit-user-select: text; }
+/* 中でスクロールするもの（タブの中身・モーダル・演出）は、縦の指の動きだけ通す */
+.view-scroll, .modal, .modal-card, .owner-sheet, .deed, .sharecard, .sc-box, .pc-viewer, .celebrate, .game-layer, .cover, .compass-veil, .compass-sheet, .cutin, .td-cards, .preface-tate, .map-scope { touch-action: pan-x pan-y; }
+.app { position: relative; display: grid; grid-template-rows: 112px minmax(0, 1fr) 60px; }
+
+/* ---- 上の固定バー ---- */
+.topbar { position: relative; z-index: 50; display: grid; grid-template-rows: 44px 68px; background: var(--fiber), var(--forest); box-shadow: inset 0 -1px 0 rgba(197, 155, 39, .5), 0 6px 14px -10px rgba(0, 0, 0, .5); }
+.tb-row { display: flex; align-items: center; gap: 10px; padding: 0 12px; min-width: 0; color: var(--antique); }
+.tb-brand { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1 1 auto; }
+.tb-brand .brand-die { width: 26px; height: 26px; flex: none; }
+.tb-brand .brand-die svg { width: 100%; height: 100%; display: block; }
+.tb-brand .logo-title { display: flex; align-items: baseline; gap: 8px; margin: 0; min-width: 0; white-space: nowrap; overflow: hidden; }
+.tb-brand .logo-brand { font-family: var(--font-serif); font-weight: 600; font-size: 13px; letter-spacing: .2em; color: var(--gold-2); padding: 0 6px; box-shadow: inset 0 0 0 1px rgba(230, 198, 101, .6); line-height: 1.5; }
+.tb-brand .logo-name { font-family: var(--font-mincho); font-weight: 700; font-size: 15px; letter-spacing: .08em; color: var(--antique); overflow: hidden; text-overflow: ellipsis; }
+.tb-brand .logo-name b { color: var(--gold-2); }
+.lang-btn { flex: none; display: inline-flex; align-items: center; gap: 3px; height: 24px; padding: 0 8px; font-family: var(--font-serif); font-weight: 600; font-size: 11.5px; letter-spacing: .1em; color: rgba(244, 239, 230, .55); box-shadow: inset 0 0 0 1px rgba(197, 155, 39, .55); }
+.lang-btn i { font-style: normal; opacity: .5; }
+html[lang="ja"] .lang-btn [data-lang="ja"], html[lang="en"] .lang-btn [data-lang="en"] { color: var(--gold-2); }
+.tb-stats { flex: none; display: flex; gap: 12px; margin: 0; }
+.tb-stat { display: grid; line-height: 1.1; text-align: right; }
+.tb-stat dt { font-size: 9.5px; letter-spacing: .1em; color: rgba(244, 239, 230, .6); }
+.tb-stat dd { margin: 0; font-size: 10px; color: rgba(244, 239, 230, .7); white-space: nowrap; }
+.tb-stat b { font-family: var(--font-serif); font-style: italic; font-weight: 600; font-size: 17px; color: var(--gold-2); margin-right: 2px; }
+.topbar .compass-btn { position: static; flex: none; }
+/* 車窓パノラマ（高さ68px。木の枠はこの中に収める） */
+.topbar .scenery { height: 56px; margin: 0; border-width: 6px; border-left-width: 8px; border-right-width: 8px; border-radius: 0; box-shadow: inset 0 0 0 1px #2e2017; }
+
+/* ---- 真ん中：地図とタブの中身 ---- */
+.app-stage { position: relative; height: calc(100vh - 172px); height: calc(100dvh - 172px); overflow: hidden; padding: 0; margin: 0; max-width: none; }
+.app-stage > [data-view] { position: absolute; inset: 0; }
+.app-stage > [data-view][hidden] { display: none; }
+.view-scroll { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 16px 16px 120px; }
+.view-scroll > * { max-width: 1100px; margin-left: auto; margin-right: auto; }
+.view-back { margin-bottom: 8px; }
+.view-back .ico { transform: rotate(180deg); }
+.map-view { display: block; }
+.map-view .map-board { position: absolute; inset: 0; box-shadow: none; }
+.map-view .map-svg { width: 100%; height: 100%; display: block; }
+.map-view .spotlight-bar { position: absolute; left: 10px; top: 10px; right: 10px; z-index: 4; margin: 0; padding: 6px 12px 7px 22px; max-width: 520px; font-size: 12px; }
+.map-view .spotlight-bar { display: flex; align-items: center; gap: 4px 10px; flex-wrap: nowrap; min-height: 0; white-space: nowrap; overflow: hidden; right: auto; max-width: calc(100% - 20px); }
+.map-view .spotlight-bar .sb-hint { display: none; }
+.map-view .sb-target { flex-wrap: nowrap; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.map-view .sb-n { font-size: 19px; }
+.map-view .cam-ctrl { top: 56px; bottom: auto; right: 10px; }
+.map-view .dice-badge { top: 56px; }
+/* 振っているあいだだけ、盤面の真ん中にダイスのトレイ */
+.dice-stage { position: absolute; left: 50%; top: 42%; z-index: 6; display: flex; align-items: center; gap: 14px; padding: 12px 18px; transform: translate(-50%, -50%) scale(.92); opacity: 0; pointer-events: none;
+  background: var(--fiber), var(--antique); box-shadow: var(--frame-gold), var(--sh-3); transition: opacity .5s var(--ease), transform .6s var(--ease); }
+.dice-stage.is-on { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.dice-stage .dice-result { font-size: 52px; }
+/* いまいる駅と案内（左下。右の親指のダイスと重ならない幅） */
+.hud { position: absolute; left: 10px; bottom: 12px; right: 106px; z-index: 5; display: grid; gap: 6px; max-width: 460px; pointer-events: none; }
+.hud > * { pointer-events: auto; }
+.hud .ticket-deck { margin: 0; }
+.hud .td-head { display: none; }
+.hud .td-cards { padding: 0 0 2px; }
+.hud .td-empty { display: none; }
+.hud-card { padding: 8px 12px 9px; background: rgba(250, 246, 240, .95); box-shadow: var(--frame), 0 10px 22px -16px rgba(30, 24, 20, .7); }
+.hud-station { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.hud .current-name { font-size: 20px; line-height: 1.2; letter-spacing: .08em; }
+.hud .current-name small { font-size: 11px; }
+.hud .current-status { margin: 0; }
+.hud .current-status .chip { font-size: 10px; }
+.hud-open { margin-left: auto; font-size: 12px; }
+.hud .current-tagline { display: none; }
+.hud .guide { margin-top: 4px; font-size: 12px; line-height: 1.65; max-height: 5em; overflow: hidden; }
+.hud .ticket-bar { margin-top: 4px; }
+.hud .ticket-hint { display: none; }
+
+/* ---- 下のタブ（60px） ---- */
+.tabbar { position: relative; z-index: 100; display: grid; grid-template-columns: repeat(3, 1fr); padding-right: 96px; background: var(--fiber), var(--paper); box-shadow: inset 0 1px 0 var(--rule), inset 0 3px 0 var(--ivory), inset 0 4px 0 rgba(200, 185, 166, .6); padding-bottom: env(safe-area-inset-bottom); }
+.tabbar .tab { position: relative; display: grid; justify-items: center; align-content: center; gap: 1px; height: 60px; padding: 0 4px; border: 0; background: none; color: var(--ink-3); }
+.tabbar .tab::before, .tabbar .tab::after { display: none; }
+.tabbar .tab .tab-icon { width: 20px; height: 20px; }
+.tabbar .tab-ja { font-size: 11.5px; letter-spacing: .06em; white-space: nowrap; }
+.tabbar .tab.is-active { color: var(--ink); background: none; }
+.tabbar .tab.is-active .tab-icon { color: var(--akane); }
+.tabbar .tab.is-active::after { display: block; content: ''; position: absolute; top: 4px; left: 30%; right: 30%; height: 2px; background: var(--brass); }
+/* 手帖のタブの「00」の栞（巻頭言がここにある、のしるし） */
+.tab-ribbon { position: absolute; top: 6px; right: calc(50% - 24px); padding: 0 3px; font-family: var(--font-serif); font-style: italic; font-weight: 600; font-size: 9px; line-height: 1.4; color: var(--ivory); background: var(--akane); }
+
+/* ---- 親指のダイス（右下に常駐） ---- */
+.dice-fab { position: fixed; right: 20px; bottom: 76px; bottom: calc(76px + env(safe-area-inset-bottom)); width: 76px; height: 76px; z-index: 110; padding: 0; border-radius: 50%;
+  background: radial-gradient(circle at 38% 30%, rgba(255, 255, 255, .14), transparent 52%), repeating-radial-gradient(circle at 50% 50%, rgba(0, 0, 0, .06) 0 1px, transparent 1px 3px), var(--fiber), #1e3a2f;
+  box-shadow: 0 0 0 1px #14261f, 0 10px 22px -8px rgba(20, 15, 10, .65), inset 0 -3px 6px rgba(0, 0, 0, .35), inset 0 2px 3px rgba(255, 255, 255, .12);
+  transition: transform .35s var(--ease), filter .35s var(--ease); }
+.dice-fab:active { transform: scale(.94); }
+.dice-fab:disabled { filter: grayscale(.6) brightness(.85); }
+.dice-fab:focus-visible { outline: 2px solid var(--gold-2); outline-offset: 3px; }
+.fab-face { position: absolute; inset: 0; width: 100%; height: 100%; }
+.fab-ring { fill: none; stroke: var(--gold); stroke-width: 1.6; }
+.fab-thin { stroke-width: .7; stroke: var(--gold-2); opacity: .8; }
+.fab-die { fill: #4a3525; stroke: var(--gold); stroke-width: 1.25; }
+.fab-die-in { fill: none; stroke: var(--gold-2); stroke-width: .5; opacity: .7; }
+.fab-pip { fill: var(--gold-2); }
+.fab-one { fill: var(--akane); stroke: var(--gold-2); stroke-width: .5; }
+.fab-label { position: absolute; left: 0; right: 0; bottom: 9px; font-family: var(--font-mincho); font-weight: 700; font-size: 10.5px; letter-spacing: .14em; color: var(--gold-3); text-align: center; white-space: nowrap; }
+.dice-fab.is-ticket .fab-ring { stroke: var(--akane); }
+.dice-fab.is-ticket .fab-label { color: var(--gold-2); font-size: 9.5px; letter-spacing: .04em; }
+
+/* 手帖の中の、もとは上の帯にあった称号・指標 */
+.techo-rank { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin: 6px 0 10px; }
+.techo-share { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.hdr-avatar svg { width: 22px; height: 22px; vertical-align: -6px; }
+.techo .site-footer { margin: 30px -16px -120px; padding-bottom: 130px; }
+
+@media (max-width: 639px) {
+  .tb-brand .logo-name { display: none; }
+  .tb-stats { gap: 8px; }
+  .tb-stat b { font-size: 15px; }
+  .view-scroll { padding: 12px 12px 120px; }
+  .map-view .spotlight-bar { font-size: 11px; padding: 5px 10px 6px 18px; }
+  .map-view .sb-theme { display: none; }
+  .map-view .sb-target { font-size: 12px; }
+  .dice-stage .dice-result { font-size: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dice-stage, .dice-fab { transition-duration: .01s; }
+}
