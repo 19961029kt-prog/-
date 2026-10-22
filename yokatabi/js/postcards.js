@@ -175,7 +175,7 @@
   // わたしの九州フォトマップ：盤面と同じ地図（js/geo.js）を淡く描き、投函した駅にポラロイドのピンを浮かべる
   function photoMapSvg() {
     const G = window.YOKATABI_GEO;
-    const vb = '118 0 584 960'; // 九州のまわりだけ（左右の海を切る）
+    const vb = '100 -60 620 1020'; // 九州のまわりだけ（左右の海を切る。北の駅のピンが上で切れないよう、上に海を少し足す）
     const st = YT.Store.get();
     const own = mine();
     const routes = G ? Object.values(G.routes).map((d) => `<path d="${d}" class="pm-route"/>`).join('') : '';
@@ -197,7 +197,7 @@
   let pmCam = null; // { cx, cy, z }（描き直してもカメラの位置を残す）
   let pmCamera = null;
   let pmKey = '';
-  const PM_BASE = { x: 118, y: 0, w: 584, h: 960 };
+  const PM_BASE = { x: 100, y: -60, w: 620, h: 1020 }; // photoMapSvg の viewBox と同じ
   function pinHtml(id, c, i, s) {
     const st = D.byId[id];
     return `<g class="pm-pin" transform="translate(${st.x} ${st.y}) scale(${s.toFixed(3)})" data-pm-open="${esc(id)}" tabindex="0" role="button" aria-label="${esc(st.name)}駅のポストカード">
@@ -220,7 +220,7 @@
       .join('');
     return `<g class="pm-bundle" transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) scale(${s.toFixed(3)})" data-pm-cluster="${esc(group.map((g) => g.id).join(','))}" tabindex="0" role="button" aria-label="${group.length}枚の思い出（${esc(group.map((g) => D.byId[g.id].name).join('・'))}駅）。タップで広げる">
         <g class="pm-float"><line x1="0" y1="0" x2="0" y2="-26" class="pm-stem"/>${frames}
-          <g transform="translate(0 -18)"><rect x="-38" y="-10" width="76" height="20" rx="10" class="pm-bundle-pill"/><text y="4.2" text-anchor="middle" class="pm-bundle-text">📸 ×${group.length}枚の思い出</text></g>
+          <g transform="translate(0 -16)"><rect x="-54" y="-12" width="108" height="24" rx="12" class="pm-bundle-pill"/><text y="4.6" text-anchor="middle" class="pm-bundle-text">📸 ×${group.length}枚の思い出</text></g>
         </g>
       </g>`;
   }
@@ -247,10 +247,13 @@
       g.forEach((b) => used.add(b.id));
       groups.push(g.length ? g : [a]);
     });
-    const key = `${groups.map((g) => g.map((x) => x.id).join('+')).join('|')}@${s.toFixed(2)}`;
+    // ピンと束は、地図の幅が狭くても画面で約40pxの大きさを保つ（×1で盤面1単位が1pxに満たないときだけ大きくする）
+    const boost = Math.min(1.8, Math.max(1, 0.9 / ((svg.clientWidth || PM_BASE.w) / PM_BASE.w)));
+    const ps = s * boost;
+    const key = `${groups.map((g) => g.map((x) => x.id).join('+')).join('|')}@${ps.toFixed(2)}`;
     if (key === pmKey) return;
     pmKey = key;
-    layer.innerHTML = groups.map((g, i) => (g.length > 1 ? bundleHtml(g, s) : pinHtml(g[0].id, g[0].c, i, s))).join('');
+    layer.innerHTML = groups.map((g, i) => (g.length > 1 ? bundleHtml(g, ps) : pinHtml(g[0].id, g[0].c, i, ps))).join('');
     loadImages(layer);
   }
   function mountPhotoCamera() {
