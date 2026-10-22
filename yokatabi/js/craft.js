@@ -131,9 +131,11 @@
 
   // 車輪：黒鉄の円に金のふち・スポーク・軸
   function wheel(x, cy = -5, r = 4.6) {
-    const sp = [0, 60, 120].map((a) => `<path d="M${n1(-r * 0.78)},0 H${n1(r * 0.78)}" transform="rotate(${a})"/>`).join('');
+    // スポークは1本の path にまとめる（盤面で毎フレーム動かすので、要素の数を抑える）
+    const k = r * 0.78, c = n1(k * 0.5), s = n1(k * 0.866);
+    const sp = `M${n1(-k)},0H${n1(k)}M-${c},-${s}L${c},${s}M${c},-${s}L-${c},${s}`;
     return `<g transform="translate(${x} ${cy})"><circle r="${r}" fill="#221D1A"/><circle r="${n1(r - 0.4)}" fill="none" stroke="${GOLD}" stroke-width=".55"/>
-      <g stroke="${GOLD}" stroke-width=".35" opacity=".85">${sp}</g><circle r="${n1(r * 0.22)}" fill="${GOLD}"/></g>`;
+      <path d="${sp}" stroke="${GOLD}" stroke-width=".35" opacity=".85"/><circle r="${n1(r * 0.22)}" fill="${GOLD}"/></g>`;
   }
   // 台車：二つの車輪の上に、金線で縁どった側枠と枕ばね
   function bogie(cx) {
@@ -246,7 +248,7 @@
   function steamLoco(p) {
     const big = (x) => `<g transform="translate(${x} -10)"><circle r="9.4" fill="#16120F" stroke="${p.line}" stroke-width=".9"/>
         <circle r="7.9" fill="none" stroke="${p.line}" stroke-width=".35"/>
-        <g stroke="${p.line}" stroke-width=".45" opacity=".85">${[0, 30, 60, 90, 120, 150].map((a) => `<path d="M-7.6,0 H7.6" transform="rotate(${a})"/>`).join('')}</g>
+        <path d="${[0, 30, 60, 90, 120, 150].map((a) => { const c = n1(7.6 * Math.cos((a * Math.PI) / 180)), s = n1(7.6 * Math.sin((a * Math.PI) / 180)); return `M${-c},${-s}L${c},${s}`; }).join('')}" stroke="${p.line}" stroke-width=".45" opacity=".85"/>
         <path d="M-6.6,3.4 A7.4,7.4 0 0 0 6.6,3.4 Z" fill="#16120F" stroke="${p.line}" stroke-width=".35"/>
         <circle r="1.8" fill="${p.line}"/></g>`;
     return `<g class="tr-bogie">

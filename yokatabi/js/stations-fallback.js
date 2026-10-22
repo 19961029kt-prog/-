@@ -374,7 +374,7 @@ window.YOKATABI_FALLBACK_DATA = {
             },
             {
               "id": "royal",
-              "name": "ロイヤル・セブンズ号",
+              "name": "ロイヤル・マルーン号",
               "price": 15000,
               "ticket": true,
               "desc": "深いロイヤルマルーンに金の紋章。九州をめぐる最高峰のクルーズトレイン。"
