@@ -301,8 +301,18 @@
     move = { n, left: n, at: cur, seen: new Set([cur]), waiting: null };
     setBusy(true);
     Sound.depart();
+    showBoardCenter();
     // 走り出す瞬間に、カメラが列車のまわりへズームインして追いかける
     Map.followStart().then(() => advance());
+  }
+
+  // カメラは列車を盤面の真ん中に置くので、盤面の真ん中が画面から外れていたら（スマホでダイスの欄まで下りているときなど）そこまで送る
+  function showBoardCenter() {
+    const r = $('.map-board').getBoundingClientRect();
+    const mid = r.top + r.height / 2, top = 90, bottom = window.innerHeight - 40;
+    if (mid >= top && mid <= bottom) return;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollBy({ top: mid - window.innerHeight / 2, behavior: reduce ? 'auto' : 'smooth' });
   }
 
   // 分かれ道か、残りのマスが0になるか、行き止まりまで、まとめて走る（つながった区間はなめらかに1本で走る）
@@ -388,39 +398,44 @@
       })
       .join('');
     layer.hidden = false;
-    spreadButtons(layer);
+    // 今いる駅のしるしは隠さない（動かない障害物として、ボタンだけを押しのける）
+    const here = Map.toBoard(D.byId[move.at].x, D.byId[move.at].y);
+    spreadButtons(layer, [{ x: here.left, y: here.top, w: 84, h: 54 }]); // 駅名の字のぶんも少し広めに
   }
   // 行き先ボタンが重なったら、互いに押しのけて離す（盤面の枠からははみ出さない）
-  function spreadButtons(layer) {
+  function spreadButtons(layer, fixed = []) {
     const W = layer.clientWidth, H = layer.clientHeight;
-    const items = [...layer.querySelectorAll('.dir-btn')].map((el) => ({ el, x: parseFloat(el.style.left), y: parseFloat(el.style.top), w: el.offsetWidth + 6, h: el.offsetHeight + 6 }));
-    for (let it = 0; it < 60; it++) {
+    const btns = [...layer.querySelectorAll('.dir-btn')].map((el) => ({ el, x: parseFloat(el.style.left), y: parseFloat(el.style.top), w: el.offsetWidth + 6, h: el.offsetHeight + 6 }));
+    const items = [...btns, ...fixed.map((f) => ({ ...f, fixed: true }))];
+    for (let it = 0; it < 80; it++) {
       let moved = false;
       for (let i = 0; i < items.length; i++) {
         for (let j = i + 1; j < items.length; j++) {
           const a = items[i], b = items[j];
+          if (a.fixed && b.fixed) continue;
           const ox = (a.w + b.w) / 2 - Math.abs(a.x - b.x), oy = (a.h + b.h) / 2 - Math.abs(a.y - b.y);
           if (ox <= 0 || oy <= 0) continue;
           moved = true;
-          // 重なりの少ない向き（たいていは縦）に半分ずつずらす
+          // 重なりの少ない向き（たいていは縦）にずらす。ふたつとも動けるなら半分ずつ、片方が駅なら動ける側だけ
+          const ka = a.fixed ? 0 : b.fixed ? 2 : 1, kb = b.fixed ? 0 : a.fixed ? 2 : 1;
           if (oy < ox) {
             const d = (oy / 2 + 1) * (a.y <= b.y ? -1 : 1);
-            a.y += d;
-            b.y -= d;
+            a.y += d * ka;
+            b.y -= d * kb;
           } else {
             const d = (ox / 2 + 1) * (a.x <= b.x ? -1 : 1);
-            a.x += d;
-            b.x -= d;
+            a.x += d * ka;
+            b.x -= d * kb;
           }
         }
       }
-      items.forEach((b) => {
+      btns.forEach((b) => {
         b.x = Math.max(b.w / 2 + 4, Math.min(W - b.w / 2 - 4, b.x));
         b.y = Math.max(b.h / 2 + 4, Math.min(H - b.h / 2 - 4, b.y));
       });
       if (!moved) break;
     }
-    items.forEach((b) => {
+    btns.forEach((b) => {
       b.el.style.left = `${b.x.toFixed(0)}px`;
       b.el.style.top = `${b.y.toFixed(0)}px`;
     });
@@ -431,7 +446,10 @@
     $('#map-overlay').innerHTML = '';
     $('#map-overlay').hidden = true;
     Map.setCandidates(null);
+    // カメラが寄るあいだも、選んだ方面をすぐ見せる（古い行き先ボタンを残さない）
+    setGuide(`🚃 <b>${esc(D.byId[id].name)}</b>方面へ出発…`);
     Sound.click();
+    showBoardCenter(); // 下の欄の行き先ボタンで選んだときも、走る列車が見えるように
     Map.followStart().then(() => advance(id)); // 選んだ方向へ、また列車を追いかける
   }
 

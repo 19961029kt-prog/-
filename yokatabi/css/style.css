@@ -1385,6 +1385,7 @@ body.modal-open { overflow: hidden; }
   .scenery { height: 60px; }
   .scenery-text { font-size: 11px; }
   .dir-btn { font-size: 12px; padding: 5px 10px 6px; }
+  .dir-btn small { display: none; } /* 狭い盤面では路線名を省いてボタンを小さく保つ（6方面に分かれる博多でも、ボタンが向きから離れすぎないように） */
   .lt-form { grid-template-columns: minmax(0, 1fr); }
   .lt-preview { max-width: 260px; justify-self: center; width: 100%; }
   .lt-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
