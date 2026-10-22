@@ -1,7 +1,8 @@
-// 駅のオーナー権：累計購入金額ランキングで決める（トップオーナー制＋下克上ボーナス＋上位3名の共同株主）。
-// サーバーはないので、競う相手は stations.json の「ライバル旅人」（駅ごとの rivals）。自分の実績はレシートで立候補した記録（Store.purchases）。
+// 駅のオーナー権：累計出資額ランキングで決める（トップオーナー制＋下克上ボーナス＋上位3名の共同株主）。
+// サーバーはないので、競う相手は stations.json の「ライバル旅人」（駅ごとの rivals。金額は万円）。
+// 自分の実績は、クラフト資金で出資した記録（Store.purchases。保存データの項目名は旧名のまま。レシート時代の記録もそのまま数える）。
 //   ・1位（totalAmount がいちばん高い）＝ その駅の正式なオーナー（地図の金の王冠・称号の総資産額に入る）
-//   ・いまの1位でない人が立候補するときは、申告額に下克上ボーナス（meta.owner.upsetBonus＝1.3倍）を掛けて数える
+//   ・いまの1位でない人が出資するときは、出資額に下克上ボーナス（meta.owner.upsetBonus＝1.3倍）を掛けて数える
 //   ・上位3名（meta.owner.shareholders）は共同株主。配当は駅の評価額（万円）× meta.owner.dividendRates
 //     （1位＝評価額そのまま、2位・3位の理事＝その3割・1割5分）
 // 配当はゲームの中だけのクラフト資金（お金の価値はない）。
@@ -15,7 +16,7 @@
   const rivalById = () => Object.fromEntries(D.meta.rivals.map((r) => [r.id, r]));
   const youName = () => Store.get().profile.name || 'あなた';
 
-  // ownersHistory：その駅の購入実績ランキング（金額の大きい順。同じ額ならライバルが先＝追い越さないと上がらない）
+  // ownersHistory：その駅の出資額ランキング（金額の大きい順。同じ額ならライバルが先＝追い越さないと上がらない）
   // baseRanking はライン制覇の倍率をかける前。ranking は、制覇したラインの駅の自分の配当を lineBonus 倍にする
   function baseRanking(id) {
     const s = D.byId[id];
@@ -49,7 +50,7 @@
     const rates = cfg().dividendRates;
     rows.forEach((r, i) => {
       r.rank = i + 1;
-      r.share = i < cfg().shareholders ? r.totalAmount / pool : 0; // 上位3名の中での購入額の割合（表示用）
+      r.share = i < cfg().shareholders ? r.totalAmount / pool : 0; // 上位3名の中での出資額の割合（表示用）
       r.dividend = i < cfg().shareholders ? Math.round(s.assetValue * (rates[i] || 0)) : 0; // 万円（ゲーム内のクラフト資金）
     });
     return rows;
@@ -77,7 +78,7 @@
   const yourRank = (id) => baseRank(id);
   const owner = (id) => ranking(id)[0];
 
-  // 立候補する前の見込み：この金額を足すと何位になるか
+  // 出資する前の見込み：この金額を足すと何位になるか
   function preview(id, amount) {
     const before = yourRank(id);
     const upset = before !== 1;
@@ -87,12 +88,24 @@
     const rankAfter = rows.filter((r) => r.totalAmount >= mine).length + 1;
     const leader = rows[0] ? rows[0].totalAmount : 0;
     const toTop = Math.max(0, leader - mine + 1);
-    // 次の立候補でも1位でなければ下克上ボーナスが付くので、実際に必要な購入額は toTop ÷ 1.3（切り上げ）
+    // 次の出資でも1位でなければ下克上ボーナスが付くので、実際に必要な出資額は toTop ÷ 1.3（切り上げ）
     const needToTop = rankAfter === 1 ? 0 : Math.ceil(toTop / cfg().upsetBonus);
     return { before, upset, scored, total: mine, rankAfter, toTop, needToTop };
   }
 
-  // 立候補を記録する。返り値で、1位を取ったか（王座交代）がわかる
+  // rank 位以内に入るのに、あといくら出資すればよいか（万円。下克上ボーナスも見込む。もう入っていれば 0）
+  function needFor(id, rank) {
+    const now = yourRank(id);
+    if (now && now <= rank) return 0;
+    const rows = ranking(id).filter((r) => !r.isYou);
+    const target = rows[rank - 1];
+    if (!target) return 1;
+    const mine = (you(id) || { totalAmount: 0 }).totalAmount;
+    const k = now === 1 ? 1 : cfg().upsetBonus;
+    return Math.max(1, Math.ceil((target.totalAmount - mine + 1) / k));
+  }
+
+  // 出資を記録する。返り値で、1位を取ったか（王座交代）がわかる
   function register(id, rec) {
     const p = preview(id, rec.amount);
     Store.addPurchase(id, { ...rec, scored: p.scored, upset: p.upset });
@@ -127,6 +140,7 @@
     yourRank,
     owner,
     preview,
+    needFor,
     register,
     sync,
     totalDividends,

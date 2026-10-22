@@ -343,11 +343,6 @@ svg { display: block; }
 .current-name small { font-size: 15px; margin-left: 2px; letter-spacing: .04em; }
 .current-status { margin-top: 6px; }
 .current-tagline { font-family: var(--font-mincho); font-size: 14px; color: var(--ink-2); margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--perf); letter-spacing: .06em; }
-.pending-chip {
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 10px; margin-top: 12px; padding: 8px 12px;
-  font-size: 12px; border: 1px dashed var(--sage); color: var(--sage-deep);
-}
-.pending-chip .ico { color: var(--brass); }
 .mini-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .mini-title { display: flex; align-items: center; gap: 6px; font-family: var(--font-mincho); font-weight: 700; font-size: 17px; letter-spacing: .06em; }
 .mini-title .ico { color: var(--brass); }
@@ -437,18 +432,6 @@ body.modal-open { overflow: hidden; }
 .owner-banner .ico { color: var(--brass); }
 .owner-banner small { display: block; font-size: 11px; color: var(--ink-3); margin-top: 2px; }
 .owner-banner.is-owner { background: linear-gradient(90deg, rgba(250, 240, 202, .6), transparent); }
-/* 待機パネル：視察・手配中 */
-.pending-panel { display: flex; gap: 16px; margin: 16px 26px 0; padding: 14px 16px; background: var(--paper); box-shadow: 0 0 0 1px rgba(91, 110, 90, .5), inset 0 0 0 3px var(--paper), inset 0 0 0 4px rgba(91, 110, 90, .3); }
-.pending-compass { flex: none; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; color: var(--brass); box-shadow: inset 0 0 0 1px var(--brass), inset 0 0 0 4px var(--paper), inset 0 0 0 5px rgba(184, 134, 11, .4); }
-.pending-compass .ico { width: 26px; height: 26px; }
-.pending-compass span { animation: compass-sway 3.2s var(--ease) infinite; display: inline-grid; }
-.pending-title { font-family: var(--font-mincho); font-weight: 700; font-size: 16px; color: var(--sage-deep); letter-spacing: .06em; }
-.pending-sub { font-size: 12px; color: var(--ink-2); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 2px; }
-.pending-time { color: var(--ink-3); }
-.pending-time b { font-family: var(--font-serif); font-weight: 600; font-size: 14px; color: var(--sage-deep); }
-.pending-msg { font-size: 13px; line-height: 1.85; margin-top: 6px; color: var(--ink); }
-.pending-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 10px; }
-.via-badge { display: inline-flex; align-items: center; gap: 4px; padding: 0 9px; font-size: 11.5px; font-weight: 500; color: var(--sage-deep); border: 1px solid rgba(91, 110, 90, .55); }
 .modal-sec { padding: 22px 26px 0; }
 /* 寄り道ノート：罫線のある手帖のページに、明朝で */
 .memo {
@@ -462,6 +445,25 @@ body.modal-open { overflow: hidden; }
 .item-name { font-family: var(--font-mincho); font-weight: 700; font-size: 17px; letter-spacing: .06em; }
 .item-desc { font-size: 13px; color: var(--ink-2); line-height: 1.85; margin: 2px 0 10px; }
 .aff-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; }
+/* 15秒覗くだけの急行切符：硬券の切符の帯（左右にパンチ穴・ミシン目）に、真鍮の線画の切符 */
+.peek-btn {
+  display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 10px 22px 11px 24px; color: var(--ink); text-decoration: none;
+  background: linear-gradient(90deg, transparent 52px, var(--perf) 52px 53px, transparent 53px) 0 0 / 100% 100% no-repeat, var(--antique);
+  box-shadow: inset 0 0 0 1px var(--brass), inset 0 0 0 3px var(--antique), inset 0 0 0 3.6px rgba(184, 134, 11, .45);
+  -webkit-mask: radial-gradient(circle 5px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 5px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+  mask: radial-gradient(circle 5px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 5px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+  transition: background-color .45s var(--ease);
+}
+.peek-btn:hover, .peek-btn:focus-visible { background-color: var(--gold-3); outline: none; }
+.peek-icon { flex: none; display: grid; place-items: center; width: 22px; color: var(--brass); }
+.peek-icon .ico { width: 22px; height: 22px; }
+.peek-text { display: grid; gap: 1px; padding-left: 8px; font-family: var(--font-mincho); font-weight: 700; font-size: 13px; line-height: 1.55; letter-spacing: .04em; }
+.peek-text b { color: var(--akane); }
+.peek-text small { font-family: var(--font-ui); font-weight: 500; font-size: 10.5px; color: var(--ink-3); letter-spacing: .02em; }
+.peek-btn.is-waiting { background-color: rgba(250, 240, 202, .6); }
+.peek-btn.is-waiting .peek-icon { animation: peek-wait 2.4s var(--ease) infinite; }
+.peek-done { display: flex; align-items: center; gap: 6px; margin-top: 10px; padding: 7px 12px; font-size: 11.5px; color: var(--ink-3); border: 1px dashed var(--perf); }
+.peek-done .ico { color: var(--brass); }
 /* ショップの札：店の色は左の縦線だけにして、字はインク */
 .aff-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 10px; text-decoration: none;
@@ -485,6 +487,34 @@ body.modal-open { overflow: hidden; }
 .fav-btn.is-on { background: rgba(250, 240, 202, .45); border-color: var(--gold); color: var(--mustard-deep); }
 
 /* ---------- 到着のタイトル（映画のタイトルバックのような全画面の組み） ---------- */
+/* 到着の駅名標：ホームの駅名標のような生成りの板。上の真鍮の吊り金具から下りてきて、カシャンと止まる */
+.station-sign { position: fixed; left: 50%; top: 0; z-index: 75; width: min(440px, calc(100vw - 32px)); transform: translate(-50%, -115%); pointer-events: none; transition: transform .75s var(--ease); }
+.station-sign.is-in { transform: translate(-50%, 0); }
+.station-sign.is-out { transform: translate(-50%, -115%); transition-duration: .6s; }
+.station-sign.is-in .ss-board { animation: ss-settle .9s var(--ease) .45s both; }
+.ss-hanger { display: flex; justify-content: space-between; padding: 0 22%; height: 18px; }
+.ss-hanger i { width: 1.5px; height: 100%; background: linear-gradient(var(--brass), var(--gold-2) 60%, var(--brass)); box-shadow: 0 0 0 .5px rgba(44, 37, 35, .25); }
+.ss-board {
+  position: relative; padding: 10px 16px 0; text-align: center; transform-origin: 50% 0;
+  background: var(--fiber), var(--ivory); box-shadow: 0 0 0 1px var(--plate), inset 0 0 0 3px var(--ivory), inset 0 0 0 3.6px rgba(110, 93, 79, .55), 0 18px 34px -22px rgba(30, 24, 20, .7);
+}
+.ss-top { display: flex; justify-content: center; align-items: baseline; gap: 12px; font-size: 10.5px; color: var(--ink-3); letter-spacing: .08em; }
+.ss-no { font-family: var(--font-serif); font-style: italic; font-weight: 600; font-size: 13px; color: var(--brass); letter-spacing: .04em; }
+.ss-line { font-family: var(--font-mincho); color: var(--ink-2); }
+.ss-name { font-family: var(--font-mincho); font-weight: 800; font-size: clamp(30px, 8vw, 40px); line-height: 1.15; letter-spacing: .32em; text-indent: .32em; color: var(--ink); margin-top: 2px; }
+.ss-kana { font-family: var(--font-mincho); font-size: 13px; letter-spacing: .5em; text-indent: .5em; color: var(--ink-2); margin-top: 2px; }
+.ss-band {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 8px -16px 0; padding: 6px 14px 7px; min-height: 30px;
+  font-family: var(--font-mincho); font-weight: 700; font-size: 12.5px; letter-spacing: .1em; color: var(--ivory); background: var(--line, var(--forest));
+  box-shadow: inset 0 1px 0 rgba(250, 240, 202, .35), inset 0 -2px 0 rgba(0, 0, 0, .12);
+}
+.ss-band span { display: inline-flex; align-items: center; gap: 5px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ss-band .ico { width: 14px; height: 14px; color: var(--gold-2); flex: none; }
+.ss-band small { font-weight: 500; font-size: 11px; opacity: .8; }
+@media (prefers-reduced-motion: reduce) {
+  .station-sign, .station-sign.is-out { transition-duration: .01s; }
+  .station-sign.is-in .ss-board { animation: none; }
+}
 .arrival { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 24px; cursor: pointer; background: rgba(26, 21, 18, .9); opacity: 0; transition: opacity .7s var(--ease); overflow: hidden; }
 .arrival.is-open { opacity: 1; }
 .arrival.is-closing { opacity: 0; transition-duration: .5s; }
@@ -528,6 +558,24 @@ body.modal-open { overflow: hidden; }
 .deed-rows div { display: grid; grid-template-columns: 90px 1fr; gap: 10px; align-items: center; font-size: 13px; }
 .deed-rows dt { color: var(--ink-3); font-weight: 500; font-size: 12px; }
 .deed.is-stamped { animation: deed-thud .6s var(--ease); }
+/* 出資届：何位に届くかの金額の札（硬券の小さな札）と、刻印の朱の印 */
+.invest-presets { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 14px; }
+.invest-chip { display: grid; justify-items: center; gap: 1px; padding: 8px 10px 9px; font-family: var(--font-mincho); font-weight: 700; font-size: 12.5px; letter-spacing: .06em; color: var(--ink); background: var(--ivory); box-shadow: 0 0 0 1px var(--rule), inset 0 0 0 3px var(--ivory), inset 0 0 0 3.6px rgba(200, 185, 166, .8); transition: background .4s var(--ease), box-shadow .4s var(--ease); }
+.invest-chip i { font-family: var(--font-serif); font-style: italic; font-weight: 600; font-size: 16px; margin-right: 1px; }
+.invest-chip b { font-family: var(--font-serif); font-style: italic; font-weight: 600; font-size: 18px; color: var(--akane); letter-spacing: 0; }
+.invest-chip .ico { width: 15px; height: 15px; color: var(--brass); vertical-align: -2px; margin-right: 2px; }
+.invest-chip:hover, .invest-chip:focus-visible { background: var(--gold-3); box-shadow: 0 0 0 1px var(--brass), inset 0 0 0 3px var(--gold-3), inset 0 0 0 3.6px rgba(184, 134, 11, .6); outline: none; }
+.invest-chip.is-short { opacity: .55; }
+.invest-chip.is-short b { color: var(--ink-3); }
+.invest-steps { display: flex; gap: 6px; align-self: end; padding-bottom: 6px; }
+.deed-apply .apply-row { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
+.amount-field small { flex: none; font-family: var(--font-mincho); font-size: 14px; font-weight: 700; color: var(--ink-2); }
+.apply-verdict { margin-top: 8px; font-size: 12.5px; }
+.apply-verdict.is-ok { color: var(--forest); }
+.apply-verdict.is-ng { color: var(--akane); }
+.apply-verdict .ico { color: currentColor; }
+.deed-stamp-spot { position: absolute; right: 26px; top: 64px; width: 128px; pointer-events: none; opacity: 0; transform: scale(1.7) rotate(-14deg); }
+.deed.is-stamped .deed-stamp-spot { animation: seal-slam .5s cubic-bezier(.5, 0, .75, .2) forwards; }
 /* 刻印のボタン：朱肉の色の札に、内側の細い金線 */
 .stamp-btn {
   display: block; width: 100%; margin-top: 14px; padding: 14px; font-family: var(--font-mincho); font-weight: 800; font-size: 18px; letter-spacing: .16em; color: var(--cream);
@@ -652,6 +700,87 @@ body.modal-open { overflow: hidden; }
 .seg { display: inline-flex; gap: 0; margin-bottom: 18px; box-shadow: 0 0 0 1px var(--rule); background: var(--paper); }
 .seg-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; font-family: var(--font-mincho); font-weight: 700; font-size: 14px; letter-spacing: .06em; color: var(--ink-2); transition: background .45s var(--ease), color .45s var(--ease); }
 .seg-btn + .seg-btn { border-left: 1px solid var(--line); }
+/* 「00 / 旅の巻頭言」の栞：ほかの見出しより一段落ちた、細い真鍮の栞紐のしるし */
+.seg-preface { position: relative; color: var(--brass); }
+.seg-no { font-family: var(--font-serif); font-style: italic; font-weight: 600; font-size: 13px; letter-spacing: .04em; }
+.seg-preface::before { content: ''; position: absolute; left: 9px; top: -6px; width: 2px; height: 12px; background: var(--akane); }
+
+/* ---------- 旅の巻頭言 ---------- */
+/* 縦組みの本文：明朝・句点ごとに改段。幅が足りなければ横にスクロール（右から読む） */
+.preface-tate { writing-mode: vertical-rl; text-orientation: mixed; height: min(470px, 58vh); max-width: 100%; overflow-x: auto; overflow-y: hidden; margin-inline: auto; font-family: var(--font-mincho); color: var(--ink); }
+.preface-title { font-weight: 800; font-size: 21px; line-height: 1.9; letter-spacing: .16em; margin-left: 18px; }
+.preface-body { font-size: 15px; line-height: 2.05; letter-spacing: .12em; color: var(--ink-2); }
+.preface-body span { display: block; }
+.preface-body span + span { margin-top: 1em; }
+.preface-sign { font-family: var(--font-mincho); font-size: 12.5px; letter-spacing: .2em; color: var(--brass); margin-right: 18px; text-align: end; }
+.preface-tate .preface-sign { margin-right: 22px; }
+/* ① 初回の表紙：深緑の革張りの手帖に、金の箔押しの枠と羅針盤の紋。右に生成りの扉のページ */
+.cover { position: fixed; inset: 0; z-index: 95; display: grid; place-items: center; padding: 16px; background: rgba(26, 21, 18, .72); opacity: 0; transition: opacity .8s var(--ease); overflow: auto; }
+.cover.is-open { opacity: 1; }
+.cover.is-closing { opacity: 0; transition-duration: .8s; }
+.cover-book { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 560px); width: min(860px, 100%); transform: translateY(14px); transition: transform 1s var(--ease); box-shadow: 0 30px 60px -30px rgba(0, 0, 0, .8); }
+.cover.is-open .cover-book { transform: none; }
+.cover.is-closing .cover-book { transform: translateY(-10px) scale(.985); }
+.cover-leather {
+  position: relative; display: grid; align-content: center; justify-items: center; gap: 8px; padding: 40px 24px; color: var(--gold-2); text-align: center;
+  background: radial-gradient(120% 90% at 30% 20%, rgba(255, 255, 255, .08), transparent 60%), radial-gradient(90% 80% at 80% 90%, rgba(0, 0, 0, .28), transparent 70%), var(--fiber), var(--forest);
+  box-shadow: inset 0 0 0 1px #16291f, inset -6px 0 10px -6px rgba(0, 0, 0, .6);
+}
+/* 金の箔押しの二重枠（革の縁から少し内側に） */
+.cover-tool { position: absolute; inset: 14px; pointer-events: none; box-shadow: inset 0 0 0 1px rgba(230, 198, 101, .75), inset 0 0 0 4px transparent, inset 0 0 0 4.6px rgba(230, 198, 101, .45); }
+.cover-emblem { display: grid; place-items: center; width: 70px; height: 70px; border-radius: 50%; color: var(--gold-2); box-shadow: inset 0 0 0 1px rgba(230, 198, 101, .8), inset 0 0 0 5px transparent, inset 0 0 0 5.6px rgba(230, 198, 101, .5); }
+.cover-emblem .ico { width: 36px; height: 36px; }
+.cover-brand { font-family: var(--font-serif); font-weight: 600; font-size: 26px; letter-spacing: .3em; text-indent: .3em; margin-top: 10px; }
+.cover-name { font-family: var(--font-mincho); font-weight: 700; font-size: 17px; letter-spacing: .24em; color: var(--gold-3); }
+.cover-sub { font-family: var(--font-serif); font-style: italic; font-size: 11px; letter-spacing: .24em; opacity: .8; }
+.cover-page { display: grid; justify-items: center; gap: 18px; padding: 28px 28px 26px; background: var(--fiber), var(--ivory); box-shadow: inset 0 0 0 1px var(--rule), inset 8px 0 14px -10px rgba(44, 37, 35, .35); }
+.cover-eyebrow { justify-self: start; }
+.cover-go { min-width: 15em; justify-content: center; }
+/* ② マップ右上の真鍮の羅針盤ボタン（直径32px） */
+.compass-btn { position: absolute; top: 12px; right: 12px; z-index: 4; width: 32px; height: 32px; padding: 0; border-radius: 50%; background: rgba(250, 246, 240, .92); box-shadow: 0 0 0 1px rgba(110, 93, 79, .5), 0 4px 10px -6px rgba(44, 37, 35, .6); transition: transform .5s var(--ease), background .4s var(--ease); }
+.compass-btn svg { display: block; width: 32px; height: 32px; }
+.compass-btn:hover, .compass-btn:focus-visible { background: var(--gold-3); transform: rotate(-18deg); outline: none; }
+.cb-ring { fill: none; stroke: var(--brass); stroke-width: 1.25; }
+.cb-thin { stroke-width: .5; }
+.cb-tick { stroke: var(--brass); stroke-width: 1; stroke-linecap: round; }
+.cb-needle { fill: none; stroke: var(--ink); stroke-width: .8; stroke-linejoin: round; }
+.cb-ew { stroke: var(--brass); stroke-width: .6; }
+.cb-north { fill: var(--akane); }
+.cb-pin { fill: var(--brass); }
+.compass-veil { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 16px; background: rgba(26, 21, 18, .5); opacity: 0; transition: opacity .6s var(--ease); }
+.compass-veil.is-open { opacity: 1; }
+.compass-sheet { position: relative; width: min(520px, 100%); max-height: calc(100vh - 32px); overflow: auto; padding: 26px 28px 22px; background: var(--fiber), var(--ivory); box-shadow: var(--frame-gold), var(--sh-3); transform: translateY(10px); transition: transform .7s var(--ease); }
+.compass-veil.is-open .compass-sheet { transform: none; }
+.veil-title { font-family: var(--font-mincho); font-weight: 800; font-size: 21px; letter-spacing: .12em; margin-top: 8px; }
+.veil-body { font-family: var(--font-mincho); font-size: 14.5px; line-height: 2.05; letter-spacing: .06em; color: var(--ink-2); margin-top: 10px; }
+.compass-sheet .preface-sign { padding-top: 10px; text-align: right; margin-right: 0; }
+.veil-nums { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--perf); }
+.veil-nums div { display: grid; justify-items: center; gap: 2px; padding: 8px; box-shadow: 0 0 0 1px var(--rule), inset 0 0 0 3px var(--ivory), inset 0 0 0 3.6px rgba(200, 185, 166, .8); }
+.veil-nums dt { font-family: var(--font-mincho); font-weight: 700; font-size: 12px; letter-spacing: .1em; color: var(--ink-2); }
+.veil-nums b { font-size: 30px; color: var(--brass); line-height: 1.1; }
+.veil-nums small { font-size: 12px; color: var(--ink-3); margin-left: 2px; }
+.veil-note { font-size: 11px; color: var(--ink-3); margin-top: 10px; }
+/* ③ 手帖の栞のページ：罫の入った生成りの紙に、縦組み */
+.preface-leaf { display: grid; justify-items: center; gap: 14px; padding: 26px 20px 24px; background: var(--fiber), var(--ivory); box-shadow: var(--frame); }
+.preface-leaf .eyebrow { justify-self: start; }
+@media (max-width: 639px) {
+  .cover { align-items: start; padding: 12px; }
+  .cover-book { grid-template-columns: 1fr; }
+  .cover-leather { grid-template-columns: auto 1fr; grid-template-rows: auto auto auto; justify-items: start; text-align: left; column-gap: 14px; row-gap: 0; padding: 22px 26px; }
+  .cover-emblem { grid-row: 1 / span 3; width: 52px; height: 52px; }
+  .cover-emblem .ico { width: 28px; height: 28px; }
+  .cover-brand { font-size: 19px; margin-top: 0; text-indent: 0; }
+  .cover-name { font-size: 14px; }
+  .cover-page { padding: 20px 14px 18px; gap: 14px; }
+  .preface-tate { height: min(440px, 56vh); }
+  .preface-title { font-size: 18px; margin-left: 12px; }
+  .preface-body { font-size: 14px; line-height: 1.9; letter-spacing: .08em; }
+  .compass-btn { top: 8px; right: 8px; }
+  .compass-sheet { padding: 22px 18px 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cover, .cover-book, .compass-veil, .compass-sheet { transition-duration: .01s; }
+}
 .seg-btn .ico { color: var(--brass); }
 .seg-btn.is-active { background: var(--ink); color: var(--cream); }
 .seg-btn.is-active .ico { color: var(--gold-2); }
@@ -911,9 +1040,7 @@ body.modal-open { overflow: hidden; }
   .journey { margin-left: 14px; margin-right: 14px; }
   .modal-sec { padding-left: 14px; padding-right: 14px; }
   .journey-label { font-size: 12px; }
-  .owner-banner, .pending-panel, .disclosure { margin-left: 14px; margin-right: 14px; }
-  .pending-panel { flex-direction: column; gap: 8px; }
-  .pending-compass { width: 40px; height: 40px; }
+  .owner-banner, .disclosure { margin-left: 14px; margin-right: 14px; }
   .memo { font-size: 15px; padding: 8px 12px 8px 16px; }
   .modal-foot { padding: 10px 14px; flex-wrap: nowrap; gap: 6px; }
   .modal-foot > * { flex: 1 1 auto; padding: 8px 8px; font-size: 12px; justify-content: center; white-space: nowrap; letter-spacing: .02em; }
@@ -996,83 +1123,18 @@ body.modal-open { overflow: hidden; }
 .rank-note b { color: var(--akane); font-weight: 700; }
 .rank-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 12px; }
 .rank-actions small { font-size: 11px; color: var(--ink-3); }
-.mini-receipts { display: flex; gap: 12px; overflow-x: auto; padding: 12px 2px 4px; }
 /* 立候補届 */
 .deed-apply .deed-value b { font-size: 15px; }
 .deed-bonus { margin-top: 6px; font-size: 12px; font-weight: 500; color: var(--akane); }
-/* 画像を置く場所：罫線の方眼に、ミシン目の枠 */
-.drop {
-  position: relative; display: grid; place-items: center; min-height: 170px; margin-top: 16px; padding: 12px; cursor: pointer; overflow: hidden;
-  background: repeating-linear-gradient(0deg, rgba(184, 166, 142, .18) 0 1px, transparent 1px 14px), repeating-linear-gradient(90deg, rgba(184, 166, 142, .18) 0 1px, transparent 1px 14px), var(--paper);
-  border: 1px dashed var(--perf); transition: background .5s var(--ease), border-color .5s var(--ease);
-}
-.drop.is-over { border-color: var(--akane); background-color: var(--terracotta-soft); }
-.drop-empty { display: grid; justify-items: center; gap: 4px; text-align: center; }
-.drop-icon .ico { width: 36px; height: 36px; color: var(--brass); }
-.drop-empty b { font-size: 14px; font-weight: 500; line-height: 1.7; }
-.drop-empty small { font-size: 11px; color: var(--ink-3); }
-.drop-preview { position: relative; display: block; width: 100%; }
-.drop-preview img { display: block; max-width: 100%; max-height: 300px; margin: 0 auto; box-shadow: 0 0 0 1px var(--rule); }
-/* 解析中：紙をなぞる鉛筆の帯がゆっくり上下する */
-.scan { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
-.drop.is-scanning .scan { opacity: 1; }
-.scan i { position: absolute; left: 4%; right: 4%; height: 16%; background: linear-gradient(180deg, transparent, rgba(184, 134, 11, .2), transparent); border-top: 1px solid rgba(184, 134, 11, .5); animation: scan 1.6s var(--ease) infinite alternate; }
-.drop-stamp { position: absolute; left: 50%; top: 50%; width: min(70%, 240px); opacity: 0; transform: translate(-50%, -50%) scale(1.6) rotate(-14deg); pointer-events: none; }
-.drop.is-stamping .drop-stamp { animation: receipt-slam .5s cubic-bezier(.5, 0, .75, .2) forwards; }
-.scan-status { min-height: 1.8em; margin-top: 8px; font-size: 13px; font-weight: 500; color: var(--sage-deep); }
-.scan-status .ico { color: var(--brass); }
-.scan-label { display: inline-block; margin-right: 6px; padding: 0 8px; font-family: var(--font-serif); font-weight: 700; font-size: 11px; letter-spacing: .16em; color: var(--cream); background: var(--ink); vertical-align: 1px; }
-.drop-ai { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; padding: 2px 10px; color: var(--sage-deep); font-size: 11px; font-weight: 500; border: 1px solid rgba(91, 110, 90, .4); }
 .apply-form { margin-top: 8px; text-align: left; }
 .apply-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .apply-row label { display: grid; gap: 2px; font-size: 12px; font-weight: 500; color: var(--ink-3); }
 .amount-field { display: flex; align-items: center; gap: 4px; padding: 6px 10px; background: var(--paper); box-shadow: 0 0 0 1px var(--rule); font-family: var(--font-serif); font-weight: 600; font-size: 22px; color: var(--ink); }
 .amount-field input { width: 100%; min-width: 0; border: 0; background: transparent; font: inherit; color: inherit; outline: none; }
 .apply-row select { padding: 9px 10px; background: var(--paper); border: 0; box-shadow: 0 0 0 1px var(--rule); font: inherit; font-size: 14px; color: var(--ink); }
-.apply-candidates { margin-top: 6px; font-size: 11px; color: var(--ink-3); display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
-.cand { padding: 0 8px; border: 1px solid var(--rule); font-size: 11px; font-weight: 500; }
 .apply-preview { margin-top: 10px; padding: 8px 12px; font-size: 13px; line-height: 1.8; border-left: 2px solid var(--gold); background: rgba(250, 240, 202, .35); }
 .apply-preview b { color: var(--akane); }
 .apply-preview .ico { color: var(--brass); }
-/* 査収のハンコ（Q-TRIP 旅の領収書）：朱肉。かすれは receipts.js のフィルタ */
-.receipt-stamp-svg { width: 100%; height: auto; overflow: visible; }
-.rs-ring { fill: none; stroke: var(--akane); stroke-width: 3; }
-.rs-thin { stroke-width: 1.1; }
-.rs-big { font-family: var(--font-mincho); font-weight: 800; font-size: 24px; fill: var(--akane); letter-spacing: .14em; }
-.rs-mid { font-family: var(--font-mincho); font-weight: 700; font-size: 12.5px; fill: var(--akane); letter-spacing: .06em; }
-.rs-line { stroke: var(--akane); stroke-width: 1; stroke-dasharray: 3 2; }
-.rs-date { font-family: var(--font-serif); font-weight: 700; font-size: 13px; fill: var(--akane); letter-spacing: .12em; }
-.rs-check { fill: none; stroke: var(--akane); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-.rs-verified { font-family: var(--font-mincho); font-weight: 800; font-size: 10px; fill: var(--akane); letter-spacing: .14em; }
-/* 切手風の領収証カード */
-.receipt { position: relative; flex: none; width: 100%; padding: 8px; background: var(--porcelain); overflow: hidden;
-  -webkit-mask: radial-gradient(circle at center, transparent 3.1px, #000 3.6px) -5px -5px / 10px 10px round, linear-gradient(#000 0 0) content-box;
-  mask: radial-gradient(circle at center, transparent 3.1px, #000 3.6px) -5px -5px / 10px 10px round, linear-gradient(#000 0 0) content-box;
-  filter: drop-shadow(0 1px 1px rgba(44, 37, 35, .18)); }
-.receipt-paper { display: grid; grid-template-columns: 92px 1fr; gap: 12px; padding: 9px; min-height: 120px; background: var(--fiber), var(--porcelain); box-shadow: inset 0 0 0 1px var(--pref), inset 0 0 0 4px var(--porcelain), inset 0 0 0 4.6px color-mix(in srgb, var(--pref) 40%, transparent); }
-.receipt-thumb { display: grid; place-items: center; height: 104px; overflow: hidden; background: var(--paper-2); color: var(--brass); }
-.receipt-thumb .ico { width: 28px; height: 28px; }
-.receipt-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top; filter: sepia(.15); }
-.receipt-station { font-family: var(--font-mincho); font-weight: 800; font-size: 16px; line-height: 1.4; letter-spacing: .06em; }
-.receipt-station small { font-size: 11px; }
-.receipt-amount { font-family: var(--font-serif); font-style: italic; font-weight: 600; font-size: 24px; color: var(--ink); line-height: 1.25; }
-.receipt-body { min-width: 0; }
-.receipt-shop { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; color: var(--ink-2); line-height: 1.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.receipt-shop .ico { color: var(--brass); }
-.receipt-meta { font-size: 10px; color: var(--ink-3); line-height: 1.6; }
-/* 査収スタンプは右上（駅名・金額の右の空き）に押し、下のショップ・日付の行にはかけない */
-.receipt-stamp { position: absolute; right: 8px; top: 10px; width: 82px; transform: rotate(-6deg); opacity: .85; mix-blend-mode: multiply; pointer-events: none; }
-.receipt-mini { width: 230px; }
-.receipt-mini .receipt-paper { grid-template-columns: 64px 1fr; min-height: 92px; }
-.receipt-mini .receipt-thumb { height: 76px; }
-.receipt-mini .receipt-amount { font-size: 18px; }
-.receipt-mini .receipt-stamp { width: 62px; }
-.album-head { margin-bottom: 14px; }
-.album-sum { font-size: 13px; color: var(--ink-2); }
-.album-sum b { color: var(--ink); font-family: var(--font-serif); font-style: italic; font-weight: 600; font-size: 17px; }
-.album-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
-.legacy-sec { margin-top: 28px; }
-.legacy-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .blank-top { font-size: 10px; color: var(--ink-3); margin-top: 2px; }
 .owner-name { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 11px; color: rgba(244, 239, 230, .8); }
 .owner-name input { width: 9em; padding: 2px 8px; border: 0; box-shadow: 0 0 0 1px rgba(197, 155, 39, .5); background: rgba(244, 239, 230, .08); color: var(--cream); font: inherit; font-family: var(--font-mincho); font-size: 13px; }
@@ -1080,8 +1142,6 @@ body.modal-open { overflow: hidden; }
   .rk { padding: 8px 10px; grid-template-columns: 32px 1fr auto; }
   .rk-amt { font-size: 16px; }
   .apply-row { grid-template-columns: 1fr; }
-  .album-grid { grid-template-columns: minmax(0, 1fr); }
-  .drop { min-height: 140px; }
 }
 
 /* =====================================================================
@@ -1104,15 +1164,31 @@ body.modal-open { overflow: hidden; }
 .hdr-share:hover { border-color: var(--gold-2); color: #fff; }
 
 /* ---------- ご当地のミニ車窓バナー ---------- */
-/* 客車の窓：真鍮の細い窓枠に、銅版画の風景（js/scenery.js） */
-.scenery { position: relative; height: 76px; margin-bottom: 12px; overflow: hidden; background: var(--antique); box-shadow: 0 0 0 1px var(--plate), inset 0 0 0 3px var(--paper), inset 0 0 0 4px var(--gold); }
-.scenery-view, .scenery-view svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.scenery::after { content: ''; position: absolute; inset: 0; box-shadow: inset 0 0 0 3px var(--paper), inset 0 0 0 4px rgba(197, 155, 39, .8), inset 0 0 0 5px var(--paper); pointer-events: none; }
-.scenery-text { position: absolute; left: 12px; bottom: 10px; display: flex; align-items: center; gap: 7px; padding: 1px 12px 1px 8px; font-size: 12px; line-height: 1.7; background: rgba(251, 248, 242, .94); box-shadow: 0 0 0 1px var(--rule); max-width: calc(100% - 24px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 車窓パノラマ：観光列車の木の内装のような、ウォールナットの窓枠＋真鍮の二重細線。中を銅版画の風景が流れる（js/scenery.js） */
+.scenery { position: relative; box-sizing: content-box; height: 68px; margin-bottom: 12px; overflow: hidden; border: 6px solid transparent; border-radius: 4px;
+  background: linear-gradient(var(--antique), var(--antique)) padding-box,
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, .16) 0 1px, transparent 1px 7px, rgba(255, 236, 200, .07) 7px 8px, transparent 8px 19px) border-box,
+    linear-gradient(rgba(255, 236, 200, .12), rgba(0, 0, 0, .18)) border-box, var(--walnut) border-box;
+  box-shadow: 0 0 0 1px #2e2017, inset 0 0 0 1px #2e2017, 0 10px 20px -14px rgba(30, 24, 20, .7); }
+.pano-view { position: absolute; inset: 0; overflow: hidden; }
+.pano-scene { position: absolute; inset: 0; transition: opacity .9s var(--ease); }
+.pano-scene.is-entering { opacity: 0; }
+.pano-sky, .pano-drift { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pano-band { position: absolute; inset: 0; overflow: hidden; }
+.pano-track { display: flex; height: 100%; will-change: transform; }
+.pano-tile { flex: none; width: var(--tw, 362px); height: 100%; }
+.pano-tile.is-flip { transform: scaleX(-1); }
+.pano-tile svg { display: block; width: 100%; height: 100%; }
+.pano-far { opacity: 1; }
+/* 窓のガラス：上に淡い映り込み、四隅は少し暗く。内側に真鍮の二重細線 */
+.pano-frame { position: absolute; inset: 0; pointer-events: none; border-radius: 3px;
+  background: linear-gradient(172deg, rgba(255, 255, 255, .28), rgba(255, 255, 255, 0) 38%), radial-gradient(120% 140% at 50% 50%, transparent 62%, rgba(44, 37, 35, .16));
+  box-shadow: inset 0 0 0 1.5px var(--gold), inset 0 0 0 3.5px rgba(74, 53, 37, .35), inset 0 0 0 4.2px rgba(230, 198, 101, .75); }
+.scenery-text { position: absolute; left: 12px; bottom: 9px; z-index: 1; display: flex; align-items: center; gap: 7px; padding: 1px 12px 1px 8px; font-size: 12px; line-height: 1.7; background: rgba(251, 248, 242, .94); box-shadow: 0 0 0 1px var(--rule); max-width: calc(100% - 24px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .scenery-icon { display: inline-grid; color: var(--brass); }
 .scenery-text b { font-family: var(--font-mincho); font-size: 13px; letter-spacing: .06em; }
 .scenery-text span:last-child { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; }
-.scenery.is-moving .scenery-view svg { animation: scenery-pan 9s var(--ease) infinite alternate; }
+.sc-window { animation: sc-lamp 4.2s var(--ease) infinite; animation-delay: calc(var(--i) * -.8s); }
 .sc-steam { animation: sc-steam 4.2s var(--ease) infinite; animation-delay: calc(var(--i) * -.7s); opacity: .9; }
 .sc-plume { animation: sc-plume 6s var(--ease) infinite; transform-origin: 180px 20px; }
 .sc-wind { animation: sc-wind 4s linear infinite; animation-delay: calc(var(--i) * -.9s); }
@@ -1128,8 +1204,6 @@ body.modal-open { overflow: hidden; }
 .rfx-volcano > * { animation-name: rfx-drift; }
 .rfx.is-big > * { animation-duration: 2.8s; }
 .btn-sm { padding: 6px 14px; font-size: 13px; vertical-align: middle; }
-.aff-locked { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-3); padding: 6px 10px; border: 1px dashed var(--perf); }
-.aff-locked .ico { color: var(--brass); }
 .kicker-ro { font-size: 11px; color: var(--ink-3); margin-left: 4px; letter-spacing: .04em; }
 
 /* ---------- ポラロイド風ポストカード ---------- */
@@ -1140,6 +1214,8 @@ body.modal-open { overflow: hidden; }
 .polaroid:hover { transform: rotate(0deg) translateY(-2px); }
 .pol-photo { position: relative; aspect-ratio: 4 / 3; overflow: hidden; background: var(--paper-2); box-shadow: inset 0 0 0 1px rgba(44, 37, 35, .12); }
 .pol-photo img, .pol-photo .pol-illust { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* 投函した写真は切手に仕立ててあるので、目打ちの縁が切れないよう全体を見せる（台紙と同じ色で余白を埋める） */
+.pol-photo img.pol-stampimg { object-fit: contain; background: #f4efe6; }
 .pol-empty { display: grid; place-items: center; color: var(--brass); }
 .pol-empty .ico { width: 34px; height: 34px; }
 .polaroid.is-locked .pol-photo > :not(.pol-lock) { filter: blur(10px) sepia(.3); transform: scale(1.08); }
@@ -1176,6 +1252,23 @@ body.modal-open { overflow: hidden; }
 .lt-title .eyebrow { font-size: 10.5px; }
 .lt-lead { font-size: 13px; color: var(--ink-2); margin-top: 4px; }
 .lt-note { font-size: 11.5px; color: var(--ink-3); margin-top: 8px; }
+.lt-submit { display: grid; justify-items: center; gap: 1px; letter-spacing: .1em; }
+.lt-submit small { font-family: var(--font-ui); font-weight: 500; font-size: 10.5px; letter-spacing: .04em; opacity: .85; }
+.lt-pass { margin-top: 8px; font-family: var(--font-mincho); font-size: 13px; letter-spacing: .1em; color: var(--brass); text-align: center; }
+/* ある旅人から届いた記憶：右下から、ポラロイドがすっと届く（タップで閉じる） */
+.memory-slide { position: fixed; right: 20px; bottom: 24px; z-index: 58; width: 236px; padding: 12px 12px 10px; cursor: pointer; background: var(--fiber), var(--ivory); box-shadow: var(--frame-gold), 0 20px 40px -22px rgba(30, 24, 20, .75);
+  transform: translate(30px, 24px) rotate(4deg); opacity: 0; transition: transform .9s var(--ease), opacity .7s var(--ease); }
+.memory-slide.is-in { transform: rotate(-2deg); opacity: 1; }
+.memory-slide.is-out { transform: translate(40px, 10px) rotate(6deg); opacity: 0; transition-duration: .7s; }
+.mem-kicker { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-family: var(--font-mincho); font-weight: 700; font-size: 13px; letter-spacing: .1em; color: var(--ink); }
+.mem-kicker .ico { color: var(--brass); }
+.memory-slide .polaroid { width: 100%; margin: 0; }
+.memory-slide .pol-like { display: none; }
+.mem-bonus { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 4px; white-space: nowrap; margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--perf); font-size: 12px; color: var(--ink-2); }
+.mem-bonus .ico { color: var(--brass); align-self: center; }
+.mem-bonus b { font-family: var(--font-serif); font-style: italic; font-weight: 600; font-size: 15px; color: var(--akane); }
+.mem-bonus small { font-size: 10.5px; color: var(--ink-3); }
+@media (max-width: 639px) { .memory-slide { right: 12px; bottom: 84px; width: 200px; } }
 .lt-form { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 22px; margin-top: 16px; align-items: start; }
 .lt-fields { display: grid; gap: 12px; }
 .lt-label { display: grid; gap: 4px; font-size: 12px; font-weight: 500; color: var(--ink-2); }
@@ -1206,7 +1299,12 @@ body.modal-open { overflow: hidden; }
 .pm-border { fill: none; stroke: var(--perf); stroke-width: 1; stroke-dasharray: 4 4; }
 .pm-route { fill: none; stroke: rgba(44, 37, 35, .4); stroke-width: 1.6; stroke-linecap: round; }
 .pm-st circle { fill: var(--porcelain); stroke: var(--plate); stroke-width: 1.2; }
-.pm-st.is-visited circle { fill: var(--akane); stroke: var(--porcelain); }
+/* 霧の解放：まだの駅は霧に沈んだ灰色、到着・投函した駅は真鍮の輪と県の色で灯る */
+.pm-st.is-fog circle { fill: #ece6dc; stroke: #a39a90; stroke-width: 1; }
+.pm-st .pm-fog { fill: url(#pm-fog); stroke: none; pointer-events: none; }
+.pm-st.is-visited circle { fill: var(--ivory); stroke: var(--brass); stroke-width: 1.6; }
+.pm-st.is-visited .pm-core { fill: var(--pref); stroke: none; }
+.pm-st.is-visited .pm-glow { fill: url(#pm-glow); stroke: none; pointer-events: none; }
 .pm-crown { fill: var(--gold-3); stroke: var(--brass); stroke-width: .8; }
 .pm-pin { cursor: pointer; }
 .pm-float { animation: pm-float 4.4s var(--ease) infinite; animation-delay: calc(var(--i) * -.8s); }
@@ -1249,7 +1347,7 @@ body.modal-open { overflow: hidden; }
   .avatar-btn:has(.hdr-name) { padding: 0; }
   .hdr-share { padding: 0 10px; }
   .hdr-share-text { display: none; }
-  .scenery { height: 62px; }
+  .scenery { height: 60px; }
   .scenery-text { font-size: 11px; }
   .lt-form { grid-template-columns: minmax(0, 1fr); }
   .lt-preview { max-width: 260px; justify-self: center; width: 100%; }
@@ -1263,26 +1361,11 @@ body.modal-open { overflow: hidden; }
   .sc-actions > * { flex: 1 1 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .scenery.is-moving .scenery-view svg, .scenery-view svg * { animation: none !important; }
-  .pm-float, .dir-btn { animation: none; }
+  .pano-scene svg * { animation: none !important; }
+  .pm-float { animation: none; }
 }
 
 /* ---------- 厳格3点チェック（立候補シート） ---------- */
-.checks { display: grid; gap: 0; margin: 12px 0 4px; box-shadow: 0 0 0 1px var(--rule); background: var(--paper); }
-.check { display: flex; gap: 10px; align-items: flex-start; padding: 8px 12px; font-size: 12.5px; line-height: 1.7; text-align: left; transition: background .5s var(--ease); }
-.check + .check { border-top: 1px dashed var(--perf); }
-.check-icon { flex: none; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; color: var(--ink-3); box-shadow: inset 0 0 0 1px var(--rule); }
-.check-icon .ico { width: 13px; height: 13px; }
-.check-body { display: grid; min-width: 0; }
-.check-body b { font-family: var(--font-mincho); font-size: 12.5px; letter-spacing: .04em; }
-.check-detail { color: var(--ink-2); word-break: break-word; }
-.check.is-wait .check-icon .ico { animation: check-spin 2.4s var(--ease) infinite; }
-.check.is-ok { background: rgba(91, 110, 90, .07); animation: check-pop .7s var(--ease); }
-.check.is-ok .check-icon { color: var(--sage-deep); box-shadow: inset 0 0 0 1px var(--sage); }
-.check.is-ng { background: rgba(168, 56, 43, .06); animation: check-pop .7s var(--ease); }
-.check.is-ng .check-icon { color: var(--akane); box-shadow: inset 0 0 0 1px var(--akane); }
-.check.is-warn { background: rgba(250, 240, 202, .45); }
-.check.is-warn .check-icon { color: var(--brass); box-shadow: inset 0 0 0 1px var(--gold); }
 .apply-shop { font-size: 12px; color: var(--ink-2); align-self: end; padding-bottom: 6px; }
 .apply-shop b { font-size: 14px; color: var(--ink); margin: 0 2px; }
 .apply-shop small { font-size: 10.5px; color: var(--ink-3); }
@@ -1290,10 +1373,6 @@ body.modal-open { overflow: hidden; }
 .apply-verdict.is-ok { color: var(--sage-deep); box-shadow: inset 2px 0 0 var(--sage), 0 0 0 1px rgba(91, 110, 90, .3); }
 .apply-verdict.is-ng { color: var(--akane); box-shadow: inset 2px 0 0 var(--akane), 0 0 0 1px rgba(168, 56, 43, .3); }
 /* 分かれ道の行き先（ダイスの欄の一覧）：方向板の小さな札 */
-.dir-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.dir-chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; font-family: var(--font-mincho); font-size: 12.5px; font-weight: 700; letter-spacing: .04em; color: var(--ink); background: var(--paper); box-shadow: 0 0 0 1px var(--rule); transition: background .45s var(--ease); }
-.dir-chip .ico { color: var(--akane); width: 14px; height: 14px; }
-.dir-chip:hover { background: var(--antique); }
 .lt-map-body { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 20px; align-items: start; }
 .lt-map-body .lt-mine { margin-top: 0; align-content: start; }
 @media (max-width: 760px) {
@@ -1507,7 +1586,6 @@ body.modal-open { overflow: hidden; }
   50% { transform: translateX(var(--x)) rotateY(380deg) rotate(calc(var(--r) * .5)); }
   100% { top: 104%; opacity: .2; transform: translateX(calc(var(--x) * -.3)) rotateY(760deg) rotate(var(--r)); }
 }
-@keyframes compass-sway { 25% { transform: rotate(-12deg); } 75% { transform: rotate(10deg); } }
 @keyframes deed-thud { 30% { transform: translateY(2px); } }
 @keyframes card-in { from { transform: translateY(30px); opacity: 0; } }
 @keyframes cancel-in { from { opacity: 0; transform: rotate(-24deg) scale(1.5); } }
@@ -1517,9 +1595,6 @@ body.modal-open { overflow: hidden; }
 @keyframes char-in { from { transform: translateY(14px); opacity: 0; filter: blur(4px); } }
 @keyframes fade-up { from { opacity: 0; transform: translateY(10px); } }
 @keyframes toast-in { from { opacity: 0; transform: translateY(12px); } }
-@keyframes scan { from { top: 0; } to { top: 84%; } }
-@keyframes receipt-slam { to { opacity: .9; transform: translate(-50%, -50%) scale(1) rotate(-6deg); } }
-@keyframes scenery-pan { from { transform: translateX(0); } to { transform: translateX(-3%) scale(1.06); } }
 @keyframes sc-steam { 0% { transform: translateY(8px); opacity: 0; } 30% { opacity: .9; } 100% { transform: translateY(-40px) scaleX(1.4); opacity: 0; } }
 @keyframes sc-plume { 50% { transform: translate(14px, -6px) scale(1.12); } }
 @keyframes sc-wind { from { transform: translateX(0); opacity: 0; } 20% { opacity: .8; } to { transform: translateX(560px); opacity: 0; } }
@@ -1535,8 +1610,6 @@ body.modal-open { overflow: hidden; }
 @keyframes heart-fly { 0% { opacity: 0; transform: translate(-50%, 0) scale(.7); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), var(--dy)) scale(1.1); } }
 @keyframes pm-float { 50% { transform: translateY(-5px); } }
 @keyframes pm-ripple { 0% { r: 8; opacity: .9; } 100% { r: 46; opacity: 0; } }
-@keyframes check-spin { to { transform: rotate(180deg); } }
-@keyframes check-pop { from { opacity: .4; } }
 @keyframes gm-in { from { transform: translateY(18px); opacity: 0; } }
 @keyframes jackpot-zoom { from { transform: translateY(12px); opacity: 0; letter-spacing: .3em; } }
 @keyframes tk-flip { from { transform: rotateY(90deg); opacity: 0; } }
@@ -1545,3 +1618,6 @@ body.modal-open { overflow: hidden; }
 @keyframes ls-slam { from { transform: scale(1.6) rotate(-14deg); opacity: 0; } 70% { opacity: 1; } to { transform: scale(1) rotate(-6deg); } }
 @keyframes bolt { 0% { opacity: 0; transform: translateX(-50%) scale(.6); } 30% { opacity: 1; transform: translateX(-50%) scale(1); } 100% { opacity: 0; transform: translateX(-50%) scale(1); } }
 @keyframes pm-pop { from { opacity: 0; } }
+@keyframes seal-slam { to { opacity: .92; transform: scale(1) rotate(-6deg); } }
+@keyframes peek-wait { 50% { opacity: .35; } }
+@keyframes ss-settle { 0% { transform: rotate(0); } 30% { transform: rotate(1.1deg); } 60% { transform: rotate(-.5deg); } 100% { transform: rotate(0); } }

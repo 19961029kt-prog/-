@@ -1,5 +1,5 @@
 // 進捗の保存（localStorage）。プライベートブラウズ等で使えない場合はメモリ上だけで動く。
-// レシートの画像そのものは重いので、ここではなく IndexedDB（js/receipts.js）に置き、ここには画像のIDだけを持つ。
+// 旅の便りの写真そのものは重いので、ここではなく IndexedDB（js/photos.js）に置き、ここには画像のIDだけを持つ。
 (function () {
   'use strict';
   const YT = (window.YT = window.YT || {});
@@ -12,12 +12,12 @@
       version: VERSION,
       currentStationId: null,
       visited: {},   // { stationId: ISO日時（初到着） }
-      // いちばん最近その駅に止まった日（その端末の日付 YYYY-MM-DD）。レシートの「到着日＝注文日」の確かめに使う
+      // いちばん最近その駅に止まった日（その端末の日付 YYYY-MM-DD）
       arrivals: {},  // { stationId: 'YYYY-MM-DD' }
-      // いまトップオーナー（購入実績1位）の駅。順位から計算して書き戻す（js/ownership.js）。称号・旅しおり・地図の金色が使う
+      // いまトップオーナー（出資額1位）の駅。順位から計算して書き戻す（js/ownership.js）。称号・旅しおり・地図の金色が使う
       acquired: {},  // { stationId: { at（1位になった日時）, via, provider, item } }
-      // 駅ごとの購入実績（レシートで立候補した記録）。ランキングはこれとライバル旅人の実績から計算する
-      purchases: {}, // { stationId: [{ id, at, amount（読み取った金額・円）, scored（ランキングに入れた額）, upset（下克上ボーナス）, shop, via, item, imageId, hash }] }
+      // 駅ごとの出資の記録（項目名は旧名のまま。2026年10月まではレシートで立候補した記録だった）。ランキングはこれとライバル旅人の実績から計算する
+      purchases: {}, // { stationId: [{ id, at, amount（出資額・万円）, scored（ランキングに入れた額）, upset（下克上ボーナス）, shop, via: 'funds', item }] }
       legacyStamps: {}, // 旧版（ボタンと刻印シートで取れた頃）のオーナー刻印。記念としてアルバムにだけ残す
       profile: { name: '' }, // ランキングに出る自分の旅人名（空なら「あなた」）
       // 旅の便り（自分が投函したポストカード）。1駅に1枚（投函し直すと写真と一言を差し替える）。画像は IndexedDB
@@ -40,14 +40,19 @@
       rankSeen: null, // カットインを出し終えた称号の段階（0〜）。null は未初期化（既存データの移行用）
       rolls: 0,
       muted: false,
-      // ショップ・宿のボタンを押してから、レシートで立候補するまで
-      // { stationId, via, providerId, provider, item, clickedAt（ミリ秒） }
-      pendingOwner: null,
+      pendingOwner: null, // 旧版（レシートでの立候補）の手配中の記録。いまは使わない（読み込むと空にする）
       // クラフト資金：残高は「発見ボーナス × 初到着の駅数 ＋ 共同株主の配当 − 使った額」で毎回計算する
       spent: 0,
       owned: {},     // { 'livery:forest': ISO日時, … } … アンロック済みのパーツ（初期装備は持っている扱い）
       equipped: { livery: 'hidamari', carriage: 'none', trail: 'puff', hat: 'straw', outfit: 'canvas', buddy: 'none' },
       tickets: { date: '', used: 0 }, // よりみち切符：その日に使った枚数
+      // オートナビ：人が地図の進路の札で選んだ分かれ道の進路 { 分かれ道の駅ID: 進む隣の駅ID }（その分かれ道を通ったら消す）
+      routeLocks: {},
+      // 「15秒覗くだけ」の急行切符ボーナスを受け取った日 { stationId: 'YYYY-MM-DD' }（1駅につき1日1回）
+      peeks: {},
+      // 停車した駅で「ある旅人から届いた記憶」を受け取った便り { 旅人のポストカードID: ISO日時 }（1通につき1回）
+      memories: {},
+      prefaceSeen: false, // 初回の表紙（巻頭言）をひらいたか
     };
   }
 
@@ -59,6 +64,8 @@
     const b = blank();
     const s = Object.assign(b, parsed);
     s.equipped = Object.assign(blank().equipped, parsed.equipped || {}); // 新しく増えた装備欄は初期装備で埋める
+    // 2026年10月：レシートでの立候補をやめた（オーナー権はクラフト資金での出資だけ）。手配中の待ちは持ち越さない
+    s.pendingOwner = null;
     if (parsed.version === 1) {
       s.legacyStamps = parsed.acquired || {};
       s.acquired = {};
@@ -171,36 +178,22 @@
     isVisited: (id) => !!state.visited[id],
     arrivalDate: (id) => state.arrivals[id] || null,
     localDate,
-    // ショップ・宿のボタンを押した：ジャーニー（購入する／訪れる）の一歩として記録する
-    // providerId（押したショップ）も残す：レシートの厳格チェック①で「押したショップのレシートか」を確かめる
+    // ショップ・宿のボタンを押した：ジャーニー（購入する／訪れる）の一歩として記録する（ご褒美にはつながない）
     recordAction(id, via, providerId) {
       state.actions[id] = state.actions[id] || {};
       if (!state.actions[id][via]) state.actions[id][via] = new Date().toISOString();
       if (providerId) (state.actions[id].shops ||= {})[providerId] = new Date().toISOString();
       save();
     },
-    // 手配中の記録（レシートで立候補するまで、再読み込みしても残す）
-    setPendingOwner(info) {
-      state.pendingOwner = info;
-      save();
-    },
-    getPendingOwner: () => state.pendingOwner,
-    clearPendingOwner() {
-      state.pendingOwner = null;
-      save();
-    },
-    // 購入実績（レシート）を1件足す
+    // 出資を1件足す
     addPurchase(id, rec) {
       (state.purchases[id] ||= []).push(rec);
       state.actions[id] = state.actions[id] || {};
       if (!state.actions[id][rec.via]) state.actions[id][rec.via] = rec.at;
       if (!state.visited[id]) state.visited[id] = rec.at;
-      if (state.pendingOwner && state.pendingOwner.stationId === id) state.pendingOwner = null;
       save();
     },
     getPurchases: (id) => state.purchases[id] || [],
-    allPurchases: () => Object.entries(state.purchases).flatMap(([stationId, list]) => list.map((r) => ({ stationId, ...r }))),
-    hasReceiptHash: (hash) => Object.values(state.purchases).some((l) => l.some((r) => r.hash === hash)),
     // トップオーナーの駅を、順位の計算結果に合わせて書き戻す（1位になった日時は、最初に1位になったときのまま）
     syncOwners(top) {
       let changed = false;
@@ -273,6 +266,27 @@
     },
     spend(amount) {
       state.spent += amount;
+      save();
+    },
+    // オートナビの進路の札：to が null なら、その分かれ道はスポットライト駅への自動選択に戻す
+    setRouteLock(at, to) {
+      if (to) state.routeLocks[at] = to;
+      else delete state.routeLocks[at];
+      save();
+    },
+    routeLock: (at) => state.routeLocks[at] || null,
+    peekedOn: (id) => state.peeks[id] || null,
+    claimPeek(id, day) {
+      state.peeks[id] = day;
+      save();
+    },
+    memorySeen: (cardId) => !!state.memories[cardId],
+    markMemory(cardId) {
+      state.memories[cardId] = new Date().toISOString();
+      save();
+    },
+    markPrefaceSeen() {
+      state.prefaceSeen = true;
       save();
     },
     settle(likesBanked) {
@@ -353,7 +367,7 @@
       state.muted = !!v;
       save();
     },
-    // 旅の記録をリセット（購入実績・レシート・ポストカードの記録も消す。画像は呼び出し側で IndexedDB から消す）
+    // 旅の記録をリセット（出資・ポストカードの記録も消す。画像は呼び出し側で IndexedDB から消す）
     reset() {
       const { muted, itineraries, profile } = state;
       state = blank();

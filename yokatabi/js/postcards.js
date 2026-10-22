@@ -6,7 +6,10 @@
 //     ダイスでその駅に止まったことがあるときだけ見られて、「素敵ね」を押すと応援ボーナス +10万円
 //   ・自分のポストカードには、旅人たちから時間とともに「いいね」が届く（1つ +50万円、1枚につき最大20）。
 //     振り込みは、ダイス7回ごとの「週末の大精算まつり」（js/game.js）でまとめて
-// 写真は端末の中だけ（IndexedDB。js/receipts.js の保存を使う）。どこにも送らない。
+//   ・投函した写真は、Canvas でアンティークの切手（目打ちのギザギザの白い縁）にして、右下に朱肉の「駅名＋日付」の消印を押してから保存する
+//   ・霧の解放：フォトマップのまだ訪れていない駅は霧に沈んだモノクロ、到着・投函した駅だけ真鍮と色で灯る
+//   ・ある旅人から届いた記憶：ダイスで止まった駅に旅人たちの便りがあれば、ポラロイドがすっと届く（1通につき1回、閲覧ボーナス）
+// 写真は端末の中だけ（IndexedDB。js/photos.js の保存を使う）。どこにも送らない。
 (function () {
   'use strict';
   const YT = (window.YT = window.YT || {});
@@ -111,7 +114,7 @@
     const color = (D.meta.prefectures[s.prefecture] || {}).color || '#a8382b';
     const fid = `pol-ink-${s.id}-${hash(date + s.id) % 997}`;
     return `<svg viewBox="0 0 80 80" class="pol-stamp-svg" aria-hidden="true">
-        <defs>${YT.Receipts.inkFilter(fid, hash(s.id) % 11)}</defs>
+        <defs>${YT.Photos.inkFilter(fid, hash(s.id) % 11)}</defs>
         <g filter="url(#${fid})" transform="rotate(-6 40 40)">
           <circle cx="40" cy="40" r="35" fill="none" stroke="${color}" stroke-width="2.2"/>
           <circle cx="40" cy="40" r="30" fill="none" stroke="${color}" stroke-width=".9" stroke-dasharray="2 1.6"/>
@@ -130,7 +133,7 @@
     const color = (D.meta.prefectures[s.prefecture] || {}).color;
     const tilt = ((hash(card.id) % 7) - 3) * 0.6;
     const photo = card.imageId
-      ? `<img alt="${esc(s.name)}駅の写真" data-pc-img="${esc(card.imageId)}">`
+      ? `<img class="pol-stampimg" alt="${esc(s.name)}駅の写真（切手と消印つき）" data-pc-img="${esc(card.imageId)}">`
       : illust(card.scene || 'train', color, card.id.replace(/[^a-z0-9-]/gi, ''));
     const av = card.avatar ? YT.Craft.avatarSvg(card.avatar, { crop: true, id: `pa-${card.id}` }) : '';
     return `<figure class="polaroid ${size ? `pol-${size}` : ''} ${card.locked ? 'is-locked' : ''}" style="--pref:${color};--tilt:${tilt.toFixed(1)}deg" data-pc="${esc(card.id)}">
@@ -158,12 +161,12 @@
   // 写真の差し込み（IndexedDB の画像は、描いたあとで URL を入れる）
   function loadImages(r = root) {
     r.querySelectorAll('img[data-pc-img]').forEach((img) => {
-      YT.Receipts.thumbUrl(img.dataset.pcImg).then((u) => {
+      YT.Photos.thumbUrl(img.dataset.pcImg).then((u) => {
         if (u) img.src = u;
       });
     });
     r.querySelectorAll('image[data-pc-img]').forEach((img) => {
-      YT.Receipts.thumbUrl(img.dataset.pcImg).then((u) => u && img.setAttribute('href', u));
+      YT.Photos.thumbUrl(img.dataset.pcImg).then((u) => u && img.setAttribute('href', u));
     });
   }
 
@@ -189,7 +192,7 @@
     };
     return `<section class="panel lt-post">
         <h2 class="lt-title"><span class="eyebrow"><i>No. 04</i>Post a Letter</span>旅の便りを投函する</h2>
-        <p class="lt-lead">駅を選んで、写真と一言を送ると、風景印つきのポラロイドになります。いまその駅にいなくても投函できます。${has ? '' : `最初の1枚で<b>地域発信ボーナス +${api.yen(C().postBonus)}</b>。`}</p>
+        <p class="lt-lead">駅を選んで、写真と一言を送ると、切手と消印つきのポラロイドになります。いまその駅にいなくても投函できます。${has ? '' : `最初の1枚で<b>地域発信ボーナス +${api.yen(C().postBonus)}</b>。`}</p>
         <div class="lt-form">
           <div class="lt-fields">
             <label class="lt-label">駅<select data-pc-station>${stationOptions(sid)}</select></label>
@@ -199,8 +202,9 @@
             </label>
             <label class="lt-label">ひとこと<span class="lt-count" data-pc-count>${[...form.memo].length}/60</span>
               <textarea data-pc-memo maxlength="60" rows="2" placeholder="湯けむりの向こうに、夕焼けが…">${esc(form.memo)}</textarea></label>
-            <button class="primary-btn" data-pc-submit ${form.file ? '' : 'disabled'}>${has ? `${I('refresh')} ${esc(s.name)}駅のポストカードを差し替える` : `${I('postcard')} ${esc(s.name)}駅に投函する（+${api.yen(C().postBonus)}）`}</button>
-            <p class="lt-note">※写真はこの端末の中だけに保存されます（どこにも送信されません）。1駅に1枚で、投函し直すと差し替えになります。人の顔や住所が写った写真は避けましょう。</p>
+            <button class="primary-btn lt-submit" data-pc-submit ${form.file ? '' : 'disabled'}>${I('postcard')} この景色を、次の旅人の手帖へ託す<small>${has ? `${esc(s.name)}駅の1枚を差し替え` : `${esc(s.name)}駅へ投函・地域発信ボーナス +${api.yen(C().postBonus)}`}</small></button>
+            <p class="lt-pass">あなたの1枚が、誰かの次の旅の行き先になります</p>
+            <p class="lt-note">※投函した写真は、目打ちのある切手の縁と、${esc(s.name)}駅の消印（朱肉）をつけて保存します。※写真はこの端末の中だけに保存されます（どこにも送信されません）。1駅に1枚で、投函し直すと差し替えになります。人の顔や住所が写った写真は避けましょう。</p>
           </div>
           <div class="lt-preview">${polaroidPreview(preview)}</div>
         </div>
@@ -218,12 +222,19 @@
     const st = YT.Store.get();
     const own = mine();
     const routes = G ? Object.values(G.routes).map((d) => `<path d="${d}" class="pm-route"/>`).join('') : '';
+    // 霧の解放：到着した駅・投函した駅だけが灯り、まだの駅は生成りの霧に沈む
     const dots = D.stations
-      .map((s) => `<g class="pm-st ${st.visited[s.id] ? 'is-visited' : ''} ${st.acquired[s.id] ? 'is-owned' : ''}" transform="translate(${s.x} ${s.y})" data-pm-station="${esc(s.id)}">
-          <circle r="5.5"/>${st.acquired[s.id] ? '<path d="M-6,-9 L-3,-15 L0,-10 L3,-15 L6,-9 Z" class="pm-crown"/>' : ''}
-        </g>`)
+      .map((s) => {
+        const lit = !!(st.visited[s.id] || own[s.id]);
+        const color = (D.meta.prefectures[s.prefecture] || {}).color;
+        return `<g class="pm-st ${lit ? 'is-visited' : 'is-fog'} ${st.acquired[s.id] ? 'is-owned' : ''}" transform="translate(${s.x} ${s.y})" data-pm-station="${esc(s.id)}" style="--pref:${color}">
+          ${lit ? '<circle r="14" class="pm-glow"/>' : '<ellipse rx="17" ry="11" class="pm-fog"/>'}<circle r="5.5"/>${lit ? '<circle r="2.2" class="pm-core"/>' : ''}${st.acquired[s.id] ? '<path d="M-6,-9 L-3,-15 L0,-10 L3,-15 L6,-9 Z" class="pm-crown"/>' : ''}
+        </g>`;
+      })
       .join('');
     return `<svg viewBox="${vb}" class="pm-svg" role="group" aria-label="わたしの九州フォトマップ">
+        <defs><radialGradient id="pm-fog"><stop offset="0" stop-color="#f4efe6" stop-opacity=".95"/><stop offset=".6" stop-color="#f4efe6" stop-opacity=".5"/><stop offset="1" stop-color="#f4efe6" stop-opacity="0"/></radialGradient>
+          <radialGradient id="pm-glow"><stop offset="0" stop-color="#e6c665" stop-opacity=".6"/><stop offset="1" stop-color="#d4af37" stop-opacity="0"/></radialGradient></defs>
         <rect x="-800" y="-960" width="2400" height="2880" class="pm-sea"/>
         ${G ? `<path d="${G.land.join('')}" class="pm-land"/>${G.borders.map((d) => `<path d="${d}" class="pm-border"/>`).join('')}` : ''}
         ${routes}${dots}<g class="pm-ripples"></g><g class="pm-pins"></g>
@@ -462,26 +473,125 @@
     }
   }
 
-  // 写真を投函用に整える（長い辺 1000px の JPEG）
-  async function prepare(file) {
-    const { img, url } = await YT.Receipts.loadImage(file);
+  // 写真を投函用に整える：長い辺 1000px に縮め、アンティークの切手に仕立てて、駅名と日付の消印を押した JPEG にする
+  async function prepare(file, s) {
+    const { img, url } = await YT.Photos.loadImage(file);
     const k = Math.min(1, 1000 / Math.max(img.naturalWidth, img.naturalHeight));
-    const c = document.createElement('canvas');
-    c.width = Math.round(img.naturalWidth * k);
-    c.height = Math.round(img.naturalHeight * k);
-    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    const w = Math.round(img.naturalWidth * k), h = Math.round(img.naturalHeight * k);
+    const c = stampCanvas(img, w, h, s, new Date());
     URL.revokeObjectURL(url);
-    return new Promise((resolve) => c.toBlob((b) => resolve(b), 'image/jpeg', 0.85));
+    return new Promise((resolve) => c.toBlob((b) => resolve(b), 'image/jpeg', 0.86));
+  }
+  // 切手：生成りの台紙の上に、白い切手の紙（縁は目打ちの半円のギザギザ）・写真・内側の細い枠。
+  // 消印：右下に朱肉（#A8382B）の二重の丸に駅名と日付、左へのびる波線。少し傾け、朱肉ののらない粒でかすれさせる
+  function stampCanvas(img, w, h, s, date) {
+    const m = Math.round(Math.min(w, h) * 0.075); // 切手の白い縁
+    const pad = Math.round(m * 0.9); // 台紙の余白
+    const W = w + 2 * (m + pad), H = h + 2 * (m + pad);
+    const c = document.createElement('canvas');
+    c.width = W;
+    c.height = H;
+    const g = c.getContext('2d');
+    g.fillStyle = '#f4efe6'; // 台紙（JPEG なので透明にはしない）
+    g.fillRect(0, 0, W, H);
+    // 目打ち：切手の紙の縁に、同じ間隔の半円の穴をあける（穴は台紙の色で抜く）
+    const x0 = pad, y0 = pad, sw = w + 2 * m, sh = h + 2 * m;
+    const r = Math.max(4, Math.round(m * 0.28));
+    g.save();
+    g.shadowColor = 'rgba(44, 37, 35, .28)';
+    g.shadowBlur = r * 1.4;
+    g.shadowOffsetY = r * 0.4;
+    g.fillStyle = '#fbf8f2';
+    g.fillRect(x0, y0, sw, sh);
+    g.restore();
+    g.fillStyle = '#f4efe6';
+    const holes = (len, at) => {
+      const n = Math.max(6, Math.round(len / (r * 3.1)));
+      const step = len / n;
+      for (let i = 0; i <= n; i++) at(i * step);
+    };
+    const dot = (x, y) => (g.beginPath(), g.arc(x, y, r, 0, Math.PI * 2), g.fill());
+    holes(sw, (t) => (dot(x0 + t, y0), dot(x0 + t, y0 + sh)));
+    holes(sh, (t) => (dot(x0, y0 + t), dot(x0 + sw, y0 + t)));
+    // 写真と、内側の細い二重の枠
+    g.drawImage(img, x0 + m, y0 + m, w, h);
+    g.strokeStyle = 'rgba(44, 37, 35, .55)';
+    g.lineWidth = Math.max(1, m * 0.06);
+    g.strokeRect(x0 + m - m * 0.18, y0 + m - m * 0.18, w + m * 0.36, h + m * 0.36);
+    g.strokeStyle = 'rgba(184, 134, 11, .8)';
+    g.lineWidth = Math.max(1, m * 0.04);
+    g.strokeRect(x0 + m * 0.42, y0 + m * 0.42, sw - m * 0.84, sh - m * 0.84);
+    // 消印（別の Canvas に描いて、かすれを抜いてから重ねる）
+    const R = Math.round(Math.min(w, h) * 0.17);
+    const P = document.createElement('canvas');
+    P.width = R * 6;
+    P.height = R * 2.8;
+    const q = P.getContext('2d');
+    const cx = P.width - R * 1.25, cy = P.height / 2;
+    q.translate(cx, cy);
+    q.rotate((-6 * Math.PI) / 180);
+    q.strokeStyle = q.fillStyle = '#a8382b';
+    q.lineWidth = R * 0.07;
+    q.beginPath();
+    q.arc(0, 0, R, 0, Math.PI * 2);
+    q.stroke();
+    q.lineWidth = R * 0.03;
+    q.beginPath();
+    q.arc(0, 0, R * 0.82, 0, Math.PI * 2);
+    q.stroke();
+    q.beginPath();
+    q.moveTo(-R * 0.78, -R * 0.1);
+    q.lineTo(R * 0.78, -R * 0.1);
+    q.moveTo(-R * 0.78, R * 0.3);
+    q.lineTo(R * 0.78, R * 0.3);
+    q.stroke();
+    q.textAlign = 'center';
+    q.textBaseline = 'middle';
+    const name = s.name.length > 4 ? s.name.slice(0, 5) : s.name;
+    q.font = `700 ${Math.round(R * (name.length > 3 ? 0.3 : 0.38))}px "Shippori Mincho", serif`;
+    q.fillText(name, 0, -R * 0.42);
+    const ymd = `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
+    q.font = `600 ${Math.round(R * 0.24)}px "Cormorant Garamond", serif`;
+    q.fillText(ymd, 0, R * 0.1);
+    q.font = `700 ${Math.round(R * 0.16)}px "Shippori Mincho", serif`;
+    q.fillText('九州よりみち', 0, R * 0.55);
+    // 波線（消印の左へ）
+    q.lineWidth = R * 0.05;
+    for (let i = -1; i <= 1; i++) {
+      q.beginPath();
+      for (let x = -R * 1.25; x >= -R * 4.4; x -= R * 0.1) {
+        const y = i * R * 0.32 + Math.sin(x / (R * 0.22)) * R * 0.08;
+        if (x === -R * 1.25) q.moveTo(x, y);
+        else q.lineTo(x, y);
+      }
+      q.stroke();
+    }
+    // かすれ：朱肉ののらない細かい粒を抜く
+    q.setTransform(1, 0, 0, 1, 0, 0);
+    q.globalCompositeOperation = 'destination-out';
+    let seed = [...s.id].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, date.getDate());
+    const rnd = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
+    for (let i = 0; i < 900; i++) {
+      q.globalAlpha = 0.25 + rnd() * 0.6;
+      q.beginPath();
+      q.arc(rnd() * P.width, rnd() * P.height, 0.6 + rnd() * R * 0.035, 0, Math.PI * 2);
+      q.fill();
+    }
+    // 暗い写真の上でも朱が沈まないよう、乗算ではなくそのまま重ねる（濃さは朱肉の透け具合ていど）
+    g.globalAlpha = 0.9;
+    g.drawImage(P, x0 + sw - P.width + R * 0.15, y0 + sh - P.height + R * 0.2);
+    g.globalAlpha = 1;
+    return c;
   }
   async function submit() {
     if (!form.file) return;
     const sid = form.stationId || YT.Store.get().currentStationId;
-    const blob = await prepare(form.file).catch(() => null);
+    const blob = await prepare(form.file, D.byId[sid]).catch(() => null);
     if (!blob) return api.toast('写真を読み込めませんでした。別の画像でお試しください');
     const imageId = `pcimg-${Date.now().toString(36)}`;
-    await YT.Receipts.put(imageId, blob);
+    await YT.Photos.put(imageId, blob);
     const { first, oldImageId } = YT.Store.putPostcard(sid, { memo: form.memo.trim(), imageId });
-    if (oldImageId) YT.Receipts.del(oldImageId); // 差し替えた古い写真は消す
+    if (oldImageId) YT.Photos.del(oldImageId); // 差し替えた古い写真は消す
     if (form.url) URL.revokeObjectURL(form.url);
     form = { stationId: sid, file: null, url: null, memo: '' };
     const s = D.byId[sid];
@@ -498,6 +608,34 @@
       root.querySelector('.lt-map').scrollIntoView({ block: 'start', behavior: 'smooth' });
       ripple(sid);
     }, 200);
+  }
+
+  // ある旅人から届いた記憶：止まった駅に、まだ受け取っていない旅人たちの便りがあれば、ポラロイドがすっと届く。
+  // 閲覧ボーナス（meta.craft.memoryBonus）はクラフト資金に入る。演出は少しだけ待ってから、つづき（手帖）へ進む
+  function memoryOnArrival(id) {
+    const p = seeds().find((x) => x.stationId === id && !YT.Store.memorySeen(x.id));
+    if (!p) return Promise.resolve(false);
+    const s = D.byId[id];
+    const bonus = C().memoryBonus || 0;
+    YT.Store.markMemory(p.id);
+    if (bonus) YT.Store.addLedger('memory', `${s.name}駅で届いた記憶`, bonus);
+    const el = document.createElement('div');
+    el.className = 'memory-slide';
+    el.setAttribute('role', 'status');
+    el.innerHTML = `<p class="mem-kicker">${I('postcard')} ある旅人から届いた記憶</p>${polaroid(seedCard(p), 'mini')}
+      <p class="mem-bonus">${I('coins')} 閲覧ボーナス <b>＋${api.yen(bonus)}</b><small>（クラフト資金）</small></p>`;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('is-in')));
+    YT.Sound.coin();
+    api.renderAll();
+    const close = () => {
+      el.classList.remove('is-in');
+      el.classList.add('is-out');
+      setTimeout(() => el.remove(), 800);
+    };
+    el.addEventListener('click', close);
+    setTimeout(close, 5200);
+    return new Promise((r) => setTimeout(() => r(true), 1700));
   }
 
   // 自分のポストカードに新しく届いたいいねを、ひらいたときにお知らせ
@@ -621,5 +759,7 @@
     illust,
     seeds,
     unlocked,
+    memoryOnArrival,
+    stampCanvas,
   };
 })();

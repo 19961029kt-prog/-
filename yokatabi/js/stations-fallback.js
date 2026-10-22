@@ -66,43 +66,22 @@ window.YOKATABI_FALLBACK_DATA = {
       "notice": "所要時間は乗り換えを含むおおよその目安です。運行本数・時刻・運休は各社の最新情報をご確認ください。"
     },
     "owner": {
-      "minAwaySeconds": 15,
       "upsetBonus": 1.3,
       "shareholders": 3,
-      "maxAmount": 1000000,
+      "investStep": 100,
       "dividendRates": [
         1,
         0.3,
         0.15
-      ],
-      "scanSeconds": 1.5,
-      "shops": [
-        {
-          "id": "amazon",
-          "label": "Amazon",
-          "match": "amazon|アマゾン"
-        },
-        {
-          "id": "rakuten_travel",
-          "label": "楽天トラベル",
-          "match": "楽天トラベル|rakuten ?travel"
-        },
-        {
-          "id": "rakuten",
-          "label": "楽天市場",
-          "match": "楽天|rakuten"
-        },
-        {
-          "id": "yahoo",
-          "label": "Yahoo!ショッピング",
-          "match": "yahoo|ヤフー|paypay"
-        },
-        {
-          "id": "jalan",
-          "label": "じゃらん",
-          "match": "じゃらん|jalan"
-        }
       ]
+    },
+    "peek": {
+      "seconds": 15,
+      "ticket": "super3",
+      "funds": 300,
+      "products": "rakuten",
+      "stays": "rakuten_travel",
+      "affiliate": false
     },
     "rivals": [
       {
@@ -331,6 +310,7 @@ window.YOKATABI_FALLBACK_DATA = {
       "likeReceivedBonus": 50,
       "likeReceivedMax": 20,
       "shareBonus": 500,
+      "memoryBonus": 100,
       "ticketMax": 3,
       "train": [
         {

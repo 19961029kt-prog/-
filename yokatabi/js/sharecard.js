@@ -678,7 +678,7 @@
       ctx.lineWidth = 0.75;
       ctx.strokeRect(-pw / 2 + 0.4, -ph / 2 + 0.4, pw - 0.8, ph - 0.8);
       const card = cardsMap[id];
-      const blob = card && (await YT.Receipts.get(card.imageId));
+      const blob = card && (await YT.Photos.get(card.imageId));
       let drawn = false;
       if (blob) {
         try {

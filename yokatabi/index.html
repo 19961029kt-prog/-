@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-title" content="Q-TRIP">
   <meta property="og:site_name" content="Q-TRIP 九州よりみちダイス">
   <meta property="og:title" content="Q-TRIP 九州よりみちダイス — KYUSHU ROUTES &amp; ROOTS">
-  <meta property="og:description" content="よりみちダイスを振って、九州の駅をめぐる旅の手帖。旅のお買い物のレシートで駅のトップオーナーを目指し、貯めた資金で列車を改造しよう。">
+  <meta property="og:description" content="よりみちダイスを振って、九州の駅をめぐる旅の手帖。旅で貯めた資金で駅のトップオーナーを目指し、列車を改造しよう。">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="ja_JP">
   <meta property="og:url" content="https://q-trip.github.io/">
@@ -128,8 +128,12 @@
         <div id="scenery" class="scenery" aria-label="ご当地の車窓"></div>
         <div class="map-board">
           <svg id="map" class="map-svg" role="group" aria-label="九州すごろく路線図。よりみちダイスを振ると列車が線路を1駅ずつ走ります。駅をタップすると望遠鏡でのぞけます"></svg>
-          <div id="map-overlay" class="map-overlay" hidden></div>
           <div id="map-scope" class="map-scope" role="dialog" aria-label="望遠鏡" hidden></div>
+          <button id="btn-compass" class="compass-btn" aria-label="旅の巻頭言をひらく（真鍮の羅針盤）">
+            <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14.6" class="cb-ring"/><circle cx="16" cy="16" r="12.4" class="cb-ring cb-thin"/>
+              <path d="M16,2.6 V5 M16,27 V29.4 M2.6,16 H5 M27,16 H29.4" class="cb-tick"/><path d="M16,6.4 L18.2,16 L16,25.6 L13.8,16 Z" class="cb-needle"/><path d="M16,6.4 L18.2,16 H13.8 Z" class="cb-north"/>
+              <path d="M8.4,16 L16,14.2 L23.6,16 L16,17.8 Z" class="cb-needle cb-ew"/><circle cx="16" cy="16" r="1.4" class="cb-pin"/></svg>
+          </button>
           <div id="dice-badge" class="dice-badge" hidden></div>
           <div id="course-chip" class="course-chip" hidden>
             <span><i data-ico="suitcase"></i> <b id="course-chip-title"></b></span>
@@ -176,7 +180,6 @@
           <p id="current-status" class="current-status"></p>
           <p id="current-tagline" class="current-tagline"></p>
           <button id="btn-open-current" class="ghost-btn wide">この駅の寄り道手帖をひらく</button>
-          <div id="pending-chip" class="pending-chip" hidden></div>
         </div>
 
         <div class="panel mini-collection">
@@ -195,10 +198,10 @@
           <p class="card-kicker"><span class="eyebrow">How to Travel</span><span>あそびかた</span></p>
           <p class="how-lead"><b>Q-TRIP 九州よりみちダイス</b>は、九州の路線図をすごろく盤にした旅の手帖。よりみちしながら、駅ごとの名物と秘湯に出会えます。</p>
           <ol class="how-list">
-            <li><b>よりみちダイス</b>を振ると、出た目の数だけ列車が線路を1駅ずつ進みます。分かれ道では進む路線を選べます（駅をタップしても移動はせず、望遠鏡でのぞくだけ）。</li>
+            <li><b>よりみちダイス</b>を振ると、出た目の数だけ列車が線路を走ります。分かれ道は<b>オートナビ</b>がスポットライト駅の方へ選び、止まらずに通過（振る前に地図の分かれ道の真鍮の矢印をタップすると、進む路線を切り替えられます）。駅をタップしても移動はせず、望遠鏡でのぞくだけ。</li>
             <li>止まった駅で<b>寄り道手帖</b>と現地スナップが解放され、車窓とまちの寄り道ノート・名産品・宿がわかります。</li>
-            <li>手帖のボタンからお取り寄せ・宿の予約をしたら、その日のうちに<b>注文完了画面のスクショ</b>でオーナー権に立候補。ショップ・注文日・金額の3点を読み取って確かめます。</li>
-            <li>駅ごとの<b>累計購入金額の1位がトップオーナー</b>。追う側は<b>下克上ボーナス×1.3</b>、上位3名は<b>共同株主</b>として配当を受け取れます。</li>
+            <li>旅で貯めた<b>クラフト資金</b>で、停車中の駅に<b>出資</b>できます（お買い物はいりません）。名産品・宿のカードの<b>「逸品を覗いて急行切符を受け取る」</b>を押してショップを15秒覗くと、特別切符と資金がもらえます（1駅1日1回）。</li>
+            <li>駅ごとの<b>累計出資額の1位がトップオーナー</b>。追う側は<b>下克上ボーナス×1.3</b>、上位3名は<b>共同株主</b>として配当を受け取れます。</li>
             <li>いつも1駅が<b>スポットライト駅</b>。ピタリと止まると一番乗りのご祝儀とレア切符。<b>特別切符</b>でダイスを2〜4個同時に振ったり、出目を選んだりできます。ダイス7回ごとに<b>週末の大精算まつり</b>、ラインの全駅で株主になると<b>ライン制覇</b>で配当2倍。</li>
             <li>配当や<b>旅の便り</b>（写真のポストカード）・いいね・手帖カードのシェアで貯まった<b>クラフト資金</b>（ゲームの中だけのもの）で、列車の改造やアバターの着せ替えができます。</li>
           </ol>
@@ -206,13 +209,13 @@
       </aside>
     </section>
 
-    <!-- オーナー刻印手帖（トップオーナーの切手／レシートアルバム／マイ旅しおり） -->
+    <!-- オーナー刻印手帖（旅の巻頭言／トップオーナーの切手／マイ旅しおり） -->
     <section data-view="collection" class="techo" hidden>
       <div class="techo-head">
         <div id="techo-owner"></div>
         <div class="techo-stats">
           <h2 class="techo-title">オーナー刻印手帖</h2>
-          <p class="techo-lead">購入実績で1位になった駅が切手に、立候補に使ったスクショがレシートアルバムに並びます。</p>
+          <p class="techo-lead">出資額で1位になった駅が、トップオーナーの切手になって並びます。</p>
           <dl class="techo-nums">
             <div><dt>オーナー率</dt><dd id="col-kingdom">0%</dd></div>
             <div><dt>トップオーナー</dt><dd id="col-count">0 / 15</dd></div>
@@ -222,8 +225,8 @@
         </div>
       </div>
       <div class="seg" role="tablist" aria-label="手帖の切り替え">
+        <button class="seg-btn seg-preface" role="tab" data-sub-tab="preface"><span class="seg-no">00 /</span> 旅の巻頭言</button>
         <button class="seg-btn is-active" role="tab" data-sub-tab="stamps"><i data-ico="stamp"></i> <span class="seg-more">オーナーの</span>切手</button>
-        <button class="seg-btn" role="tab" data-sub-tab="album"><i data-ico="receipt"></i> レシート<span class="seg-more">アルバム</span></button>
         <button class="seg-btn" role="tab" data-sub-tab="trip"><i data-ico="suitcase"></i> <span class="seg-more">マイ</span>旅しおり</button>
       </div>
       <div data-sub="stamps">
@@ -231,8 +234,8 @@
         <div id="collection-grid" class="collection-grid"></div>
         <p class="reset-row"><button id="btn-reset" class="ghost-btn small">旅の記録をリセット</button></p>
       </div>
-      <div data-sub="album" hidden>
-        <div id="album-root" class="album"></div>
+      <div data-sub="preface" hidden>
+        <div id="preface-root" class="preface-page"></div>
       </div>
       <div data-sub="trip" hidden>
         <div id="trip-root" class="trip-root"></div>
@@ -256,7 +259,7 @@
       <p>「Q-TRIP 九州よりみちダイス（KYUSHU ROUTES &amp; ROOTS）」はオリジナルの企画・世界観で制作した非公式の旅メディアです。既存のゲーム作品・鉄道事業者とは関係ありません。列車のデザインは九州の観光列車の雰囲気を参考にしたオリジナルで、実在の列車の名前・ロゴ・紋章は使っていません。</p>
       <p>地図の海岸線・県境・山地・線路・駅の位置は、実際の地理データから作っています（バス・航路の線は経路のイメージ）。黒川温泉・高千穂・屋久島・桜島（港）は旅のマスとして「駅」としています。掲載情報はプロトタイプ用で、最新の営業・運行状況は各公式情報をご確認ください。</p>
       <p>地図の出典：<span id="geo-source">国土数値情報「行政区域（N03）」（国土交通省）を加工／山地：Terrain Tiles（Mapzen・AWS Open Data。SRTM・GMTED2010 は U.S. Geological Survey、ETOPO1 は NOAA 提供）の標高を加工／線路：station_database の線形（国土数値情報「鉄道（N02）」を加工したもの）／駅の位置：station_database（CC BY 4.0、駅データ.jp 由来）</span></p>
-      <p>駅のオーナー権ランキングの相手は、ゲームの中の架空の旅人です。ランキング・配当・クラフト資金はゲームの中だけのもので、お金や景品との交換はできません。立候補に使ったスクショと、旅の便りに投函した写真は、この端末の中にだけ保存され、どこにも送信されません（ほかの旅人のポストカードはゲームの中の架空のもので、絵はイラストです）（文字の読み取りも端末の中で行い、その仕組み（Tesseract.js）を初回だけ jsDelivr から読み込みます）。</p>
+      <p>駅のオーナー権ランキングの相手は、ゲームの中の架空の旅人です。ランキング・配当・クラフト資金はゲームの中だけのもので、お金や景品との交換はできません。旅の便りに投函した写真は、この端末の中にだけ保存され、どこにも送信されません（ほかの旅人のポストカード・「ある旅人から届いた記憶」はゲームの中の架空のもので、絵はイラストです）。「逸品を覗いて急行切符を受け取る」で開くのは、紹介料のつかない各ショップの検索ページです（ご褒美はページを覗いたことに対するもので、購入とは関係しません）。</p>
       <p>【PR】寄り道手帖の中の購入・予約ボタンはアフィリエイト（広告）リンクを含みます。<span id="data-source" class="dim"></span></p>
     </div>
   </footer>
@@ -266,7 +269,7 @@
     <div id="modal-card" class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title"></div>
   </div>
 
-  <!-- オーナー権 立候補届（スクショの読み取り） -->
+  <!-- オーナー権 出資届 -->
   <div id="owner-sheet" class="owner-sheet" hidden></div>
 
   <!-- 王座交代（トップオーナー就任）の演出 -->
@@ -299,7 +302,7 @@
   <script src="js/dice.js"></script>
   <script src="js/trip.js"></script>
   <script src="js/ownership.js"></script>
-  <script src="js/receipts.js"></script>
+  <script src="js/photos.js"></script>
   <script src="js/owner.js"></script>
   <script src="js/garage.js"></script>
   <script src="js/scenery.js"></script>

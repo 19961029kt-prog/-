@@ -1,9 +1,9 @@
-// UI全体の結線：ヘッダー（称号・踏破率・総資産額・クラフト資金・アバター）・よりみちダイス・寄り道手帖（モーダル）・
-// 購入実績ランキング・王座交代の演出・オーナー刻印手帖（切手・レシートアルバム）・マイ旅しおり・Xシェア。
-// 立候補（スクショの読み取り）は owner.js、順位の計算は ownership.js、工房は garage.js。
+// UI全体の結線：ヘッダー（称号・踏破率・総資産額・クラフト資金・アバター）・よりみちダイス（オートナビ）・到着の駅名標・
+// 寄り道手帖（モーダル）・出資ランキング・王座交代の演出・オーナー刻印手帖（巻頭言・切手・マイ旅しおり）・巻頭言の表紙と羅針盤・Xシェア。
+// 出資と「15秒覗くだけ」の急行切符は owner.js、順位の計算は ownership.js、工房は garage.js。
 (function () {
   'use strict';
-  const { Data, Store, Sound, Map, Trip, Craft, Dice, Owner, Garage, Ownership, Receipts, Scenery, Postcards, ShareCard, Game } = window.YT;
+  const { Data, Store, Sound, Map, Trip, Craft, Dice, Owner, Garage, Ownership, Photos, Scenery, Postcards, ShareCard, Game } = window.YT;
 
   let D = null;
   let busy = false; // 列車走行中・ダイス回転中
@@ -23,13 +23,115 @@
     return `${oku}億${rest ? rest.toLocaleString('ja-JP') + '万' : ''}円`;
   };
   const pct = (n, d) => (d ? Math.round((n / d) * 100) : 0);
-  const yenJP = (v) => `¥${Number(v).toLocaleString('ja-JP')}`;
   // 大きな金額は欧文の組み（¥ 150,000,000）で。万円の値を円になおす
   const yenFull = (man) => `¥ ${(Number(man) * 10000).toLocaleString('en-US')}`;
   const fmtDate = (iso) => {
     const d = new Date(iso);
     return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
   };
+
+  // ---------- 旅の巻頭言（理念）----------
+  // 初回の表紙・マップの羅針盤・手帖の「00 / 旅の巻頭言」の3か所から、いつでも読み返せるようにする
+  const PREFACE = {
+    title: 'まだ見ぬ、もうひとつの九州へ。',
+    body: '九州は、広くて、深くて、あたたかい。誰もが知る名湯や大自然の向こう側に、名もなき無人駅の澄んだ空気や、地元の人しか知らない路地裏の味、車窓を染める茜色の海が、静かに息づいています。この島の美しさをもっと知ってほしい。そして、あなたが見つけた九州を次の旅人へと手渡していく。そんな温かな交差点をつくりたくて、この小さな旅手帖を編みました。',
+    sign: '九州を愛する旅人たちの手帖',
+  };
+  // 本文は句点ごとに改行し、明朝の縦組みで読ませる
+  const prefaceBody = () => PREFACE.body.split(/(?<=。)/).map((t) => `<span>${esc(t)}</span>`).join('');
+
+  // ① 初回の表紙：革張りの手帖の扉。『よりみちの旅をはじめる』で閉じる（次からは出さない）
+  function openCover() {
+    const el = document.createElement('div');
+    el.className = 'cover';
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-modal', 'true');
+    el.setAttribute('aria-labelledby', 'cover-title');
+    el.innerHTML = `<div class="cover-book">
+        <div class="cover-leather" aria-hidden="true">
+          <span class="cover-tool"></span>
+          <span class="cover-emblem">${I('compass')}</span>
+          <span class="cover-brand">Q-TRIP</span>
+          <span class="cover-name">九州よりみちダイス</span>
+          <span class="cover-sub">KYUSHU ROUTES &amp; ROOTS</span>
+        </div>
+        <div class="cover-page">
+          <p class="eyebrow cover-eyebrow"><i>00</i> / Preface</p>
+          <div class="preface-tate">
+            <h2 id="cover-title" class="preface-title">${esc(PREFACE.title)}</h2>
+            <p class="preface-body">${prefaceBody()}</p>
+            <p class="preface-sign">${esc(PREFACE.sign)}</p>
+          </div>
+          <button class="primary-btn cover-go" data-cover-go>${I('train')} よりみちの旅をはじめる</button>
+        </div>
+      </div>`;
+    document.body.appendChild(el);
+    document.body.classList.add('modal-open');
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('is-open')));
+    const go = () => {
+      Store.markPrefaceSeen();
+      Sound.unlock();
+      Sound.gentle();
+      el.classList.remove('is-open');
+      el.classList.add('is-closing');
+      document.body.classList.remove('modal-open');
+      document.removeEventListener('keydown', onKey);
+      setTimeout(() => el.remove(), 900);
+    };
+    const onKey = (e) => e.key === 'Escape' && go();
+    el.querySelector('[data-cover-go]').addEventListener('click', go);
+    document.addEventListener('keydown', onKey);
+    setTimeout(() => el.querySelector('[data-cover-go]').focus({ preventScroll: true }), 400);
+  }
+
+  // ② マップ右上の真鍮の羅針盤：巻頭言と、灯した駅・記憶の数を静かに重ねて見せる
+  function openCompass() {
+    const st = Store.get();
+    const lit = D.stations.filter((s) => st.visited[s.id]).length;
+    const mine = Object.keys(st.postcards || {}).length;
+    const theirs = Postcards.seeds().length;
+    const el = document.createElement('div');
+    el.className = 'compass-veil';
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-modal', 'true');
+    el.setAttribute('aria-label', '旅の巻頭言');
+    el.innerHTML = `<div class="compass-sheet">
+        <button class="modal-close" data-veil-close aria-label="閉じる">${I('close')}</button>
+        <p class="eyebrow"><i>00</i> / Preface</p>
+        <h2 class="veil-title">${esc(PREFACE.title)}</h2>
+        <p class="veil-body">${esc(PREFACE.body)}</p>
+        <p class="preface-sign">${esc(PREFACE.sign)}</p>
+        <dl class="veil-nums">
+          <div><dt>灯した踏破駅</dt><dd><b class="num-it">${lit}</b><small>／${D.stations.length}駅</small></dd></div>
+          <div><dt>手帖に綴じた記憶</dt><dd><b class="num-it">${mine + theirs}</b><small>通</small></dd></div>
+        </dl>
+        <p class="veil-note">記憶は、あなたの旅の便り ${mine}通と、旅人たちの便り ${theirs}通（ほかの旅人はゲームの中の架空の旅人で、絵はイラストです）。</p>
+      </div>`;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('is-open'));
+    Sound.gentle();
+    const close = () => {
+      el.classList.remove('is-open');
+      document.removeEventListener('keydown', onKey);
+      setTimeout(() => el.remove(), 600);
+    };
+    const onKey = (e) => e.key === 'Escape' && close();
+    el.addEventListener('click', (e) => (e.target === el || e.target.closest('[data-veil-close]')) && close());
+    document.addEventListener('keydown', onKey);
+    setTimeout(() => el.querySelector('[data-veil-close]').focus({ preventScroll: true }), 60);
+  }
+
+  // ③ 手帖の「00 / 旅の巻頭言」の栞：明朝の縦組みで読み返す
+  function renderPreface() {
+    $('#preface-root').innerHTML = `<article class="preface-leaf">
+        <p class="eyebrow"><i>00</i> / Preface</p>
+        <div class="preface-tate">
+          <h2 class="preface-title">${esc(PREFACE.title)}</h2>
+          <p class="preface-body">${prefaceBody()}</p>
+          <p class="preface-sign">${esc(PREFACE.sign)}</p>
+        </div>
+      </article>`;
+  }
 
   // ---------- 指標 ----------
   function stats() {
@@ -83,13 +185,6 @@
     $('#current-pref').style.setProperty('--pref', (D.meta.prefectures[s.prefecture] || {}).color);
     $('#current-tagline').textContent = s.tagline;
     $('#current-status').innerHTML = rankChip(s.id);
-    // 手配中の駅を別の駅で忘れないよう、パネルの下に小さく出す
-    const p = Owner.pending();
-    const chip = $('#pending-chip');
-    chip.hidden = !p;
-    if (!chip.hidden) {
-      chip.innerHTML = `<span>${I('compass')} <b>${esc(D.byId[p.stationId].name)}駅</b>を${esc(p.provider)}で視察・手配中</span><button class="link-btn" data-candidacy-open="${esc(p.stationId)}">スクショで立候補する</button>`;
-    }
   }
 
   function renderAll() {
@@ -114,6 +209,7 @@
       : plan.count > 1
         ? `${I(plan.count === 2 ? 'dice2' : 'dice3')} ダイス${plan.count}個を同時に振る`
         : `${I('dice')} よりみちダイスを振る`;
+    renderNav(); // 振るダイスの数が変わると、届く分かれ道も変わる
   }
 
   // ---------- 称号（トップオーナーの駅の評価額の合計でランクアップ） ----------
@@ -270,7 +366,7 @@
     $('#mini-assets').textContent = yenBig(s.assets);
     $('#mini-grid').innerHTML = owned.length
       ? owned.map((stn) => stampCard(stn, st.acquired[stn.id], 'mini', miniShown && !miniShown.has(stn.id) ? 'is-new' : '')).join('')
-      : '<p class="mini-empty">寄り道手帖のボタンからお買い物・予約をして、完了画面のスクショで立候補し、購入実績で1位になると、ここにトップオーナーの切手が増えていきます。</p>';
+      : '<p class="mini-empty">旅で貯めたクラフト資金で駅に出資し、出資額で1位になると、ここにトップオーナーの切手が増えていきます。</p>';
     miniShown = new Set(owned.map((stn) => stn.id));
   }
 
@@ -290,10 +386,10 @@
   function setGuide(html) {
     $('#guide').innerHTML = html;
   }
-  const IDLE_GUIDE = 'よりみちダイスを振って旅をつづけましょう。地図の駅をタップすると、望遠鏡でのぞけます。';
+  const IDLE_GUIDE = 'よりみちダイスを振って旅をつづけましょう。分かれ道はオートナビにおまかせ。地図の分かれ道の真鍮の矢印をタップすると、進む路線を切り替えられます。';
 
   // ---------- 移動（よりみちダイスで1駅ずつ。駅を直接タップしても列車は動かない） ----------
-  // move = { n（出目）, left（残りのマス）, at（列車のいる駅）, seen（この移動で通った駅。同じ駅を二度通らない）, waiting（分かれ道の候補） }
+  // move = { n（出目）, left（残りのマス）, at（列車のいる駅）, seen（この移動で通る駅。同じ駅を二度通らない） }
   let move = null;
 
   function setBusy(on) {
@@ -306,7 +402,7 @@
   function startMove(n) {
     clearChoice();
     const cur = Store.get().currentStationId;
-    move = { n, left: n, at: cur, seen: new Set([cur]), waiting: null };
+    move = { n, left: n, at: cur, seen: new Set([cur]) };
     setBusy(true);
     Sound.depart();
     showBoardCenter();
@@ -323,35 +419,105 @@
     window.scrollBy({ top: mid - window.innerHeight / 2, behavior: reduce ? 'auto' : 'smooth' });
   }
 
-  // 分かれ道か、残りのマスが0になるか、行き止まりまで、まとめて走る（つながった区間はなめらかに1本で走る）
-  async function advance(first) {
-    const path = [move.at];
-    const stepTo = (id) => {
-      path.push(id);
-      move.at = id;
-      move.seen.add(id);
-      move.left -= 1;
-    };
-    if (first) stepTo(first);
-    while (move.left > 0) {
-      const opts = [...(D.adj[move.at] || [])].filter((id) => !move.seen.has(id));
-      if (!opts.length) break; // 行き止まり：届くところまで
-      if (opts.length > 1) {
-        if (path.length > 1) await run(path);
-        return askDirection(opts);
-      }
-      stepTo(opts[0]);
+  // ---------- オートナビ（分かれ道で止まらない） ----------
+  // 出目のぶんの道のりを、出発の前にまとめて決める。分かれ道では、地図の進路の札で選んだ路線があればそれ、
+  // なければスポットライト駅にいちばん近づく路線を選ぶ。同じ駅は二度通らず、行き止まりならそこまで。
+  // 返り値：path（出発駅から止まる駅まで）、junctions（通る分かれ道と、選んだ路線・ほかの候補）
+  function planRoute(from, steps, seen = new Set([from])) {
+    const path = [from], junctions = [];
+    let at = from;
+    for (let i = 0; i < steps; i++) {
+      const opts = [...(D.adj[at] || [])].filter((id) => !seen.has(id));
+      if (!opts.length) break;
+      const next = opts.length > 1 ? navPick(at, opts, seen) : opts[0];
+      if (opts.length > 1) junctions.push({ at, to: next, opts, locked: Store.routeLock(at) === next });
+      path.push(next);
+      seen.add(next);
+      at = next;
     }
-    if (path.length > 1) await run(path);
+    return { path, junctions };
+  }
+  // 分かれ道で進む路線（ロックがなければ、スポットライト駅までの駅数がいちばん少ない路線）
+  function navPick(at, opts, seen, useLock = true) {
+    const lock = useLock && Store.routeLock(at);
+    if (lock && opts.includes(lock)) return lock;
+    const goal = (Store.get().spotlight || {}).id;
+    let best = opts[0], bestD = Infinity; // スポットライト駅へ通じないときは、隣の駅の並びの先頭（推定の決め方）
+    if (goal) {
+      const block = new Set([...seen, at]);
+      opts.forEach((id) => {
+        const d = hopsAvoiding(id, goal, block);
+        if (d < bestD) (bestD = d), (best = id);
+      });
+    }
+    return best;
+  }
+  // block の駅を通らずに from から to まで行く最短の駅数（BFS。行けなければ Infinity）
+  function hopsAvoiding(from, to, block) {
+    if (from === to) return 0;
+    const dist = { [from]: 0 }, q = [from];
+    while (q.length) {
+      const cur = q.shift();
+      for (const n of D.adj[cur] || []) {
+        if (n in dist || block.has(n)) continue;
+        dist[n] = dist[cur] + 1;
+        if (n === to) return dist[n];
+        q.push(n);
+      }
+    }
+    return Infinity;
+  }
+  // 停車中：次のダイスで通りうる分かれ道に、進む路線を指す真鍮の札を出す（タップで進路を切り替えてロック）
+  function navSteps() {
+    const st = Store.get();
+    const t = st.cruiseLeft > 0 ? { dice: 4 } : (st.deck || []).find((x) => x.uid === st.armed);
+    const def = t && t.kind ? (D.meta.game.tickets || []).find((x) => x.id === t.kind) || {} : t || {};
+    return 6 * (def.dice || 1);
+  }
+  function renderNav() {
+    if (move) return;
+    const { junctions } = planRoute(Store.get().currentStationId, choice ? choice.n : navSteps());
+    Map.setNav(junctions, toggleNav);
+  }
+  function toggleNav(at) {
+    if (busy && !choice) return;
+    const plan = planRoute(Store.get().currentStationId, choice ? choice.n : navSteps());
+    const j = plan.junctions.find((x) => x.at === at);
+    if (!j) return;
+    const next = j.opts[(j.opts.indexOf(j.to) + 1) % j.opts.length];
+    // 切り替えた先が、オートナビがもともと選ぶ路線なら、ロックを外して自動に戻す
+    const auto = navPick(at, j.opts, new Set(plan.path.slice(0, plan.path.indexOf(at) + 1)), false);
+    Store.setRouteLock(at, next === auto ? null : next);
+    Sound.click();
+    toast(`${D.byId[at].name}駅の分かれ道：${directionLabel(at, next)}へ${next === auto ? '（オートナビ）' : 'ロック'}`, '', 'route');
+    renderNav();
+  }
+
+  // オートナビで決めた道のりを、止まらずに1本で走る
+  async function advance() {
+    const { path, junctions } = planRoute(move.at, move.left, move.seen);
+    move.left -= path.length - 1;
+    move.at = path[path.length - 1];
+    move.prev = path.length > 1 ? path[path.length - 2] : null;
+    if (path.length > 1) await run(path, junctions);
+    junctions.forEach((j) => Store.routeLock(j.at) && Store.setRouteLock(j.at, null)); // 通った分かれ道の札は外す
     finishMove();
   }
 
-  function run(path) {
-    setGuide(`${I('train')} <b>${esc(D.byId[path[path.length - 1]].name)}</b>方面へ走行中…（あと${move.left}マス）`);
+  function run(path, junctions = []) {
+    const last = D.byId[path[path.length - 1]];
+    const via = junctions.length ? `・分かれ道${junctions.length}か所はオートナビ` : '';
+    setGuide(`${I('train')} <b>${esc(last.name)}</b>まで走行中…（${path.length - 1}駅${via}）`);
     return Map.moveTrain(path, {
       onJoint: (k) => Sound.railJoint(k),
-      onPass: (id) => Scenery.pass(id),
+      onPass: (id) => {
+        Scenery.pass(id);
+        const j = junctions.find((x) => x.at === id);
+        if (j) setGuide(`${I('route')} <b>${esc(D.byId[id].name)}駅</b>の分かれ道を${esc(directionLabel(id, j.to))}へ（${j.locked ? '進路ロック' : 'オートナビ'}）。<b>${esc(last.name)}</b>まで走行中…`);
+      },
       onFx: (x, y, seg) => Scenery.trainFx(x, y, seg.to),
+      onSpeed: (k) => Scenery.setSpeed(k),
+      badge: true,
       follow: true,
     });
   }
@@ -375,101 +541,17 @@
     return `${D.byId[to].name}${far ? '・' + D.byId[far].name : ''}方面`;
   }
 
-  // 分かれ道：行き先がそろって見える角度でカメラを止め、それぞれの路線の少し先に「（矢印）由布院・大分方面」のボタンを出す
-  async function askDirection(opts) {
-    move.waiting = opts;
-    Map.setCandidates(opts);
-    await Map.frame([move.at, ...opts]);
-    if (!move || move.waiting !== opts) return;
-    placeDirButtons(opts);
-    Sound.click();
-    // 同じ選択肢を、ダイスの欄にも一覧で出す（地図のボタンが重なったり、画面の外に出たりしても選べるように）
-    setGuide(
-      `${I('route')} <b>${esc(D.byId[move.at].name)}駅</b>は分かれ道。あと<b>${move.left}</b>マス、進む路線を選んでください。` +
-        `<span class="dir-list">${opts.map((id) => `<button class="dir-chip" data-dir="${esc(id)}">${arrowOf(move.at, id)} ${esc(directionLabel(move.at, id))}</button>`).join('')}</span>`
-    );
-    const btn = $('#map-overlay .dir-btn');
-    if (btn) btn.focus({ preventScroll: true });
-  }
-  // 地図の上の行き先ボタン（カメラが動いたら置き直す）
-  function placeDirButtons(opts) {
-    const layer = $('#map-overlay');
-    layer.innerHTML = opts
-      .map((id) => {
-        const [x, y] = Map.along(move.at, id, 64 / Math.max(1, Map.camera().get().z * 0.8));
-        const { left, top } = Map.toBoard(x, y);
-        const e = D.edgeOf(move.at, id);
-        return `<button class="dir-btn" data-dir="${esc(id)}" style="left:${left.toFixed(0)}px;top:${top.toFixed(0)}px">
-            <span class="dir-arrow" aria-hidden="true">${arrowOf(move.at, id)}</span>${esc(directionLabel(move.at, id))}${e && e.name ? `<small>${esc(e.name)}</small>` : ''}
-          </button>`;
-      })
-      .join('');
-    layer.hidden = false;
-    // 今いる駅のしるしは隠さない（動かない障害物として、ボタンだけを押しのける）
-    const here = Map.toBoard(D.byId[move.at].x, D.byId[move.at].y);
-    spreadButtons(layer, [{ x: here.left, y: here.top, w: 84, h: 54 }]); // 駅名の字のぶんも少し広めに
-  }
-  // 行き先ボタンが重なったら、互いに押しのけて離す（盤面の枠からははみ出さない）
-  function spreadButtons(layer, fixed = []) {
-    const W = layer.clientWidth, H = layer.clientHeight;
-    const btns = [...layer.querySelectorAll('.dir-btn')].map((el) => ({ el, x: parseFloat(el.style.left), y: parseFloat(el.style.top), w: el.offsetWidth + 6, h: el.offsetHeight + 6 }));
-    const items = [...btns, ...fixed.map((f) => ({ ...f, fixed: true }))];
-    for (let it = 0; it < 80; it++) {
-      let moved = false;
-      for (let i = 0; i < items.length; i++) {
-        for (let j = i + 1; j < items.length; j++) {
-          const a = items[i], b = items[j];
-          if (a.fixed && b.fixed) continue;
-          const ox = (a.w + b.w) / 2 - Math.abs(a.x - b.x), oy = (a.h + b.h) / 2 - Math.abs(a.y - b.y);
-          if (ox <= 0 || oy <= 0) continue;
-          moved = true;
-          // 重なりの少ない向き（たいていは縦）にずらす。ふたつとも動けるなら半分ずつ、片方が駅なら動ける側だけ
-          const ka = a.fixed ? 0 : b.fixed ? 2 : 1, kb = b.fixed ? 0 : a.fixed ? 2 : 1;
-          if (oy < ox) {
-            const d = (oy / 2 + 1) * (a.y <= b.y ? -1 : 1);
-            a.y += d * ka;
-            b.y -= d * kb;
-          } else {
-            const d = (ox / 2 + 1) * (a.x <= b.x ? -1 : 1);
-            a.x += d * ka;
-            b.x -= d * kb;
-          }
-        }
-      }
-      btns.forEach((b) => {
-        b.x = Math.max(b.w / 2 + 4, Math.min(W - b.w / 2 - 4, b.x));
-        b.y = Math.max(b.h / 2 + 4, Math.min(H - b.h / 2 - 4, b.y));
-      });
-      if (!moved) break;
-    }
-    btns.forEach((b) => {
-      b.el.style.left = `${b.x.toFixed(0)}px`;
-      b.el.style.top = `${b.y.toFixed(0)}px`;
-    });
-  }
-  function pickDirection(id) {
-    if (!move || !move.waiting || !move.waiting.includes(id)) return;
-    move.waiting = null;
-    $('#map-overlay').innerHTML = '';
-    $('#map-overlay').hidden = true;
-    Map.setCandidates(null);
-    // カメラが寄るあいだも、選んだ方面をすぐ見せる（古い行き先ボタンを残さない）
-    setGuide(`${I('train')} <b>${esc(D.byId[id].name)}</b>方面へ出発…`);
-    Sound.click();
-    showBoardCenter(); // 下の欄の行き先ボタンで選んだときも、走る列車が見えるように
-    Map.followStart().then(() => advance(id)); // 選んだ方向へ、また列車を追いかける
-  }
-
   function finishMove() {
-    const { at, n, left } = move;
+    const { at, n, left, prev } = move;
     move = null;
     setBusy(false);
-    arrive(at, n - left, left > 0);
+    arrive(at, n - left, left > 0, prev);
   }
 
   function landAt(id) {
     const s = D.byId[id];
     const first = Store.visit(id);
+    if (first) Map.unveil(id);
     Sound.arrive();
     Scenery.arrive(id);
     renderAll();
@@ -479,19 +561,62 @@
         toast(`${s.name}駅に初めて到着！ よりみち発見ボーナス ＋${yen(D.meta.craft.discoveryBonus)}（クラフト資金）`, 'toast-gold');
       }, 500);
     }
+    return first;
   }
   // 止まった駅：スポットライト駅のピタ止め・切符・サプライズ・週末の精算・ライン制覇（js/game.js）を順に見せてから、寄り道手帖をひらく
-  async function arrive(id, hops, deadEnd) {
+  async function arrive(id, hops, deadEnd, prev) {
     const s = D.byId[id];
     setBusy(true);
-    landAt(id);
+    Sound.brake();
+    const first = landAt(id);
+    stationSign(id, prev);
     setGuide(`<b>${esc(s.name)}駅</b>に到着（${hops}マス${deadEnd ? '・線路の果てで止まりました' : ''}）。寄り道手帖と現地スナップが解放されました。`);
-    await Promise.all([Map.arriveZoom(id), new Promise((r) => setTimeout(r, 500))]);
-    await arrivalTitle(s);
+    await Promise.all([Map.arriveZoom(id), new Promise((r) => setTimeout(r, first ? 900 : 1400))]);
+    // 初めての駅だけ、縦書きのタイトルバックで迎える（2回目からは駅名標だけで、テンポよく手帖へ）
+    if (first) await arrivalTitle(s);
+    await Postcards.memoryOnArrival(id);
     const at = await Game.afterArrival(id);
     setBusy(false);
     renderAll();
     openModal(at);
+  }
+  // 到着の駅名標：昔のホームの駅名標のような生成りの板に、漢字の駅名・かな・隣の駅・乗ってきた路線の色の帯。
+  // 停車した瞬間に画面の上からカシャンと下りてきて、しばらくして上へ戻る（操作はさえぎらない）
+  const LINE_COLORS = { shin: 'var(--gold)', trunk: 'var(--ink)', local: 'var(--forest)', scenic: 'var(--akane)', ferry: 'var(--sea-ink)', bus: 'var(--akane)' };
+  let signTimer = 0;
+  function stationSign(id, prev) {
+    hideSign(true);
+    const s = D.byId[id];
+    const e = prev ? D.edgeOf(prev, id) : null;
+    const type = e && e.type && e.type !== 'rail' ? e.type : 'local';
+    const next = [...(D.adj[id] || [])].filter((x) => x !== prev).map((x) => D.byId[x].name);
+    const el = document.createElement('div');
+    el.className = 'station-sign';
+    el.setAttribute('role', 'status');
+    el.style.setProperty('--line', LINE_COLORS[type] || LINE_COLORS.local);
+    el.innerHTML = `<div class="ss-hanger" aria-hidden="true"><i></i><i></i></div>
+      <div class="ss-board">
+        <p class="ss-top"><span class="ss-no">No. ${String(D.stations.indexOf(s) + 1).padStart(2, '0')}</span>${e && e.name ? `<span class="ss-line">${esc(e.name)}</span>` : ''}<span class="ss-pref">${esc(s.prefecture)}</span></p>
+        <p class="ss-name">${esc(s.name)}</p>
+        <p class="ss-kana">${esc(s.kana)}</p>
+        <div class="ss-band">
+          <span class="ss-prev">${prev ? `${I('arrow', { rotate: 180 })}${esc(D.byId[prev].name)}` : ''}</span>
+          <span class="ss-next">${next.length ? `${esc(next.slice(0, 2).join('・'))}${I('arrow')}` : '<small>線路の果て</small>'}</span>
+        </div>
+      </div>`;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('is-in')));
+    setTimeout(() => Sound.clack(), 380);
+    signTimer = setTimeout(() => hideSign(), 3800);
+  }
+  function hideSign(now) {
+    clearTimeout(signTimer);
+    document.querySelectorAll('.station-sign').forEach((el) => {
+      if (now) return el.remove();
+      el.classList.remove('is-in');
+      el.classList.add('is-out');
+      setTimeout(() => el.remove(), 700);
+    });
   }
   // 到着のタイトル：映画のタイトルバックのように、縦書きの駅名と情緒の一文を、しっとり浮かべて消す（タップ・キーで飛ばせる）
   function arrivalTitle(s) {
@@ -532,14 +657,9 @@
     await new Promise((r) => setTimeout(r, 900));
   }
 
-  // 駅をタップ：分かれ道ならその方面へ。いまいる駅なら手帖、それ以外は望遠鏡でのぞくだけ（移動しない）
+  // 駅をタップ：いまいる駅なら手帖、それ以外は望遠鏡でのぞくだけ（移動しない）
   function onStationClick(id) {
     Sound.unlock();
-    if (move && move.waiting) {
-      if (move.waiting.includes(id)) return pickDirection(id);
-      toast('分かれ道です。地図のボタンか、波紋の駅から進む路線を選んでください');
-      return;
-    }
     if (busy) return;
     const cur = Store.get().currentStationId;
     if (id === cur) return openModal(id);
@@ -560,8 +680,8 @@
     box.innerHTML = `
       <button class="scope-x" data-scope-close aria-label="閉じる">×</button>
       <p class="scope-title">${I(visited ? 'here' : 'lock')} <b>${esc(s.name)}駅</b>${hops ? `<small>（現在地から約${hops}マス）</small>` : ''}</p>
-      <p class="scope-owner">いまのトップオーナー：${esc(top.userName)}（累計${yenJP(top.totalAmount)}）</p>
-      <p class="scope-note">${visited ? '訪れたことのある駅です。手帖は読めますが、手配と立候補はこの駅に停車中だけです。' : '※ダイスを振ってこの駅に停車すると、寄り道手帖と現地スナップが解放されます'}</p>
+      <p class="scope-owner">いまのトップオーナー：${esc(top.userName)}（累計出資 ${yen(top.totalAmount)}）</p>
+      <p class="scope-note">${visited ? '訪れたことのある駅です。手帖は読めますが、出資と急行切符の受け取りはこの駅に停車中だけです。' : '※ダイスを振ってこの駅に停車すると、寄り道手帖と現地スナップが解放されます'}</p>
       ${visited ? `<button class="link-btn" data-read-techo="${esc(id)}">${I('book')} 手帖を読む（閲覧のみ）</button>` : ''}`;
     box.hidden = false;
     const w = box.offsetWidth, bw = box.parentElement.clientWidth;
@@ -581,6 +701,7 @@
     $('#btn-dice').disabled = busy;
     $('#dice-badge').hidden = true;
     renderTickets();
+    renderNav();
   }
 
   // ---------- よりみちダイス ----------
@@ -629,13 +750,14 @@
     void badge.offsetWidth;
     badge.classList.add('is-pop');
     if (Craft.ticketsLeft() <= 0) {
-      setGuide(`<b>${n}</b>の目！ 線路に沿って1駅ずつ進みます。分かれ道では進む路線を選べます。`);
+      setGuide(`<b>${n}</b>の目！ 線路に沿って進みます。分かれ道はオートナビがスポットライト駅の方へ選びます。`);
       setTimeout(() => startMove(n), 800);
       return;
     }
     choice = { n, values };
     $('#btn-dice').disabled = true;
     renderTickets();
+    renderNav();
     setGuide(`<b>${n}</b>の目！ よりみち切符で出目を±1できます。 <button class="primary-btn btn-sm" id="btn-depart">${I('train')} ${n}マス進む</button>`);
     $('#btn-depart').addEventListener('click', () => startMove(choice.n));
   }
@@ -708,7 +830,7 @@
     const st = stats();
     const me = Ownership.you(s.id);
     if (me && me.rank === 1) {
-      return `【${s.name}駅】のトップオーナーになりました。累計購入 ${yenJP(me.totalAmount)}\n称号「${rankInfo(st.assets).rank.title}」／トップオーナー ${st.acquiredCount}駅／総資産 ${yenBig(st.assets)}`;
+      return `【${s.name}駅】のトップオーナーになりました。累計出資 ${yen(me.totalAmount)}\n称号「${rankInfo(st.assets).rank.title}」／トップオーナー ${st.acquiredCount}駅／総資産 ${yenBig(st.assets)}`;
     }
     if (me && me.rank <= D.meta.owner.shareholders) return `【${s.name}駅】の共同株主（${me.rank}位）になりました。1位まで下克上をねらいます\n九州踏破率 ${st.visitedPct}%`;
     return `${s.name}駅に寄り道中。${s.tagline}\n九州踏破率 ${st.visitedPct}%`;
@@ -727,10 +849,9 @@
     const actions = Store.getActions(id);
     const color = (D.meta.prefectures[s.prefecture] || {}).color;
     const aff = D.meta.affiliate;
-    const pendingHere = Owner.isPendingFor(id);
     const me = Ownership.you(id);
-    const here = st.currentStationId === id; // 手配（ショップ・宿のボタン）は、この駅に停車中だけ
-    const locked = `<p class="aff-locked">${I('lock')} 手配は、この駅に停車中のときだけできます</p>`;
+    const here = st.currentStationId === id; // 出資と急行切符の受け取りは、この駅に停車中だけ
+    const peek = (via, kw) => (here ? Owner.peekHtml(id, via, kw) : '');
     const card = $('#modal-card');
     card.style.setProperty('--pref', color);
     card.classList.toggle('is-acquired', !!acq);
@@ -771,12 +892,10 @@
       </ol>
 
       ${
-        pendingHere
-          ? Owner.panelHtml(id)
-          : acq
-            ? `<div class="owner-banner is-owner">${I('crown')} あなたはこの駅の<b>トップオーナー</b>です（累計 ${yenJP(me.totalAmount)}）。追い越されないよう、旅の買い物を楽しんでください</div>`
-            : `<div class="owner-banner">${I('receipt')} <b>この手帖の中のボタン</b>からお取り寄せ・宿の予約をしたら、<b>注文完了画面のスクショ</b>でオーナー権に立候補できます。累計購入金額の<b>1位がトップオーナー</b>、上位3名は共同株主です。
-               <small>※ボタンを押しただけ・商品名で別に検索しただけでは記録になりません。同じスクショは二度使えません</small></div>`
+        acq
+          ? `<div class="owner-banner is-owner">${I('crown')} あなたはこの駅の<b>トップオーナー</b>です（累計出資 ${yen(me.totalAmount)}）。旅で貯めたクラフト資金で、ほかの駅にも出資してみましょう</div>`
+          : `<div class="owner-banner">${I('coins')} 旅で貯めた<b>クラフト資金</b>でこの駅に出資すると、オーナー権ランキングに入れます。累計出資額の<b>1位がトップオーナー</b>、上位3名は共同株主です。
+               <small>※出資はゲームの中の資金だけで行います。お買い物やその証明はいりません（出資できるのは、この駅に停車中のときだけ）</small></div>`
       }
 
       ${rankingHtml(id)}
@@ -789,14 +908,15 @@
       ${Postcards.stationSnapsHtml(id)}
 
       <section class="modal-sec">
-        <h3 class="sec-title">${I('gift')}名産品物件 <em>お取り寄せで立候補へ</em></h3>
+        <h3 class="sec-title">${I('gift')}名産品物件 <em>この駅の逸品</em></h3>
         <div class="items">
           ${s.products
             .map(
               (p) => `<div class="item">
                 <div class="item-name">${esc(p.name)}</div>
                 <p class="item-desc">${esc(p.desc)}</p>
-                ${here ? `<div class="aff-row">${affButtons(aff.products, p.keyword, 'product', p.name, id)}</div>` : locked}
+                <div class="aff-row">${affButtons(aff.products, p.keyword, 'product', p.name, id)}</div>
+                ${peek('product', p.keyword)}
               </div>`
             )
             .join('')}
@@ -804,11 +924,12 @@
       </section>
 
       <section class="modal-sec">
-        <h3 class="sec-title">${I('onsen')}宿泊・体験物件 <em>宿の予約で立候補へ</em></h3>
+        <h3 class="sec-title">${I('onsen')}宿泊・体験物件 <em>この駅の名宿</em></h3>
         <div class="item">
           <div class="item-name">${esc(s.stay.name)} <span class="chip chip-dim">${esc(s.stay.kind)}</span></div>
           <p class="item-desc">${esc(s.stay.desc)}</p>
-          ${here ? `<div class="aff-row">${affButtons(aff.stays, s.stay.keyword, 'stay', s.stay.name, id)}</div>` : locked}
+          <div class="aff-row">${affButtons(aff.stays, s.stay.keyword, 'stay', s.stay.name, id)}</div>
+          ${peek('stay', s.stay.keyword)}
         </div>
       </section>
 
@@ -821,7 +942,6 @@
         <button class="fav-btn ${st.favorites[id] ? 'is-on' : ''}" data-fav>${I('bell')} ${st.favorites[id] ? '推し駅' : '推し駅にする'}</button>
         <button class="ghost-btn" data-close>旅をつづける</button>
       </footer>`;
-    loadThumbs(card);
     Postcards.loadImages(card);
   }
 
@@ -831,11 +951,10 @@
     if (me && me.rank === 1) return `<span class="chip chip-gold">${I('crown')} トップオーナー</span>`;
     if (me && me.rank <= D.meta.owner.shareholders) return `<span class="chip chip-share">${I('chart')} ${me.rank}位・共同株主</span>`;
     if (me) return `<span class="chip">${me.rank}位</span>`;
-    if (Owner.isPendingFor(id)) return `<span class="chip chip-green">${I('compass')} 視察・手配中</span>`;
     return '<span class="chip chip-dim">オーナー募集中</span>';
   }
 
-  // オーナー権ランキング（累計購入金額）。上位3名が共同株主で、駅の評価額を金額の割合で配当として分け合う
+  // オーナー権ランキング（累計出資額）。上位3名が共同株主で、駅の評価額から配当を受け取る
   function rankingHtml(id) {
     const s = D.byId[id];
     const cfg = D.meta.owner;
@@ -843,64 +962,28 @@
     const me = rows.find((r) => r.isYou);
     const shown = rows.slice(0, cfg.shareholders);
     if (me && me.rank > cfg.shareholders) shown.push(me);
-    const mine = Store.getPurchases(id);
+    const here = Store.get().currentStationId === id;
     return `<section class="modal-sec">
-        <h3 class="sec-title">${I('crown')}オーナー権ランキング <em>累計購入金額</em></h3>
+        <h3 class="sec-title">${I('crown')}オーナー権ランキング <em>累計出資額</em></h3>
         <ol class="ranking">${shown
           .map(
             (r) => `<li class="rk rk-${r.rank} ${r.isYou ? 'is-you' : ''}">
               <span class="rk-no">${r.rank === 1 ? I('crown') : r.rank}</span>
               <span class="rk-name">${r.avatarConfig ? `<span class="rk-av">${Craft.avatarSvg(r.avatarConfig, { crop: true, id: `rk-${id}-${r.rank}` })}</span>` : ''}${esc(r.userName)}${r.isYou ? '<small>（あなた）</small>' : ''}</span>
-              <span class="rk-amt">${yenJP(r.totalAmount)}</span>
+              <span class="rk-amt">${yen(r.totalAmount)}</span>
               <span class="rk-share">${r.rank <= cfg.shareholders ? `${r.rank === 1 ? 'トップオーナー' : `共同株主（${r.rank}位理事）`}・配当 ${yen(r.dividend)}` : '株主の圏外'}${r.lastUpdated ? `・最終 ${fmtDate(r.lastUpdated)}` : ''}</span>
             </li>`
           )
           .join('')}</ol>
-        <p class="rank-note">1位がこの駅のトップオーナー（地図の金の王冠）で、評価額 ${yen(s.assetValue)} ぶんのクラフト資金を受け取ります。2位・3位は共同株主（理事）として、その${Math.round(cfg.dividendRates[1] * 100)}%・${Math.round(cfg.dividendRates[2] * 100)}%の配当。いまの1位でない人の申告額は、<b>下克上ボーナス×${cfg.upsetBonus}</b>で数えます。</p>
+        <p class="rank-note">1位がこの駅のトップオーナー（地図の金の王冠）で、評価額 ${yen(s.assetValue)} ぶんのクラフト資金を受け取ります。2位・3位は共同株主（理事）として、その${Math.round(cfg.dividendRates[1] * 100)}%・${Math.round(cfg.dividendRates[2] * 100)}%の配当。いまの1位でない人の出資額は、<b>下克上ボーナス×${cfg.upsetBonus}</b>で数えます。</p>
         <div class="rank-actions">
-          <button class="primary-btn" data-candidacy="${esc(id)}" ${Owner.canApply(id) ? '' : 'disabled'}>${I('receipt')} オーナー権に立候補する</button>
-          ${Owner.canApply(id) ? '' : '<small>この手帖のショップ・宿のボタンからお買い物・予約をすると、立候補できます</small>'}
+          <button class="primary-btn" data-invest="${esc(id)}" ${here ? '' : 'disabled'}>${I('coins')} クラフト資金で出資する</button>
+          <small>${here ? `使えるクラフト資金 ${yen(Craft.balance())}` : 'ダイスでこの駅に停車しているときだけ出資できます'}</small>
         </div>
-        ${
-          mine.length
-            ? `<div class="mini-receipts" aria-label="この駅のレシート">${mine
-                .slice()
-                .reverse()
-                .map((r) => receiptCard(id, r, 'mini'))
-                .join('')}</div>`
-            : ''
-        }
       </section>`;
   }
 
-  // 切手風の領収証カード（スクショのサムネイル・金額・ショップ・査収のハンコ）
-  function receiptCard(stationId, r, size = '') {
-    const s = D.byId[stationId];
-    const color = (D.meta.prefectures[s.prefecture] || {}).color;
-    return `<article class="receipt ${size ? `receipt-${size}` : ''}" style="--pref:${color}">
-        <div class="receipt-paper">
-          <div class="receipt-thumb">${r.imageId ? `<img alt="${esc(s.name)}駅のレシート" data-thumb="${esc(r.imageId)}">` : `<span>${I('receipt')}</span>`}</div>
-          <div class="receipt-body">
-            <p class="receipt-station">${esc(s.name)}<small>駅</small></p>
-            <p class="receipt-amount">${yenJP(r.amount)}</p>
-            <p class="receipt-shop">${I(r.via === 'stay' ? 'onsen' : 'gift')} ${esc(r.shop)}${size === 'mini' ? '' : `・${esc(r.item || '')}`}</p>
-            <p class="receipt-meta">${r.arrival ? `駅到着日＝購入日 ${fmtDate(r.arrival)}` : fmtDate(r.at)}${r.upset ? `　下克上×${D.meta.owner.upsetBonus} → ${yenJP(r.scored)}` : ''}</p>
-          </div>
-        </div>
-        <div class="receipt-stamp" aria-hidden="true">${Receipts.receiptStampSvg(fmtDate(r.arrival || r.at), size === 'mini' ? '' : s.name)}</div>
-      </article>`;
-  }
-  // 端末の中に保存したサムネイルを、あとから差し込む
-  function loadThumbs(root) {
-    root.querySelectorAll('img[data-thumb]').forEach((img) => {
-      Receipts.thumbUrl(img.dataset.thumb).then((u) => {
-        if (u) img.src = u;
-        else img.replaceWith(Object.assign(document.createElement('span'), { innerHTML: I('receipt') }));
-      });
-    });
-  }
-
-  // 手帖をひらいている駅だけ描き直す（立候補の流れから呼ぶ）
+  // 手帖をひらいている駅だけ描き直す（出資・急行切符の流れから呼ぶ）
   function refreshModal(id) {
     if (modalStationId === id) {
       const top = $('#modal-card').scrollTop;
@@ -917,6 +1000,7 @@
   }
 
   function openModal(id) {
+    hideSign();
     modalStationId = id;
     lastFocus = document.activeElement;
     renderModal(id);
@@ -942,7 +1026,6 @@
   function onModalClick(ev) {
     if (ev.target.closest('[data-close]') || ev.target === $('#modal')) return closeModal();
     if (Owner.onClick(ev)) return;
-    if (ev.target.closest('[data-candidacy]')) return;
     const fav = ev.target.closest('[data-fav]');
     if (fav) {
       const on = Store.toggleFavorite(modalStationId);
@@ -952,14 +1035,17 @@
       renderAll();
       return;
     }
+    // ショップ・宿のボタン：リンクはそのまま新しいタブで開き（preventDefault しない）、ジャーニーの一歩だけ記録する。ご褒美はつけない
     const a = ev.target.closest('.aff-btn');
-    // リンク自体は通常どおり新しいタブで開く（ポップアップブロック回避のため preventDefault しない）
-    if (a) Owner.start(a.dataset.stationId, a);
+    if (a) {
+      Store.recordAction(a.dataset.stationId, a.dataset.via, a.dataset.provider);
+      setTimeout(() => refreshModal(a.dataset.stationId), 0);
+    }
   }
 
-  // ---------- 立候補のあと ----------
+  // ---------- 出資のあと ----------
   // 1位を取ったら王座交代の演出。それ以外は、何位になったかと配当をお知らせする
-  async function afterCandidacy(id, result, amount) {
+  async function afterInvest(id, result, amount) {
     const s = D.byId[id];
     if (result.tookThrone) {
       // 王冠が駅に刺さるところが見えるよう、手帖を閉じて地図をその駅まで送ってから
@@ -975,8 +1061,8 @@
     if (result.after <= D.meta.owner.shareholders) Sound.coin();
     else Sound.gentle();
     toast(
-      `${s.name}駅に購入実績 ${yenJP(amount)}${result.upset ? `（下克上×${D.meta.owner.upsetBonus}で ${yenJP(result.scored)}）` : ''}を記録しました。いま${result.after}位${
-        result.after === 1 ? '（トップオーナーのまま）' : result.after <= D.meta.owner.shareholders ? `・共同株主（配当 ${yen(me.dividend)}）` : `・1位まであと お買い物 ${yenJP(Ownership.preview(id, 0).needToTop)} ぶん`
+      `${s.name}駅に ${yen(amount)} を出資しました${result.upset ? `（下克上×${D.meta.owner.upsetBonus}で ${yen(result.scored)}）` : ''}。いま${result.after}位${
+        result.after === 1 ? '（トップオーナーのまま）' : result.after <= D.meta.owner.shareholders ? `・共同株主（配当 ${yen(me.dividend)}）` : `・1位まであと 出資 ${yen(Ownership.needFor(id, 1))} ぶん`
       }`,
       result.after <= D.meta.owner.shareholders ? 'toast-gold' : ''
     );
@@ -996,7 +1082,7 @@
         <p class="celebrate-kicker">王座交代</p>
         <h2 id="celebrate-title" class="celebrate-title">トップオーナー就任！</h2>
         <div class="celebrate-card">${stampCard(s, Store.getAcquisition(id), 'big')}</div>
-        <p class="celebrate-msg"><b>${esc(s.name)}駅</b>の購入実績で1位になりました${prev ? `（${esc(prev.userName)}さんを追い越しました）` : ''}。<br>累計 <b>${yenJP(me.totalAmount)}</b>${result && result.upset ? `（下克上ボーナス×${D.meta.owner.upsetBonus}込み）` : ''}・配当 <b>${yen(me.dividend)}</b>／総資産額に <b>${yen(s.assetValue)}</b></p>
+        <p class="celebrate-msg"><b>${esc(s.name)}駅</b>の出資額で1位になりました${prev ? `（${esc(prev.userName)}さんを追い越しました）` : ''}。<br>累計出資 <b>${yen(me.totalAmount)}</b>${result && result.upset ? `（下克上ボーナス×${D.meta.owner.upsetBonus}込み）` : ''}・配当 <b>${yen(me.dividend)}</b>／総資産額に <b>${yen(s.assetValue)}</b></p>
         <div class="celebrate-actions">
           <a class="share-btn" href="${esc(shareUrl(stationShareText(s)))}" target="_blank" rel="noopener"><span class="x-logo">𝕏</span>オーナー権をシェア</a>
           ${canMakeTrip() ? `<button class="ghost-btn ghost-light" data-go-trip>${I('suitcase')} オーナーの駅で旅しおりを作る</button>` : ''}
@@ -1041,7 +1127,7 @@
   function stampCard(s, acq, size = '', extraClass = '') {
     const color = (D.meta.prefectures[s.prefecture] || {}).color;
     const me = Ownership.you(s.id);
-    const via = me ? `累計購入 ${yenJP(me.totalAmount)}・レシート${Store.getPurchases(s.id).length}枚` : '旧版の記念刻印';
+    const via = me ? `累計出資 ${yen(me.totalAmount)}・出資${Store.getPurchases(s.id).length}回` : '旧版の記念刻印';
     const no = String(D.stations.indexOf(s) + 1).padStart(3, '0');
     return `
       <article class="stamp ${size ? `stamp-${size}` : ''} ${extraClass}" style="--pref:${color}" data-station="${esc(s.id)}" tabindex="0" aria-label="${esc(s.name)}駅のトップオーナーの切手">
@@ -1101,15 +1187,14 @@
         const acq = st.acquired[stn.id];
         if (acq) return stampCard(stn, acq);
         const visited = !!st.visited[stn.id];
-        const pend = Owner.isPendingFor(stn.id);
         const me = Ownership.you(stn.id);
         const top = Ownership.owner(stn.id);
         return `<article class="stamp-blank" data-station="${esc(stn.id)}" tabindex="0" style="--pref:${(D.meta.prefectures[stn.prefecture] || {}).color}">
-            <div class="blank-q" aria-hidden="true">${me ? me.rank : pend ? I('compass') : '？'}</div>
+            <div class="blank-q" aria-hidden="true">${me ? me.rank : '？'}</div>
             <div class="blank-name">${esc(stn.name)}<small>駅</small></div>
             <div class="blank-pref">${esc(stn.prefecture)}・${esc(stn.propertyType)}</div>
             <div class="blank-value">評価額 ${yen(stn.assetValue)}</div>
-            <div class="blank-state">${me ? `${me.rank}位${me.rank <= D.meta.owner.shareholders ? '・共同株主' : ''}（1位まで お買い物 ${yenJP(Ownership.preview(stn.id, 0).needToTop)} ぶん）` : pend ? '視察・手配中' : visited ? '訪問済み・まだ立候補していません' : 'まだ訪れていない駅'}</div>
+            <div class="blank-state">${me ? `${me.rank}位${me.rank <= D.meta.owner.shareholders ? '・共同株主' : ''}（1位まで 出資 ${yen(Ownership.needFor(stn.id, 1))} ぶん）` : visited ? '訪問済み・まだ出資していません' : 'まだ訪れていない駅'}</div>
             <div class="blank-top">いまのオーナー：${esc(top.userName)}</div>
           </article>`;
       })
@@ -1120,28 +1205,7 @@
       b.setAttribute('aria-selected', b.dataset.subTab === techoSub);
     });
     if (techoSub === 'trip') renderTrip();
-    if (techoSub === 'album') renderAlbum();
-  }
-
-  // 切手風レシートアルバム：立候補に使ったスクショを、新しい順にファイリングする
-  function renderAlbum() {
-    const list = Store.allPurchases().sort((a, b) => b.at.localeCompare(a.at));
-    const legacy = Object.entries(Store.get().legacyStamps || {}).filter(([id]) => D.byId[id]);
-    const total = list.reduce((n, r) => n + r.amount, 0);
-    $('#album-root').innerHTML = `
-      <div class="album-head">
-        <h3 class="sec-title">${I('receipt')}旅のレシートアルバム <em>端末の中だけに保存</em></h3>
-        <p class="album-sum">${list.length ? `レシート <b>${list.length}</b>枚・購入実績の合計 <b>${yenJP(total)}</b>` : 'まだレシートはありません。寄り道手帖のショップ・宿のボタンからお買い物をして、完了画面のスクショで立候補すると、ここに切手のように並びます。'}</p>
-      </div>
-      <div class="album-grid">${list.map((r) => receiptCard(r.stationId, r)).join('')}</div>
-      ${
-        legacy.length
-          ? `<section class="legacy-sec"><h3 class="sec-title">${I('postcard')}旧版の記念刻印 <em>購入実績には入りません</em></h3>
-              <p class="album-sum">以前の版（ボタンと刻印シートでオーナーになれた頃）に押した刻印です。いまのランキングには入りませんが、記念に残しています。</p>
-              <div class="legacy-list">${legacy.map(([id, a]) => `<span class="chip">${I('stamp')} ${esc(D.byId[id].name)}駅 ${fmtDate(a.at)}</span>`).join('')}</div></section>`
-          : ''
-      }`;
-    loadThumbs($('#album-root'));
+    if (techoSub === 'preface') renderPreface();
   }
 
   function showView(name) {
@@ -1389,7 +1453,7 @@
 
       <section class="stay-compare" id="trip-stays">
         <h3 class="sec-title">${I('bed')}宿をまとめて比較する <em>楽天トラベル・じゃらん</em></h3>
-        <p class="stay-lead">このプランの宿泊地と、ほかの候補プランの宿泊地を並べています。ボタンを押すと各サイトで同じ条件の宿を探せます（予約のあと、完了画面のスクショでその駅のオーナー権に立候補できます）。</p>
+        <p class="stay-lead">このプランの宿泊地と、ほかの候補プランの宿泊地を並べています。ボタンを押すと各サイトで同じ条件の宿を探せます。</p>
         <div class="stay-list">${stayRows(plan, otherOvernights)}</div>
         <p class="disclosure">${esc(D.meta.affiliate.disclosure)}</p>
       </section>
@@ -1451,12 +1515,9 @@
       if (trip.savedId === del.dataset.deleteSaved) trip.savedId = null;
       return renderTrip();
     }
-    // 宿比較のボタン：リンクは新しいタブで開き、その駅の「視察・手配中」にする（立候補は戻ってきてから）
+    // 宿比較のボタン：リンクは新しいタブで開き、ジャーニーの「訪れる」だけを記録する
     const a = t.closest('.aff-btn');
-    if (a && a.dataset.stationId) {
-      Owner.start(a.dataset.stationId, a);
-      toast(`${a.dataset.label}で${D.byId[a.dataset.stationId].name}の宿を視察中。予約が済んだら、完了画面のスクショを持って戻ってきてください`);
-    }
+    if (a && a.dataset.stationId) Store.recordAction(a.dataset.stationId, a.dataset.via, a.dataset.provider);
   }
 
   // ---------- ミュート ----------
@@ -1486,7 +1547,7 @@
     Craft.init(D);
     Ownership.init(D);
     // 旅の便り（ポストカードのいいね）もクラフト資金に入るので、最初の計算より前にデータを渡しておく
-    const api = { esc, yen, yenBig, fmtDate, toast, renderAll, refreshModal, afterCandidacy, confetti, showView, closeModal };
+    const api = { esc, yen, yenBig, fmtDate, toast, renderAll, refreshModal, afterInvest, confetti, showView, closeModal, buildUrl };
     Postcards.init(D, api, $('#letters-root'));
     Sound.setMuted(Store.get().muted);
     renderMute();
@@ -1498,11 +1559,8 @@
       onStationClick,
       currentId: () => Store.get().currentStationId,
       spotlightId: () => (Store.get().spotlight || {}).id,
-      // カメラが動いたら：分かれ道のボタンを置き直し、望遠鏡の吹き出しは閉じる
-      onCamera: () => {
-        if (move && move.waiting && !$('#map-overlay').hidden) placeDirButtons(move.waiting);
-        hideScope();
-      },
+      // カメラが動いたら、望遠鏡の吹き出しは閉じる
+      onCamera: () => hideScope(),
     });
     Map.placeTrain(Store.get().currentStationId);
     Dice.mount($('#die'));
@@ -1514,6 +1572,8 @@
     Game.init(D, { ...api, isBusy: () => busy || !!choice || !!move, renderDiceHint, warpTo });
     renderAll();
     setGuide(IDLE_GUIDE);
+    if (!Store.get().prefaceSeen) openCover();
+    $('#btn-compass').addEventListener('click', openCompass);
 
     $('#btn-dice').addEventListener('click', rollDice);
     $('#ticket-bar').addEventListener('click', (e) => {
@@ -1529,9 +1589,7 @@
     $('#btn-open-current').addEventListener('click', () => !busy && openModal(Store.get().currentStationId));
     $('#modal').addEventListener('click', onModalClick);
     document.addEventListener('click', (e) => {
-      const c = e.target.closest('[data-candidacy-open]');
-      if (c) return Owner.openSheet(c.dataset.candidacyOpen);
-      const o = e.target.closest('#pending-chip [data-open-station], #collection-grid [data-station], #mini-grid [data-station]');
+      const o = e.target.closest('#collection-grid [data-station], #mini-grid [data-station]');
       if (o && !busy) openTecho(o.dataset.openStation || o.dataset.station);
       const r = e.target.closest('[data-read-techo]');
       if (r) {
@@ -1540,15 +1598,8 @@
       }
       if (e.target.closest('[data-scope-close]') || (!e.target.closest('#map-scope') && !e.target.closest('.station'))) hideScope();
     });
-    document.addEventListener('click', (e) => {
-      const b = e.target.closest('#map-overlay [data-dir], #guide [data-dir]');
-      if (b) pickDirection(b.dataset.dir);
-    });
-    // 画面の大きさが変わったら、分かれ道のボタンを置き直す（望遠鏡はいったん閉じる）
-    window.addEventListener('resize', () => {
-      hideScope();
-      if (move && move.waiting) placeDirButtons(move.waiting);
-    });
+    // 画面の大きさが変わったら、望遠鏡はいったん閉じる
+    window.addEventListener('resize', () => hideScope());
     $('#collection-grid').addEventListener('keydown', (e) => {
       const c = e.target.closest('[data-station]');
       if (c && (e.key === 'Enter' || e.key === ' ')) {
@@ -1591,9 +1642,9 @@
     $('#btn-clear-course').addEventListener('click', clearCourse);
     $('#btn-course-trip').addEventListener('click', openTrip);
     $('#btn-reset').addEventListener('click', () => {
-      if (!confirm('旅の記録（訪問・購入実績とレシート・旅の便りの写真・推し駅・クラフト工房のパーツ）をすべてリセットします。よろしいですか？')) return;
+      if (!confirm('旅の記録（訪問・出資・旅の便りの写真・推し駅・クラフト工房のパーツ）をすべてリセットします。よろしいですか？')) return;
       Store.reset();
-      Receipts.clear();
+      Photos.clear();
       Store.visit(D.meta.startStationId);
       syncRankSeen();
       clearChoice();

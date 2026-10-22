@@ -215,12 +215,28 @@
       });
       hit(0, { type: 'bandpass', freq: 1500, q: 0.8, gain: 0.05, dur: 0.6, attack: 0.08, curve: 2 });
     }),
-    // レールの継ぎ目「ガタン、ゴトン」：こもった低いノイズの2連打
+    // レールの継ぎ目「ガタン、ゴトン」：こもった低いノイズの2連打。
+    // ブレーキで遅くなるほど、2打の間も「ガタン……ゴトン」と開き、音も少しこもる
     railJoint: play((speed = 1) => {
-      const g = 0.12 + 0.1 * Math.min(1, speed);
-      hit(0, { type: 'lowpass', freq: 320, q: 1.2, gain: g, dur: 0.07 });
+      const k = Math.max(0, Math.min(1, speed));
+      const g = 0.12 + 0.1 * k;
+      const gap = 0.085 + 0.16 * (1 - k);
+      hit(0, { type: 'lowpass', freq: 220 + 100 * k, q: 1.2, gain: g, dur: 0.07 });
       hit(0, { freq: 1800, q: 5, gain: g * 0.18, dur: 0.02 });
-      hit(0.085, { type: 'lowpass', freq: 260, q: 1.2, gain: g * 0.85, dur: 0.08 });
+      hit(gap, { type: 'lowpass', freq: 180 + 80 * k, q: 1.2, gain: g * 0.85, dur: 0.08 });
+    }),
+    // 停車：空気ブレーキの「プシュー」と、車体が沈む低い「ゴトン」
+    brake: play(() => {
+      hit(0, { type: 'lowpass', freq: 200, q: 1.4, gain: 0.16, dur: 0.12 });
+      hit(0.05, { type: 'highpass', freq: 3200, q: 0.7, gain: 0.05, dur: 0.75, attack: 0.03, curve: 2 });
+      note(70, 0.02, 0.3, { type: 'sine', gain: 0.12, attack: 0.004, release: 0.1, slideTo: 46 });
+    }),
+    // 駅名標が下りてきて止まる「カシャン」：金具の高い2打と、板の小さな響き
+    clack: play(() => {
+      hit(0, { freq: 2600, q: 9, gain: 0.12, dur: 0.035 });
+      hit(0.055, { freq: 1900, q: 7, gain: 0.1, dur: 0.05 });
+      hit(0.055, { type: 'lowpass', freq: 520, q: 1, gain: 0.12, dur: 0.07 });
+      note(hz(79), 0.06, 0.25, { type: 'triangle', gain: 0.03, attack: 0.002, release: 0.08 });
     }),
     // 駅に到着：メジャーセブンスのアルペジオ（ポーン・ポーン・ポーン・ポーン）をオルゴール風に
     arrive: play(() => {
