@@ -45,8 +45,15 @@
         api.refreshModal(p.stationId);
         return;
       }
-      Owner.openSheet(p.stationId);
+      autoOpen(p);
     }, 250);
+  }
+  // 立候補届を自動でひらくのは、手配1回につき1度だけ（閉じたあとは、ページをひらくたびに出さない）。
+  // そのあとは、寄り道手帖の待機パネルや「手配中」の札から、自分でひらける
+  function autoOpen(p) {
+    if (p.prompted) return;
+    Store.setPendingOwner({ ...p, prompted: true });
+    Owner.openSheet(p.stationId);
   }
 
   const elapsedText = () => {
@@ -337,7 +344,7 @@
       setInterval(tick, 1000);
       // 起動時：手配中のまま戻ってきた（スマホでタブが再読み込みされた）ら、そのまま続きから
       const p = pending();
-      if (p && ready()) setTimeout(() => Owner.openSheet(p.stationId), 600);
+      if (p && ready()) setTimeout(() => autoOpen(p), 600);
     },
     sealSvg,
     pending,
