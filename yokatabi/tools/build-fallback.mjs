@@ -107,6 +107,8 @@ const itemIds = (slot) => new Set([...(craft.train ?? []), ...(craft.avatar ?? [
 for (const r of data.meta.rivals ?? []) {
   for (const slot of ['hat', 'outfit', 'buddy', 'livery']) if (r.avatar && !itemIds(slot).has(r.avatar[slot])) errors.push(`meta.rivals ${r.id}: avatar.${slot} の ${r.avatar[slot]} が工房にありません`);
 }
+// 駅の階層（3段階のセマンティック・ズームで、駅名を出し始める倍率が変わる）
+for (const s of data.stations) if (!['hub', 'tourist', 'local'].includes(s.stationTier)) errors.push(`${s.id}: stationTier が hub/tourist/local のどれでもありません`);
 // 地域テーマ：ご当地の車窓と演出（js/scenery.js）
 const THEMES = new Set(['onsen', 'volcano', 'ocean', 'forest', 'city']);
 for (const s of data.stations) if (!THEMES.has(s.regionTheme)) errors.push(`${s.id}: regionTheme が ${[...THEMES].join('/')} のどれでもありません`);

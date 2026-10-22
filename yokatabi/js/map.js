@@ -43,8 +43,12 @@
   }
   const f1 = (v) => (Math.round(v * 10) / 10).toString();
 
-  let D, svg, layers, handlers;
+  let D, svg, layers, handlers, camera;
   const nodes = {}; // id -> <g>
+  // 拡大しても大きくなりすぎないよう、倍率の逆数で縮める要素（駅・駅名・県名・海や山の名前・経由駅・区間のしるし）
+  const scalables = []; // [{ el, x, y }]
+  const scalable = (el, x, y) => (scalables.push({ el, x, y }), el);
+  let curScale = 1;
   let candidates = null;
 
   // a→b 方向の区間パス。geo.js の線形は「キーの前の駅 → 後ろの駅」の向きなので、逆向きのときは点列を反転する。
@@ -125,7 +129,7 @@
 
     PEAKS.forEach(([name, lat, lng]) => {
       const [x, y] = latLngToSvg(lat, lng);
-      const g = el('g', { class: 'peak', transform: `translate(${f1(x)} ${f1(y)})` }, layers.bg);
+      const g = scalable(el('g', { class: 'peak', transform: `translate(${f1(x)} ${f1(y)})` }, layers.bg), x, y);
       el('path', { d: 'M-7,3 L-1.5,-5 L1,-2 L3,-4.5 L8,3 Z', class: 'peak-mark' }, g);
       el('text', { y: 14, 'text-anchor': 'middle', class: 'peak-label' }, g).textContent = name;
     });
@@ -136,7 +140,8 @@
 
     SEAS.forEach(([name, lat, lng, small]) => {
       const [x, y] = latLngToSvg(lat, lng);
-      el('text', { x: f1(x), y: f1(y), 'text-anchor': 'middle', class: small ? 'sea-label sea-label-sm' : 'sea-label' }, layers.bg).textContent = name;
+      const g = scalable(el('g', { transform: `translate(${f1(x)} ${f1(y)})`, class: small ? 'sea-name sea-name-sm' : 'sea-name' }, layers.bg), x, y);
+      el('text', { 'text-anchor': 'middle', class: small ? 'sea-label sea-label-sm' : 'sea-label' }, g).textContent = name;
     });
   }
 
@@ -218,20 +223,21 @@
         const m = p.getPointAtLength(len / 2);
         p.remove();
         if (len < 70) return; // 短い区間はしるしを置くと駅名とぶつかるので省く
-        const b = el('g', { class: `route-badge badge-${type}`, transform: `translate(${f1(m.x)} ${f1(m.y)})` }, layers.badges);
+        const b = scalable(el('g', { class: `route-badge badge-${type}`, transform: `translate(${f1(m.x)} ${f1(m.y)})` }, layers.badges), m.x, m.y);
         el('circle', { r: 9 }, b);
         el('text', { y: 3.6, 'text-anchor': 'middle' }, b).textContent = ROUTE_BADGE[type];
       });
     // 経由駅：路線がどこを通っているかの目印（すごろくのマスではない）
     (GEO ? GEO.waypoints : []).forEach((w) => {
-      const g = el('g', { class: 'waypoint', transform: `translate(${w.x} ${w.y})` }, layers.badges);
+      const g = scalable(el('g', { class: 'waypoint', transform: `translate(${w.x} ${w.y})` }, layers.badges), w.x, w.y);
       el('circle', { r: 3.2 }, g);
       if (!WAYPOINT_QUIET.has(w.name)) el('text', { x: 6, y: 3.5, class: 'waypoint-label' }, g).textContent = w.name;
     });
     // 県名：線路の上・駅の下に置き、太い白フチで地図帳のように読ませる
     PREF_LABELS.forEach(([name, lat, lng]) => {
       const [x, y] = latLngToSvg(lat, lng);
-      el('text', { x: f1(x), y: f1(y), 'text-anchor': 'middle', class: 'pref-label' }, layers.labels).textContent = name;
+      const g = scalable(el('g', { transform: `translate(${f1(x)} ${f1(y)})` }, layers.labels), x, y);
+      el('text', { 'text-anchor': 'middle', class: 'pref-label' }, g).textContent = name;
     });
   }
 
@@ -251,9 +257,11 @@
         tabindex: '0',
         role: 'button',
         'data-id': s.id,
+        'data-tier': s.stationTier || 'local',
         'aria-label': `${s.name}駅（${s.prefecture}）`,
         style: `--pref:${color}`,
       }, layers.nodes);
+      scalable(g, s.x, s.y);
       el('circle', { r: 24, class: 'station-hit' }, g);
       [0, 1, 2].forEach((i) => el('circle', { r: 12, class: 'station-wave', style: `--i:${i}` }, g));
       el('circle', { r: 17, class: 'station-candidate' }, g);
@@ -273,6 +281,8 @@
       el('text', { y: 3.2, 'text-anchor': 'middle', class: 'share-char' }, share).textContent = '株';
       const [dx, dy, anchor] = LABEL_OFFSET[s.labelDir] || LABEL_OFFSET.right;
       el('text', { x: dx, y: dy, 'text-anchor': anchor, class: 'station-label' }, g).textContent = s.name;
+      // ローカル寄り道モード（2.5倍〜）で、いまいる駅にだけ出す手帖のひとこと
+      el('text', { x: dx, y: dy + 13, 'text-anchor': anchor, class: 'station-preview' }, g).textContent = s.tagline;
 
       const activate = () => handlers.onStationClick(s.id);
       g.addEventListener('click', activate);
@@ -288,9 +298,12 @@
 
   // ---------- 列車（SVG のミニチュア）----------
   // 1両目・2両目を線路の向きに回して置く。車両の絵は YT.Craft（クラフト工房で選んだもの）
-  const CAR = 0.42; // 車両の絵（長さ120）の縮尺 → 盤面で約50単位
-  const GAP = 54; // 1両目と2両目の中心の間隔（盤面の単位）
-  const STOP = 30; // 駅の手前で止まる距離（先頭が駅のしるしにかかる位置）
+  // 拡大しているときは、列車も少し小さくして（倍率^-0.6）線路の上におさめる
+  let trainK = 1;
+  const CAR0 = 0.42; // 車両の絵（長さ120）の縮尺 → 盤面で約50単位
+  const GAP0 = 54; // 1両目と2両目の中心の間隔（盤面の単位）
+  const STOP0 = 30; // 駅の手前で止まる距離（先頭が駅のしるしにかかる位置）
+  let CAR = CAR0, GAP = GAP0, STOP = STOP0;
   let car1, car2, carG1, carG2, fx;
   const pose = { segs: null, d: 0, running: false };
 
@@ -387,6 +400,68 @@
     }, 1600);
   }
 
+  // 倍率1で見せる範囲：スマホ（幅639px以下）では左右の海を少し切って、九州を大きく見せる（座標系は 800×960 のまま）
+  function baseView() {
+    const narrow = window.matchMedia('(max-width: 639px)').matches;
+    const [vx, vy, vw, vh] = D.meta.viewBox;
+    return narrow ? { x: 118, y: 0, w: 584, h: 960 } : { x: vx, y: vy, w: vw, h: vh };
+  }
+
+  // ---------- 3段階のセマンティック・ズーム（LOD）----------
+  // 1：1〜1.5倍（九州全体）…駅のしるしと路線。駅名は主要ターミナル（hub）・いまいる駅・スポットライト駅・トップオーナーの駅だけ
+  // 2：1.6〜2.4倍（エリア）…主要観光駅（tourist）の駅名・ご当地の演出・山の名前・区間のしるし
+  // 3：2.5〜4倍（ローカル）…すべての駅名・経由駅の名前・いまいる駅の手帖のひとこと
+  const lodOf = (z) => (z < 1.55 ? 1 : z < 2.45 ? 2 : 3);
+  let lod = 0;
+  let camRaf = 0;
+  // final：viewBox を書き換えて描き直したとき（アニメーションの途中は見た目だけなので、重い書き換えはしない）
+  function onCamera(cam, final = true) {
+    const s = Math.pow(cam.z, -0.78); // 見た目の大きさは 倍率^0.22 だけ大きくなる（4倍でも約1.36倍）
+    if (final && Math.abs(s - curScale) > 0.003) {
+      curScale = s;
+      scalables.forEach((it) => it.el.setAttribute('transform', `translate(${f1(it.x)} ${f1(it.y)}) scale(${s.toFixed(3)})`));
+      svg.style.setProperty('--lw', Math.pow(cam.z, -0.6).toFixed(3)); // 線の太さ（4倍でも見た目は約1.7倍まで）
+      trainK = Math.pow(cam.z, -0.6);
+      if (!pose.running) {
+        CAR = CAR0 * trainK;
+        GAP = GAP0 * trainK;
+        STOP = STOP0 * trainK;
+        if (pose.segs) setPose(Math.max(0, pose.segs.total - STOP));
+      }
+    }
+    const l = lodOf(cam.z);
+    if (l !== lod) {
+      lod = l;
+      svg.dataset.lod = l;
+    }
+    const zr = document.getElementById('cam-zoom');
+    if (zr) zr.textContent = `×${cam.z.toFixed(1)}`;
+    if (handlers.onCamera && !camRaf) camRaf = requestAnimationFrame(() => ((camRaf = 0), handlers.onCamera(cam)));
+  }
+
+  // マップ右下のカメラのボタン
+  function buildCameraButtons() {
+    const box = document.createElement('div');
+    box.className = 'cam-ctrl';
+    box.innerHTML = `
+      <button class="cam-btn" data-cam="here" title="現在地にフォーカス（×2.5）"><span aria-hidden="true">🚂</span><span class="cam-text">現在地</span></button>
+      <button class="cam-btn" data-cam="all" title="九州全体を一望（×1.0）"><span aria-hidden="true">🗾</span><span class="cam-text">九州全体</span></button>
+      <button class="cam-btn" data-cam="spot" title="スポットライト駅を見る"><span aria-hidden="true">🎯</span><span class="cam-text">スポットライト駅</span></button>
+      <span class="cam-zoom-row"><button class="cam-btn cam-sq" data-cam="out" aria-label="縮小">−</button><span id="cam-zoom" class="cam-zoom">×1.0</span><button class="cam-btn cam-sq" data-cam="in" aria-label="拡大">＋</button></span>`;
+    svg.parentElement.appendChild(box);
+    box.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-cam]');
+      if (!b) return;
+      const c = camera.get();
+      const k = b.dataset.cam;
+      if (k === 'here') Map.focus(handlers.currentId(), 2.5);
+      if (k === 'all') camera.set({ ...centerOf(camera.base()), z: 1 }, 700);
+      if (k === 'spot' && handlers.spotlightId()) Map.focus(handlers.spotlightId(), Math.max(c.z, 2));
+      if (k === 'in' || k === 'out') camera.set({ z: c.z * (k === 'in' ? 1.5 : 1 / 1.5) }, 300);
+    });
+  }
+  const centerOf = (b) => ({ cx: b.x + b.w / 2, cy: b.y + b.h / 2 });
+
   const Map = {
     latLngToSvg,
     init(svgEl, data, h) {
@@ -403,14 +478,14 @@
       buildNodes();
       buildTrain();
       idleFx();
-      Map.fit();
+      camera = YT.Camera.create(svg, { base: baseView, min: 1, max: 4, onChange: onCamera });
+      buildCameraButtons();
       window.addEventListener('resize', Map.fit);
     },
 
-    // スマホ（幅639px以下）では左右の海を少し切って、九州を大きく見せる（座標系は 800×960 のまま）
+    // 画面の大きさが変わったら、倍率1で見せる範囲を選び直す
     fit() {
-      const narrow = window.matchMedia('(max-width: 639px)').matches;
-      svg.setAttribute('viewBox', narrow ? '118 0 584 960' : D.meta.viewBox.join(' '));
+      if (camera) camera.rebase();
     },
 
     refresh(state) {
@@ -427,6 +502,39 @@
     },
 
     refreshTrain,
+
+    // ---------- カメラ ----------
+    camera: () => camera,
+    lod: () => lod,
+    // 駅を中心に z 倍へ
+    focus(id, z, ms = 700) {
+      if (!D.byId[id]) return Promise.resolve();
+      return camera.set({ cx: D.byId[id].x, cy: D.byId[id].y, z }, ms);
+    },
+    // 走り出す瞬間：列車のまわりへズームイン（2.5〜3倍）して、追従を始める
+    followStart() {
+      camera.resetUser();
+      const p = Map.trainXY() || [camera.get().cx, camera.get().cy];
+      const z = Math.max(2.75, Math.min(3, camera.get().z));
+      return camera.set({ cx: p[0], cy: p[1], z }, 650).then(() => {
+        CAR = CAR0 * trainK;
+        GAP = GAP0 * trainK;
+        STOP = STOP0 * trainK;
+      });
+    },
+    // 分かれ道：いまの駅と行き先の駅がそろって見える角度で止める
+    frame(ids, { zMin = 1.6, zMax = 3 } = {}) {
+      if (camera.userMoved()) return Promise.resolve();
+      const pts = ids.filter((id) => D.byId[id]).map((id) => [D.byId[id].x, D.byId[id].y]);
+      const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+      const box = { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
+      return camera.set(camera.fit(box, { pad: 70, zMin, zMax }), 600);
+    },
+    // 到着の瞬間：少しだけさらに寄って盛り上げる
+    arriveZoom(id) {
+      if (camera.userMoved()) return Promise.resolve();
+      return Map.focus(id, Math.min(3.4, camera.get().z * 1.18), 700);
+    },
 
     // サイコロの行き先候補：波紋のようにやさしく光らせる
     setCandidates(ids) {
@@ -488,6 +596,8 @@
           const k = Math.max(0.04, Math.min(kStart, kEnd, kStop));
           d = Math.min(end, d + VMAX * k * dt);
           const { p1, dir } = setPose(d, now, k);
+          // 桃鉄のように、走る列車を画面の真ん中に捉えつづける（人がカメラを動かしたら、その回は追わない）
+          if (opts.follow && camera && !camera.userMoved()) camera.follow(p1.x, p1.y);
           if (d >= nextJoint) {
             nextJoint += 26;
             if (opts.onJoint) opts.onJoint(k);
@@ -526,7 +636,7 @@
       });
       stops.forEach((id, i) => {
         const s = D.byId[id];
-        const g = el('g', { class: `course-pin${id === overnight ? ' is-overnight' : ''}`, transform: `translate(${s.x + 14} ${s.y - 14})` }, layers.course);
+        const g = el('g', { class: `course-pin${id === overnight ? ' is-overnight' : ''}`, transform: `translate(${s.x + 14 * curScale} ${s.y - 14 * curScale}) scale(${curScale.toFixed(3)})` }, layers.course);
         el('circle', { r: 9 }, g);
         el('text', { y: 3.8, 'text-anchor': 'middle' }, g).textContent = id === overnight ? '泊' : String(i + 1);
       });

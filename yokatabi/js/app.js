@@ -301,7 +301,8 @@
     move = { n, left: n, at: cur, seen: new Set([cur]), waiting: null };
     setBusy(true);
     Sound.depart();
-    advance();
+    // 走り出す瞬間に、カメラが列車のまわりへズームインして追いかける
+    Map.followStart().then(() => advance());
   }
 
   // 分かれ道か、残りのマスが0になるか、行き止まりまで、まとめて走る（つながった区間はなめらかに1本で走る）
@@ -333,6 +334,7 @@
       onJoint: (k) => Sound.railJoint(k),
       onPass: (id) => Scenery.pass(id),
       onFx: (x, y, seg) => Scenery.trainFx(x, y, seg.to),
+      follow: true,
     });
   }
 
@@ -356,14 +358,28 @@
     return `${D.byId[to].name}${far ? '・' + D.byId[far].name : ''}方面`;
   }
 
-  // 分かれ道：地図の上、それぞれの路線の少し先に「↗ 由布院・大分方面」のボタンを出して選んでもらう
-  function askDirection(opts) {
+  // 分かれ道：行き先がそろって見える角度でカメラを止め、それぞれの路線の少し先に「↗ 由布院・大分方面」のボタンを出す
+  async function askDirection(opts) {
     move.waiting = opts;
     Map.setCandidates(opts);
+    await Map.frame([move.at, ...opts]);
+    if (!move || move.waiting !== opts) return;
+    placeDirButtons(opts);
+    Sound.click();
+    // 同じ選択肢を、ダイスの欄にも一覧で出す（地図のボタンが重なったり、画面の外に出たりしても選べるように）
+    setGuide(
+      `🔀 <b>${esc(D.byId[move.at].name)}駅</b>は分かれ道。あと<b>${move.left}</b>マス、進む路線を選んでください。` +
+        `<span class="dir-list">${opts.map((id) => `<button class="dir-chip" data-dir="${esc(id)}">${arrowOf(move.at, id)} ${esc(directionLabel(move.at, id))}</button>`).join('')}</span>`
+    );
+    const btn = $('#map-overlay .dir-btn');
+    if (btn) btn.focus({ preventScroll: true });
+  }
+  // 地図の上の行き先ボタン（カメラが動いたら置き直す）
+  function placeDirButtons(opts) {
     const layer = $('#map-overlay');
     layer.innerHTML = opts
       .map((id) => {
-        const [x, y] = Map.along(move.at, id, 64);
+        const [x, y] = Map.along(move.at, id, 64 / Math.max(1, Map.camera().get().z * 0.8));
         const { left, top } = Map.toBoard(x, y);
         const e = D.edgeOf(move.at, id);
         return `<button class="dir-btn" data-dir="${esc(id)}" style="left:${left.toFixed(0)}px;top:${top.toFixed(0)}px">
@@ -373,14 +389,6 @@
       .join('');
     layer.hidden = false;
     spreadButtons(layer);
-    Sound.click();
-    // 同じ選択肢を、ダイスの欄にも一覧で出す（地図のボタンが重なったり、画面の外に出たりしても選べるように）
-    setGuide(
-      `🔀 <b>${esc(D.byId[move.at].name)}駅</b>は分かれ道。あと<b>${move.left}</b>マス、進む路線を選んでください。` +
-        `<span class="dir-list">${opts.map((id) => `<button class="dir-chip" data-dir="${esc(id)}">${arrowOf(move.at, id)} ${esc(directionLabel(move.at, id))}</button>`).join('')}</span>`
-    );
-    const btn = layer.querySelector('.dir-btn');
-    if (btn) btn.focus({ preventScroll: true });
   }
   // 行き先ボタンが重なったら、互いに押しのけて離す（盤面の枠からははみ出さない）
   function spreadButtons(layer) {
@@ -424,7 +432,7 @@
     $('#map-overlay').hidden = true;
     Map.setCandidates(null);
     Sound.click();
-    advance(id);
+    Map.followStart().then(() => advance(id)); // 選んだ方向へ、また列車を追いかける
   }
 
   function finishMove() {
@@ -453,7 +461,7 @@
     setBusy(true);
     landAt(id);
     setGuide(`<b>${esc(s.name)}駅</b>に到着（${hops}マス${deadEnd ? '・線路の果てで止まりました' : ''}）。寄り道手帖と現地スナップが解放されました。`);
-    await new Promise((r) => setTimeout(r, 500));
+    await Promise.all([Map.arriveZoom(id), new Promise((r) => setTimeout(r, 500))]);
     const at = await Game.afterArrival(id);
     setBusy(false);
     renderAll();
@@ -1421,7 +1429,16 @@
 
     const st = Store.get();
     if (!D.byId[st.currentStationId]) Store.visit(D.meta.startStationId);
-    Map.init($('#map'), D, { onStationClick });
+    Map.init($('#map'), D, {
+      onStationClick,
+      currentId: () => Store.get().currentStationId,
+      spotlightId: () => (Store.get().spotlight || {}).id,
+      // カメラが動いたら：分かれ道のボタンを置き直し、望遠鏡の吹き出しは閉じる
+      onCamera: () => {
+        if (move && move.waiting && !$('#map-overlay').hidden) placeDirButtons(move.waiting);
+        hideScope();
+      },
+    });
     Map.placeTrain(Store.get().currentStationId);
     Dice.mount($('#die'));
     Owner.init(D, api);
@@ -1465,7 +1482,7 @@
     // 画面の大きさが変わったら、分かれ道のボタンを置き直す（望遠鏡はいったん閉じる）
     window.addEventListener('resize', () => {
       hideScope();
-      if (move && move.waiting) askDirection(move.waiting);
+      if (move && move.waiting) placeDirButtons(move.waiting);
     });
     $('#collection-grid').addEventListener('keydown', (e) => {
       const c = e.target.closest('[data-station]');

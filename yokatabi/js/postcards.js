@@ -184,26 +184,105 @@
           <circle r="5.5"/>${st.acquired[s.id] ? '<path d="M-6,-9 L-3,-15 L0,-10 L3,-15 L6,-9 Z" class="pm-crown"/>' : ''}
         </g>`)
       .join('');
-    const pins = Object.entries(own)
-      .map(([id, c], i) => {
-        const s = D.byId[id];
-        return `<g class="pm-pin" transform="translate(${s.x} ${s.y})" data-pm-open="${esc(id)}" tabindex="0" role="button" aria-label="${esc(s.name)}駅のポストカード">
-            <g class="pm-float" style="--i:${i % 5}">
-              <line x1="0" y1="0" x2="0" y2="-26" class="pm-stem"/>
-              <g transform="translate(-22 -78) rotate(${((hash(c.id) % 9) - 4).toFixed(0)} 22 26)">
-                <rect width="44" height="52" rx="2" class="pm-frame"/>
-                <image x="4" y="4" width="36" height="34" preserveAspectRatio="xMidYMid slice" data-pc-img="${esc(c.imageId)}"/>
-                <text x="22" y="48" text-anchor="middle" class="pm-name">${esc(s.name)}</text>
-              </g>
-            </g>
-          </g>`;
-      })
-      .join('');
     return `<svg viewBox="${vb}" class="pm-svg" role="group" aria-label="わたしの九州フォトマップ">
         <rect x="-800" y="-960" width="2400" height="2880" class="pm-sea"/>
         ${G ? `<path d="${G.land.join('')}" class="pm-land"/>${G.borders.map((d) => `<path d="${d}" class="pm-border"/>`).join('')}` : ''}
-        ${routes}${dots}<g class="pm-ripples"></g>${pins}
+        ${routes}${dots}<g class="pm-ripples"></g><g class="pm-pins"></g>
       </svg>`;
+  }
+
+  // ---------- フォトマップのカメラと、写真ピンの束ね表示 ----------
+  // 全体を見ているとき、画面の上で近い（約56px以内）ピンは「📸 ×3枚の思い出」の束にまとめる。
+  // 束をタップすると、その駅たちが収まるまで寄って、1枚ずつのピンにほどける。いちばん寄ったら（4倍）束ねない
+  let pmCam = null; // { cx, cy, z }（描き直してもカメラの位置を残す）
+  let pmCamera = null;
+  let pmKey = '';
+  const PM_BASE = { x: 118, y: 0, w: 584, h: 960 };
+  function pinHtml(id, c, i, s) {
+    const st = D.byId[id];
+    return `<g class="pm-pin" transform="translate(${st.x} ${st.y}) scale(${s.toFixed(3)})" data-pm-open="${esc(id)}" tabindex="0" role="button" aria-label="${esc(st.name)}駅のポストカード">
+        <g class="pm-float" style="--i:${i % 5}">
+          <line x1="0" y1="0" x2="0" y2="-26" class="pm-stem"/>
+          <g transform="translate(-22 -78) rotate(${((hash(c.id) % 9) - 4).toFixed(0)} 22 26)">
+            <rect width="44" height="52" rx="2" class="pm-frame"/>
+            <image x="4" y="4" width="36" height="34" preserveAspectRatio="xMidYMid slice" data-pc-img="${esc(c.imageId)}"/>
+            <text x="22" y="48" text-anchor="middle" class="pm-name">${esc(st.name)}</text>
+          </g>
+        </g>
+      </g>`;
+  }
+  function bundleHtml(group, s) {
+    const cx = group.reduce((n, g) => n + D.byId[g.id].x, 0) / group.length;
+    const cy = group.reduce((n, g) => n + D.byId[g.id].y, 0) / group.length;
+    const top = group[0];
+    const frames = [[-9, -6], [7, 4], [0, 0]]
+      .map(([rot, dx], k) => `<g transform="translate(${-22 + dx} -80) rotate(${rot} 22 26)"><rect width="44" height="52" rx="2" class="pm-frame"/>${k === 2 ? `<image x="4" y="4" width="36" height="34" preserveAspectRatio="xMidYMid slice" data-pc-img="${esc(top.c.imageId)}"/>` : '<rect x="4" y="4" width="36" height="34" class="pm-frame-blank"/>'}</g>`)
+      .join('');
+    return `<g class="pm-bundle" transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) scale(${s.toFixed(3)})" data-pm-cluster="${esc(group.map((g) => g.id).join(','))}" tabindex="0" role="button" aria-label="${group.length}枚の思い出（${esc(group.map((g) => D.byId[g.id].name).join('・'))}駅）。タップで広げる">
+        <g class="pm-float"><line x1="0" y1="0" x2="0" y2="-26" class="pm-stem"/>${frames}
+          <g transform="translate(0 -18)"><rect x="-38" y="-10" width="76" height="20" rx="10" class="pm-bundle-pill"/><text y="4.2" text-anchor="middle" class="pm-bundle-text">📸 ×${group.length}枚の思い出</text></g>
+        </g>
+      </g>`;
+  }
+  function clusterPins() {
+    const svg = root && root.querySelector('.pm-svg');
+    const layer = svg && svg.querySelector('.pm-pins');
+    if (!layer || !pmCamera) return;
+    const cam = pmCamera.get();
+    const s = Math.pow(cam.z, -0.78);
+    svg.style.setProperty('--lw', Math.pow(cam.z, -0.6).toFixed(3));
+    svg.querySelectorAll('.pm-st').forEach((g) => {
+      const st = D.byId[g.dataset.pmStation];
+      g.setAttribute('transform', `translate(${st.x} ${st.y}) scale(${s.toFixed(3)})`);
+    });
+    const items = Object.entries(mine()).map(([id, c]) => ({ id, c }));
+    const pxPerUnit = (svg.clientWidth || 1) / (PM_BASE.w / cam.z);
+    const thr = cam.z >= 3.9 ? 0 : 56 / pxPerUnit; // 画面で56pxより近いピンは束ねる
+    const groups = [];
+    const used = new Set();
+    items.forEach((a) => {
+      if (used.has(a.id)) return;
+      const A = D.byId[a.id];
+      const g = items.filter((b) => !used.has(b.id) && Math.hypot(D.byId[b.id].x - A.x, D.byId[b.id].y - A.y) <= thr);
+      g.forEach((b) => used.add(b.id));
+      groups.push(g.length ? g : [a]);
+    });
+    const key = `${groups.map((g) => g.map((x) => x.id).join('+')).join('|')}@${s.toFixed(2)}`;
+    if (key === pmKey) return;
+    pmKey = key;
+    layer.innerHTML = groups.map((g, i) => (g.length > 1 ? bundleHtml(g, s) : pinHtml(g[0].id, g[0].c, i, s))).join('');
+    loadImages(layer);
+  }
+  function mountPhotoCamera() {
+    const svg = root.querySelector('.pm-svg');
+    if (!svg) return;
+    pmKey = '';
+    pmCamera = YT.Camera.create(svg, {
+      base: () => ({ ...PM_BASE }),
+      min: 1,
+      max: 4,
+      onChange: (cam, final) => {
+        pmCam = { ...cam };
+        if (final) clusterPins();
+      },
+    });
+    if (pmCam) pmCamera.set(pmCam, 0);
+    clusterPins();
+  }
+  // 束をタップ：その駅たちがちょうど収まるところまで寄る（寄ると、ピンがほどける）
+  function openBundle(ids) {
+    const pts = ids.map((id) => D.byId[id]);
+    const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
+    const box = { x: Math.min(...xs), y: Math.min(...ys) - 40, w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) + 40 };
+    YT.Sound.click();
+    const fit = pmCamera.fit(box, { pad: 30 });
+    // いちばん近い2駅のあいだが画面で56pxを超える倍率まで寄せて、1回のタップで全部ほどく（4倍でも足りないときは束ねない設定になる）
+    let dMin = Infinity;
+    pts.forEach((a, i) => pts.slice(i + 1).forEach((b) => (dMin = Math.min(dMin, Math.hypot(a.x - b.x, a.y - b.y)))));
+    const svg = root.querySelector('.pm-svg');
+    const unitPx = (svg && svg.clientWidth ? svg.clientWidth : 1) / PM_BASE.w;
+    const zNeed = dMin > 0 ? (60 / (dMin * unitPx)) : 4;
+    pmCamera.set({ ...fit, z: Math.min(4, Math.max(fit.z, zNeed * 1.05, pmCamera.get().z * 1.4)) }, 650);
   }
 
   function render() {
@@ -229,7 +308,10 @@
           <div><dt>旅の便りの収益</dt><dd>${api.yen(e.post + e.given + e.received)}</dd></div>
         </dl>
         <div class="lt-map-body">
-          <div class="pm-wrap">${photoMapSvg()}</div>
+          <div class="pm-wrap">${photoMapSvg()}
+            <div class="cam-ctrl pm-cam"><button class="cam-btn" data-pm-cam="all" title="九州全体を一望"><span aria-hidden="true">🗾</span><span class="cam-text">全体</span></button>
+              <span class="cam-zoom-row"><button class="cam-btn cam-sq" data-pm-cam="out" aria-label="縮小">−</button><button class="cam-btn cam-sq" data-pm-cam="in" aria-label="拡大">＋</button></span></div>
+          </div>
           ${own.length ? `<div class="lt-mine">${own.map(([id, c]) => `<button class="lt-mine-card" data-pm-open="${esc(id)}">${polaroid(mineCard(id, c), 'mini')}</button>`).join('')}</div>` : '<p class="lt-empty">まだ投函したポストカードはありません。上のフォームから、旅の一枚を送ってみましょう。投函した駅には、地図の上に写真のピンが浮かびます。</p>'}
         </div>
       </section>
@@ -247,6 +329,7 @@
         <p class="lt-note">※ほかの旅人のポストカードは、ゲームの中の架空の旅人が送ったもので、絵はイラストです。</p>
       </section>`;
     loadImages();
+    mountPhotoCamera();
   }
 
   // 寄り道手帖の中の「現地スナップ」（その駅の旅人たちのポストカードと、自分の1枚）
@@ -395,6 +478,18 @@
       like(lk.dataset.like, lk);
       return true;
     }
+    const bd = e.target.closest('[data-pm-cluster]');
+    if (bd && root.contains(bd)) {
+      openBundle(bd.dataset.pmCluster.split(','));
+      return true;
+    }
+    const pc = e.target.closest('[data-pm-cam]');
+    if (pc && pmCamera) {
+      const c = pmCamera.get();
+      if (pc.dataset.pmCam === 'all') pmCamera.set({ cx: PM_BASE.x + PM_BASE.w / 2, cy: PM_BASE.y + PM_BASE.h / 2, z: 1 }, 600);
+      else pmCamera.set({ z: c.z * (pc.dataset.pmCam === 'in' ? 1.6 : 1 / 1.6) }, 300);
+      return true;
+    }
     const op = e.target.closest('[data-pm-open]');
     if (op && root.contains(op)) {
       ripple(op.dataset.pmOpen);
@@ -463,7 +558,7 @@
         setFile(e.dataTransfer.files[0]);
       });
       root.addEventListener('keydown', (e) => {
-        const p = e.target.closest('.pm-pin');
+        const p = e.target.closest('.pm-pin, .pm-bundle');
         if (p && (e.key === 'Enter' || e.key === ' ')) {
           e.preventDefault();
           p.dispatchEvent(new MouseEvent('click', { bubbles: true }));
