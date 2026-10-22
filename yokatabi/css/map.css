@@ -1,277 +1,401 @@
-/* すごろくマップとフォトマップの盤面（js/map.js・js/camera.js）。style.css のトークンを使う */
+/* すごろくマップとフォトマップの盤面（js/map.js・js/camera.js）。style.css のトークンを使う。
+ * 調子は「19世紀の航海図」と「真鍮の路線図」：淡い浅葱の海に細い水線、生成りの陸、墨と真鍮の細い線。
+ * 盤面の色の小さな決まり（地図の中だけで使う）は .map-svg に置く。 */
 
 /* ---------- すごろくマップ ---------- */
 .map-view { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr) 340px; align-items: start; }
 .atlas {
-  position: relative; padding: 14px 14px 10px; border-radius: 24px;
-  background: var(--fiber), var(--paper); border: 1px solid var(--line); box-shadow: var(--sh-2);
+  position: relative; padding: 14px 14px 10px; border-radius: 2px;
+  background: var(--fiber), var(--paper); box-shadow: var(--frame);
 }
-/* 地図帳のような二重の枠 */
-.atlas::before { content: ''; position: absolute; inset: 6px; border-radius: 19px; border: 1px solid var(--line); pointer-events: none; }
-.atlas-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 2px 12px; padding: 2px 6px 10px; }
-.atlas-title { font-family: var(--font-mincho); font-weight: 800; font-size: 20px; letter-spacing: .16em; color: var(--forest); }
-.atlas-sub { font-size: 11px; color: var(--ink-3); }
-.map-board { position: relative; border-radius: 16px; overflow: hidden; background: #cbe6e4; box-shadow: inset 0 0 0 1px rgba(79, 143, 150, .25); }
-.map-svg { width: 100%; height: auto; aspect-ratio: 800 / 960; overflow: hidden; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-.map-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; padding: 10px 6px 2px; font-size: 11px; color: var(--ink-2); }
+.atlas-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 2px 12px; padding: 4px 6px 10px; }
+.atlas-title { font-family: var(--font-mincho); font-weight: 700; font-size: 20px; letter-spacing: .14em; color: var(--ink); }
+.atlas-sub { font-family: var(--font-ui); font-size: 11px; color: var(--ink-3); }
+.map-board { position: relative; overflow: hidden; background: var(--sea); box-shadow: 0 0 0 1px var(--rule); }
+.map-svg {
+  display: block; width: 100%; height: auto; aspect-ratio: 800 / 960; overflow: hidden; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  /* 地図の中の色（航海図の浅葱・活版の茶・墨・真鍮） */
+  --m-sea: #dfecea; --m-sea-line: #6f9796; --m-land: #f3ece1; --m-coast: #6e5d4f; --m-inline: #a8957c; --m-brown: #7a6656;
+}
+/* 凡例：地図帳の欄外の記号の説明のように、小さな線の見本と字 */
+.map-legend {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; margin: 10px 4px 0; padding: 8px 6px 2px;
+  border-top: 1px dashed var(--perf); font-family: var(--font-ui); font-size: 11px; color: var(--ink-2);
+}
 .map-legend span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-.lg { display: inline-block; width: 26px; height: 8px; border-radius: 2px; }
-.lg-shin { height: 7px; background: linear-gradient(var(--forest) 0 30%, var(--ivory) 30% 70%, var(--forest) 70%); box-shadow: 0 0 0 1px #b8a68e; }
-.lg-trunk { height: 4px; background: #5a4636; }
-.lg-local { height: 3px; background: var(--forest); }
-.lg-scenic { height: 4px; background: var(--terracotta); box-shadow: 0 2px 0 -1px var(--mustard); }
-.lg-ferry { height: 3px; background: repeating-linear-gradient(90deg, var(--sea-ink) 0 6px, transparent 6px 11px); }
-.lg-bus { height: 4px; background: radial-gradient(circle, var(--terracotta) 1.6px, transparent 2px) 0 50% / 7px 4px repeat-x; }
-.lg-way { width: 9px; height: 9px; border-radius: 50%; background: #fffdf9; box-shadow: inset 0 0 0 1.5px #6e5d4f; }
-.lg-seal { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 38% 32%, #f3d58c, var(--mustard) 60%, var(--mustard-deep)); }
-/* 海 */
-.sea-wash { opacity: .7; }
-.graticule .grat { stroke: #6aa5a8; stroke-width: calc(.5 * var(--lw, 1)); opacity: .35; }
-.graticule .grat-major { stroke-width: calc(.8 * var(--lw, 1)); opacity: .5; stroke-dasharray: 6 4; }
-.grat-label { font-family: var(--font-mincho); font-size: 10px; fill: #5e8f93; letter-spacing: .08em; opacity: .9; }
-.compass-ring { fill: rgba(255, 253, 249, .55); stroke: #6e8f88; stroke-width: 1; }
-.compass-ring-in { fill: none; stroke-dasharray: 2 3; }
-.compass-tick { stroke: #6e8f88; stroke-width: 1; }
-.compass-needle { fill: #fffdf9; stroke: #6e5d4f; stroke-width: .8; }
-.compass-ew { fill: #efe6d6; }
-.compass-north { fill: var(--terracotta); }
-.compass-pin { fill: #6e5d4f; }
-.compass-n { font-family: var(--font-mincho); font-weight: 700; font-size: 13px; fill: #6e5d4f; }
-.ship { fill: none; stroke: #5e8f93; stroke-width: calc(1.3 * var(--lw, 1)); stroke-linecap: round; stroke-linejoin: round; opacity: .75; }
-.sea-label { font-family: var(--font-mincho); font-weight: 600; font-size: 16px; letter-spacing: .3em; fill: #5e8f93; opacity: .85; pointer-events: none; }
-.sea-label-sm { font-size: 12px; letter-spacing: .14em; }
-/* 陸 */
-.land-neighbor { fill: #ede5d4; stroke: #c9bba3; stroke-width: calc(.7 * var(--lw, 1)); }
-.shore-far { fill: none; stroke: #e6f3f1; stroke-width: calc(9 * var(--lw, 1)); stroke-linejoin: round; opacity: .55; }
-.shore-near { fill: none; stroke: #f3faf8; stroke-width: calc(3.5 * var(--lw, 1)); stroke-linejoin: round; opacity: .8; }
-.land { fill: var(--sand); }
-.land-tint { fill: var(--pref); opacity: .055; }
-.mount-0 { fill: #d5e2c8; }
-.mount-1 { fill: #c4d6b4; }
-.mount-2 { fill: #afc79f; }
-.land-texture { opacity: .5; mix-blend-mode: multiply; pointer-events: none; }
-.coast { fill: none; stroke: #a08b6e; stroke-width: calc(.8 * var(--lw, 1)); stroke-linejoin: round; }
-.pref-border { fill: none; stroke: #b8a68e; stroke-width: calc(1.3 * var(--lw, 1)); stroke-dasharray: 4 4; stroke-linecap: round; }
-.net-line { fill: none; stroke: #a89886; stroke-width: calc(.9 * var(--lw, 1)); opacity: .7; stroke-linejoin: round; }
-.net-shin { stroke: #8c9a8f; stroke-width: calc(1.1 * var(--lw, 1)); }
-.peak-mark { fill: #8fae80; stroke: #fffdf9; stroke-width: .8; }
-.peak-label { font-family: var(--font-mincho); font-size: 10px; font-weight: 600; fill: #5f7a5c; letter-spacing: .08em; paint-order: stroke fill; stroke: rgba(250, 246, 240, .85); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
-.smoke circle { fill: #fffdf9; opacity: 0; animation: smoke 4.2s ease-out infinite; animation-delay: calc(var(--i) * 1.4s); }
-/* 県名：地図帳のように、太い白フチの落ち着いた茶色の明朝 */
+.lg { display: inline-block; width: 26px; height: 6px; }
+.lg-shin { height: 6px; background: linear-gradient(var(--ink) 0 22%, var(--ivory) 22% 36%, var(--gold) 36% 64%, var(--ivory) 64% 78%, var(--ink) 78%); }
+.lg-trunk { height: 4px; background: repeating-linear-gradient(90deg, var(--ink) 0 6px, var(--ivory) 6px 12px); box-shadow: 0 0 0 1px var(--ink); }
+.lg-local { height: 6px; background: linear-gradient(var(--forest), var(--forest)) center / 100% 1.6px no-repeat, repeating-linear-gradient(90deg, rgba(35, 66, 54, .6) 0 1px, transparent 1px 4px); }
+.lg-scenic { height: 6px; background: linear-gradient(var(--akane), var(--akane)) center / 100% 2.6px no-repeat, repeating-linear-gradient(90deg, rgba(168, 56, 43, .35) 0 1px, transparent 1px 4px); }
+.lg-ferry { height: 2px; background: repeating-linear-gradient(90deg, var(--sea-ink) 0 6px, transparent 6px 10px); }
+.lg-bus { height: 4px; background: radial-gradient(circle, var(--akane) 1.4px, transparent 1.8px) 0 50% / 6px 4px repeat-x; }
+.lg-way { width: 8px; height: 8px; border-radius: 50%; background: var(--ivory); box-shadow: inset 0 0 0 1.2px var(--ink); }
+.lg-seal { width: 13px; height: 13px; border-radius: 50%; background: var(--gold-3); box-shadow: inset 0 0 0 1px var(--brass), inset 0 0 0 2.5px var(--gold-3), inset 0 0 0 3.2px var(--brass); }
+.lg-share { width: 10px; height: 12px; background: var(--ivory); box-shadow: inset 0 0 0 1px var(--plate), inset 0 0 0 2px var(--ivory), inset 0 0 0 2.5px var(--plate); }
+
+/* ---------- 海 ---------- */
+.sea { fill: var(--m-sea); }
+/* 等深線：海岸線からの距離の場の等値線（js/map.js の buildShoreLines）。沖ほど薄い */
+.sounding { fill: none; stroke: var(--m-sea-line); stroke-width: calc(.55 * var(--lw, 1)); stroke-linejoin: round; animation: shore-in 1.2s var(--ease) both; }
+.sd-0 { stroke-opacity: .6; }
+.sd-1 { stroke-opacity: .44; }
+.sd-2 { stroke-opacity: .32; }
+.sd-3 { stroke-opacity: .22; }
+.sea-hatch { opacity: .3; pointer-events: none; }
+.map-svg[data-lod="2"] .sea-hatch, .map-svg[data-lod="3"] .sea-hatch { opacity: .22; }
+.graticule .grat { stroke: var(--m-sea-line); stroke-width: calc(.4 * var(--lw, 1)); opacity: .4; }
+.graticule .grat-major { stroke-width: calc(.6 * var(--lw, 1)); opacity: .6; }
+/* コンパスローズ */
+.compass { pointer-events: none; }
+.cp-ring { fill: none; stroke: var(--ink-2); stroke-width: .8; }
+.cp-ring-thin { stroke-width: .4; }
+.cp-ring-dot { stroke-width: .5; stroke-dasharray: .6 1.6; stroke-linecap: round; }
+.cp-ticks line { stroke: var(--ink-2); stroke-width: .45; }
+.cp-deg line { stroke-width: .3; }
+.cp-ticks .cp-tick-main { stroke-width: .8; }
+.cp-dark { fill: var(--ink-2); stroke: var(--ink); stroke-width: .35; stroke-linejoin: round; }
+.cp-light { fill: var(--ivory); stroke: var(--ink); stroke-width: .35; stroke-linejoin: round; }
+.cp-n-dark { fill: var(--brass); stroke: #7a5a0a; stroke-width: .35; stroke-linejoin: round; }
+.cp-n-light { fill: var(--gold-3); stroke: #7a5a0a; stroke-width: .35; stroke-linejoin: round; }
+.cp-pin { fill: var(--ivory); stroke: var(--ink); stroke-width: .5; }
+.cp-pin-dot { fill: var(--ink); }
+.cp-flourish { fill: none; stroke: var(--ink-2); stroke-width: .5; stroke-linecap: round; }
+.cp-n { font-family: var(--font-serif); font-style: italic; font-weight: 600; font-size: 15px; fill: var(--ink); }
+/* 船の線画 */
+.ship-pos { pointer-events: none; }
+.ship { fill: none; stroke: #4f7778; stroke-width: .8; stroke-linecap: round; stroke-linejoin: round; opacity: .78; }
+.ship .ship-thin { stroke-width: .45; }
+.ship .ship-sail { fill: rgba(250, 246, 240, .7); stroke-width: .6; }
+.ship .ship-funnel { fill: rgba(79, 119, 120, .25); }
+.sea-label { font-family: var(--font-mincho); font-weight: 500; font-size: 15px; letter-spacing: .34em; fill: #4f7f80; opacity: .9; pointer-events: none; }
+.sea-label-sm { font-size: 11.5px; letter-spacing: .16em; }
+
+/* ---------- 陸 ---------- */
+.land-neighbor { fill: #ebe4d6; stroke: var(--m-inline); stroke-width: calc(.6 * var(--lw, 1)); }
+.land { fill: var(--m-land); }
+/* 海岸線の内側の細い二重線（陸の側の距離の場の等値線） */
+.inline { fill: none; stroke: var(--m-inline); stroke-width: calc(.45 * var(--lw, 1)); stroke-linejoin: round; stroke-opacity: .6; animation: shore-in 1.2s var(--ease) both; }
+.in-1 { stroke-opacity: .4; }
+.land-tint { fill: var(--pref); opacity: .03; }
+/* 山地：ごく淡い墨のぼかし＋細い等高線＋ケバ（等高線に直交する短い刻み＝太い破線） */
+.mount { fill: #8a7a5e; fill-rule: evenodd; stroke: none; }
+.mount-0 { fill-opacity: .045; }
+.mount-1 { fill-opacity: .055; }
+.mount-2 { fill-opacity: .07; }
+/* ケバの刻みの長さ・間隔も --lw で縮め、寄っても「枕木」に見えないよう細かいままにする */
+.keba { fill: none; stroke: #7d6c52; stroke-width: calc(2.2px * var(--lw, 1)); stroke-dasharray: calc(.4px * var(--lw, 1)) calc(1.25px * var(--lw, 1)); stroke-opacity: .26; }
+.keba-1 { stroke-opacity: .32; }
+.keba-2 { stroke-opacity: .4; }
+.coast { fill: none; stroke: var(--m-coast); stroke-width: calc(.85 * var(--lw, 1)); stroke-linejoin: round; }
+/* 県境：活版の地図帳のような一点鎖線 */
+.pref-border { fill: none; stroke: #9a8468; stroke-width: calc(.9 * var(--lw, 1)); stroke-dasharray: 5 2 1 2; stroke-linecap: butt; opacity: .85; }
+.net-line { fill: none; stroke: #9c8b78; stroke-width: calc(.7 * var(--lw, 1)); opacity: .6; stroke-linejoin: round; }
+.net-shin { stroke: #7e7468; stroke-width: calc(.9 * var(--lw, 1)); }
+.peak-mark { fill: none; stroke: var(--m-brown); stroke-width: .9; stroke-linejoin: round; stroke-linecap: round; }
+.peak-shade { fill: none; stroke: var(--m-brown); stroke-width: .5; stroke-linecap: round; }
+.peak-label { font-family: var(--font-mincho); font-size: 9.5px; font-weight: 600; fill: var(--m-brown); letter-spacing: .1em; paint-order: stroke fill; stroke: rgba(243, 236, 225, .9); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.smoke path { fill: none; stroke: var(--ink-3); stroke-width: .7; stroke-linecap: round; opacity: 0; animation: smoke 4.8s var(--ease) infinite; animation-delay: calc(var(--i) * 1.6s); }
+/* 県名：地図帳のように、白フチの落ち着いた茶の明朝 */
 .pref-label {
-  font-family: var(--font-mincho); font-weight: 700; font-size: 21px; letter-spacing: .25em; fill: #6e5d4f;
-  paint-order: stroke fill; stroke: rgba(250, 246, 240, .9); stroke-width: 5px; stroke-linejoin: round; pointer-events: none;
+  font-family: var(--font-mincho); font-weight: 600; font-size: 19px; letter-spacing: .32em; fill: var(--m-brown); opacity: .9;
+  paint-order: stroke fill; stroke: rgba(243, 236, 225, .92); stroke-width: 4px; stroke-linejoin: round; pointer-events: none;
 }
-/* 路線 */
+
+/* ---------- 路線 ---------- */
 .route path { fill: none; stroke-linejoin: round; stroke-linecap: round; }
-.shin-ties { stroke: #b8a68e; stroke-width: calc(10 * var(--lw, 1)); stroke-dasharray: 1.6 4.4; stroke-linecap: butt !important; }
-.shin-rail-out { stroke: var(--forest); stroke-width: calc(6 * var(--lw, 1)); }
-.shin-rail-gap { stroke: var(--ivory); stroke-width: calc(2.6 * var(--lw, 1)); }
-.shin-flow { stroke: #f1d78a; stroke-width: calc(1.2 * var(--lw, 1)); stroke-dasharray: 14 46; animation: flow 6s linear infinite; opacity: .9; }
-.trunk-ties { stroke: #9c8673; stroke-width: calc(7 * var(--lw, 1)); stroke-dasharray: 1.4 4; stroke-linecap: butt !important; }
-.trunk-rail { stroke: #5a4636; stroke-width: calc(3.4 * var(--lw, 1)); }
-.local-ties { stroke: #93ab9b; stroke-width: calc(5.5 * var(--lw, 1)); stroke-dasharray: 1.2 4.2; stroke-linecap: butt !important; }
-.local-rail { stroke: var(--forest); stroke-width: calc(2.2 * var(--lw, 1)); }
-.scenic-ties { stroke: #c9a88a; stroke-width: calc(7.5 * var(--lw, 1)); stroke-dasharray: 1.5 3.5; stroke-linecap: butt !important; }
-.scenic-rail { stroke: var(--terracotta); stroke-width: calc(3.6 * var(--lw, 1)); }
-.scenic-gold { stroke: #f1d78a; stroke-width: calc(1.1 * var(--lw, 1)); stroke-dasharray: 2 5; }
-.ferry-wake { stroke: #fff; stroke-width: calc(7 * var(--lw, 1)); opacity: .45; }
-.ferry-line { stroke: var(--sea-ink); stroke-width: calc(2.3 * var(--lw, 1)); stroke-dasharray: 6 6; animation: dash 1.6s linear infinite; }
-.bus-outline { stroke: #fffdf9; stroke-width: calc(6.5 * var(--lw, 1)); opacity: .75; }
-.bus-dots { stroke: var(--terracotta); stroke-width: calc(3.6 * var(--lw, 1)); stroke-dasharray: .1 7.5; }
-.route-badge circle { fill: var(--paper); stroke: var(--line-2); stroke-width: 1; }
-.route-badge text { font-size: 10px; }
-.waypoint circle { fill: #fffdf9; stroke: #6e5d4f; stroke-width: 1.4; }
-.waypoint-label { font-family: var(--font-mincho); font-size: 10.5px; font-weight: 600; fill: #6e5d4f; paint-order: stroke fill; stroke: rgba(250, 246, 240, .9); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+/* 新幹線：墨の二重線の中に真鍮の帯 */
+.shin-case { stroke: var(--ink); stroke-width: calc(5.6 * var(--lw, 1)); }
+.shin-gap { stroke: var(--ivory); stroke-width: calc(3.4 * var(--lw, 1)); }
+.shin-flow { stroke: var(--gold); stroke-width: calc(1.5 * var(--lw, 1)); stroke-dasharray: 22 10; animation: flow 18s linear infinite; }
+/* 特急幹線：墨と生成りが交互に並ぶ、昔の地図の鉄道記号 */
+.trunk-case { stroke: var(--ink); stroke-width: calc(3.8 * var(--lw, 1)); }
+.trunk-gap { stroke: var(--ivory); stroke-width: calc(2.2 * var(--lw, 1)); }
+.trunk-chk { stroke: var(--ink); stroke-width: calc(2.2 * var(--lw, 1)); stroke-dasharray: 5 5; stroke-linecap: butt !important; }
+/* ローカル線：深緑の細い線に枕木の刻み */
+.local-ties { stroke: var(--forest); stroke-opacity: .55; stroke-width: calc(4.6 * var(--lw, 1)); stroke-dasharray: .55 3.6; stroke-linecap: butt !important; }
+.local-rail { stroke: var(--forest); stroke-width: calc(1.7 * var(--lw, 1)); }
+/* 観光列車：茜の線路に真鍮の点線 */
+.scenic-ties { stroke: var(--akane); stroke-opacity: .4; stroke-width: calc(5.6 * var(--lw, 1)); stroke-dasharray: .6 3.4; stroke-linecap: butt !important; }
+.scenic-rail { stroke: var(--akane); stroke-width: calc(2.8 * var(--lw, 1)); }
+.scenic-gold { stroke: var(--gold-2); stroke-width: calc(.9 * var(--lw, 1)); stroke-dasharray: 1.6 3.2; }
+/* 航路・バス */
+.ferry-wake { stroke: var(--ivory); stroke-width: calc(4.2 * var(--lw, 1)); opacity: .55; }
+.ferry-line { stroke: var(--sea-ink); stroke-width: calc(1.5 * var(--lw, 1)); stroke-dasharray: 6 5; animation: dash 3.2s linear infinite; }
+.bus-outline { stroke: var(--ivory); stroke-width: calc(5 * var(--lw, 1)); opacity: .7; }
+.bus-dots { stroke: var(--akane); stroke-width: calc(3 * var(--lw, 1)); stroke-dasharray: .1 6.2; }
+/* 区間のしるし：真鍮の輪の小さな札に線画 */
+.rb-disc { fill: var(--ivory); stroke: var(--brass); stroke-width: .9; }
+.rb-ring { fill: none; stroke: var(--brass); stroke-width: .4; }
+.rb-ico { fill: none; stroke: var(--ink); stroke-linecap: round; stroke-linejoin: round; }
+.rb-ico .f { fill: var(--ink); stroke: none; }
+.badge-scenic .rb-ico { stroke: var(--akane); }
+.badge-ferry .rb-ico { stroke: #3f6a6b; }
+/* 経由駅：時刻表の小さな白丸 */
+.waypoint circle { fill: var(--ivory); stroke: var(--ink); stroke-width: 1; }
+.waypoint-label { font-family: var(--font-mincho); font-size: 9.5px; font-weight: 600; fill: var(--ink-2); paint-order: stroke fill; stroke: rgba(243, 236, 225, .92); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
 .map-svg.is-choosing .route, .map-svg.has-course .route { opacity: .55; }
-.trail-line { fill: none; stroke: rgba(217, 107, 67, .32); stroke-width: calc(9 * var(--lw, 1)); stroke-linecap: round; stroke-linejoin: round; transition: opacity .6s; }
+/* 走ってきた道のり：金の淡い帯 */
+.trail-line { fill: none; stroke: rgba(197, 155, 39, .34); stroke-width: calc(7 * var(--lw, 1)); stroke-linecap: round; stroke-linejoin: round; transition: opacity .8s var(--ease); }
 .trail-line.is-fading { opacity: 0; }
-/* 駅 */
+
+/* ---------- 駅 ---------- */
 .station { cursor: pointer; outline: none; }
 .station-hit { fill: transparent; }
-.station-shadow { fill: rgba(58, 50, 43, .16); }
-.station-ring { fill: var(--paper); stroke: var(--pref); stroke-width: 3.2; transition: transform .2s; }
-.station-core { fill: var(--pref); opacity: .3; transition: opacity .3s; }
-.station.is-visited .station-core { opacity: 1; }
-.station-token { transition: transform .2s; }
-.station:hover .station-token, .station:focus-visible .station-token { transform: scale(1.15); }
-.station:focus-visible .station-ring { stroke: var(--terracotta); stroke-width: 4; }
-.station-label {
-  font-family: var(--font-mincho); font-weight: 700; font-size: 16px; fill: var(--ink); letter-spacing: .04em;
-  paint-order: stroke fill; stroke: rgba(250, 246, 240, .95); stroke-width: 4.5px; stroke-linejoin: round; pointer-events: none;
-}
-.station-seal { opacity: 0; transform: scale(.4); transition: opacity .3s, transform .4s cubic-bezier(.3, 1.6, .5, 1); }
+.st-shadow { fill: rgba(44, 37, 35, .1); }
+.st-ring { fill: var(--ivory); stroke: var(--ink); stroke-width: 1.5; transition: stroke .3s var(--ease), stroke-width .3s var(--ease); }
+.st-ring-local { stroke-width: 1.3; }
+.st-ring2 { fill: none; stroke: var(--ink); stroke-width: .6; }
+.st-pref { fill: none; stroke: var(--pref); stroke-width: 1.1; opacity: .8; }
+.st-core { fill: var(--pref); opacity: 0; transition: opacity .3s var(--ease); }
+.station.is-visited .st-core { opacity: 1; }
+.st-diamond { fill: var(--ivory); stroke: var(--brass); stroke-width: 1; stroke-linejoin: miter; transition: fill .3s var(--ease); }
+.st-diamond-pin { fill: var(--brass); }
+.station.is-visited .st-diamond { fill: var(--brass); }
+.station.is-visited .st-diamond-pin { fill: var(--gold-3); }
+.st-bar { stroke: var(--ink); stroke-width: 1.4; }
+.station-token { transition: transform .35s var(--ease); }
+.station:hover .station-token, .station:focus-visible .station-token { transform: scale(1.12); }
+.station:focus-visible .st-ring { stroke: var(--akane); stroke-width: 2; }
+/* 駅名標：生成りの小さなプレートに細い枠。主要駅は二重枠 */
+.st-plate { fill: var(--ivory); stroke: var(--plate); stroke-width: .8; }
+.st-plate-in { fill: none; stroke: var(--plate); stroke-width: .4; }
+.st-name { font-family: var(--font-mincho); font-weight: 600; fill: var(--ink); letter-spacing: .06em; }
+.st-name-hub { font-weight: 700; }
+.station-label { pointer-events: none; }
+.station.is-current .st-plate { stroke: var(--akane); }
+.station.is-current .st-plate-in { stroke: var(--akane); }
+/* トップオーナー：金箔の淡い円盤に、真鍮の線画の王冠 */
+.station-seal { opacity: 0; transform: scale(.7); transition: opacity .4s var(--ease), transform .5s var(--ease); }
 .station.is-acquired .station-seal { opacity: 1; transform: scale(1); }
 .station.is-acquired .station-token { opacity: 0; }
-.station.is-current .station-ring { stroke-width: 4; }
-.station.is-current .station-wave { animation: wave 2.6s ease-out infinite; animation-delay: calc(var(--i) * .85s); stroke: var(--pref); }
-.station-wave { fill: none; stroke: var(--terracotta); stroke-width: 2; opacity: 0; transform-box: fill-box; transform-origin: center; }
-.station.is-candidate .station-wave { animation: wave 1.8s ease-out infinite; animation-delay: calc(var(--i) * .6s); stroke: var(--terracotta); }
-.station-candidate { fill: none; stroke: var(--terracotta); stroke-width: 2.2; stroke-dasharray: 3 3; opacity: 0; }
+.st-seal-disc { fill: var(--gold-3); stroke: var(--brass); stroke-width: 1.2; }
+.st-seal-ring { fill: none; stroke: var(--brass); stroke-width: .45; }
+.st-seal-crown { fill: none; stroke: var(--mustard-deep); stroke-linecap: round; stroke-linejoin: round; }
+.st-seal-crown .f { fill: var(--mustard-deep); stroke: none; }
+/* 共同株主：「株」の札 */
+.station-share { opacity: 0; transition: opacity .3s var(--ease); }
+.station.is-shareholder .station-share { opacity: 1; }
+.st-share-tag { fill: var(--ivory); stroke: var(--plate); stroke-width: .8; }
+.st-share-in { fill: none; stroke: var(--plate); stroke-width: .35; }
+.st-share-char { font-family: var(--font-mincho); font-weight: 700; font-size: 7px; fill: var(--ink); pointer-events: none; }
+/* 今いる駅・行き先の候補：細い輪がしっとり広がる */
+.station-wave { fill: none; stroke: var(--brass); stroke-width: .9; opacity: 0; transform-box: fill-box; transform-origin: center; }
+.station.is-current .st-ring { stroke: var(--akane); stroke-width: 2; }
+.station.is-current .station-wave { animation: wave 3.2s var(--ease) infinite; animation-delay: calc(var(--i) * 1.05s); stroke: var(--akane); }
+.station.is-candidate .station-wave { animation: wave 2.6s var(--ease) infinite; animation-delay: calc(var(--i) * .85s); stroke: var(--brass); }
+.station-candidate { fill: none; stroke: var(--brass); stroke-width: 1; stroke-dasharray: 2 2.4; opacity: 0; transition: opacity .3s var(--ease); }
 .station.is-candidate .station-candidate { opacity: 1; }
+.station.is-candidate .st-ring { stroke: var(--brass); }
 .map-svg.is-choosing .station:not(.is-candidate) { opacity: .5; }
-.station.is-pending .station-ring { stroke-dasharray: 3 2.4; }
-.station-burst { fill: none; stroke: var(--vermilion); stroke-width: 3; transform-box: fill-box; transform-origin: center; animation: burst 1.3s ease-out forwards; }
-/* 列車とトレイル */
+/* 手配中：輪が破線になる */
+.station.is-pending .st-ring { stroke-dasharray: 2.6 1.8; }
+.station-burst { fill: none; stroke: var(--akane); stroke-width: 1.6; transform-box: fill-box; transform-origin: center; animation: burst 1.3s var(--ease) forwards; }
+
+/* ---------- 列車とトレイル ---------- */
 .train-car { pointer-events: none; }
-.train-car1 { filter: drop-shadow(0 1.5px 1px rgba(58, 50, 43, .35)); }
-.train-car2 { filter: drop-shadow(0 1.5px 1px rgba(58, 50, 43, .3)); }
-.tr-steam path { animation: steam-wave 1.6s ease-in-out infinite; }
-.fx { transform-box: fill-box; transform-origin: center; animation: fx-rise 1.5s ease-out forwards; }
-.fx-leaves { animation: fx-leaf 1.6s ease-out forwards; }
-.fx-steam { animation: fx-steam 1.6s ease-out forwards; }
-.fx-stardust { animation: fx-star 1.4s ease-out forwards; }
-/* ダイスの結果バッジ（地図の上） */
+/* 紙の上に置いた模型のような、ごく控えめな影 */
+.train-car1, .train-car2 { filter: drop-shadow(0 .8px .6px rgba(44, 37, 35, .22)); }
+.tr-steam path { animation: steam-wave 1.8s ease-in-out infinite; }
+.fx { transform-box: fill-box; transform-origin: center; animation: fx-rise 1.5s var(--ease) forwards; }
+.fx-leaves { animation: fx-leaf 1.6s var(--ease) forwards; }
+.fx-steam { animation: fx-steam 1.6s var(--ease) forwards; }
+.fx-stardust { animation: fx-star 1.4s var(--ease) forwards; }
+
+/* ---------- ダイスの結果バッジ（地図の上）：硬券切符の帯 ---------- */
 .dice-badge {
-  position: absolute; left: 50%; top: 14px; transform: translateX(-50%); z-index: 4; pointer-events: none;
-  padding: 6px 20px; border-radius: 999px; font-family: var(--font-mincho); font-weight: 800; font-size: 20px; color: var(--cream); letter-spacing: .08em; white-space: nowrap;
-  background: var(--terracotta); box-shadow: 0 0 0 3px rgba(255, 253, 249, .9), var(--sh-2);
+  position: absolute; left: 50%; top: 24px; transform: translateX(-50%); z-index: 4; pointer-events: none;
+  padding: 5px 30px 6px 40px; font-family: var(--font-mincho); font-weight: 700; font-size: 16px; color: var(--ink); letter-spacing: .1em; white-space: nowrap;
+  background: linear-gradient(90deg, transparent 23px, var(--perf) 23px 24px, transparent 24px) 0 0 / 100% 100% no-repeat, var(--antique);
+  box-shadow: inset 0 0 0 1px var(--plate), inset 0 0 0 3px var(--antique), inset 0 0 0 3.6px rgba(110, 93, 79, .55);
+  /* 左右に硬券のパンチ穴（半円の切り欠き） */
+  -webkit-mask: radial-gradient(circle 5px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 5px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+  mask: radial-gradient(circle 5px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 5px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
 }
-.dice-badge b { font-size: 28px; margin-right: 2px; }
-.dice-badge.is-pop { animation: badge-pop .6s cubic-bezier(.3, 1.6, .5, 1); }
+.dice-badge b { font-family: var(--font-serif); font-style: italic; font-weight: 600; font-size: 34px; line-height: 1; color: var(--akane); margin-right: 4px; letter-spacing: 0; vertical-align: -3px; }
+.dice-badge.is-pop { animation: badge-pop .6s var(--ease); }
+.dice-badge.is-multi { padding: 6px 30px 7px 40px; text-align: center; line-height: 1.3; }
+.dice-badge small { display: block; font-family: var(--font-ui); font-size: 10.5px; font-weight: 500; letter-spacing: .08em; color: var(--ink-2); }
+.db-sum { font-family: var(--font-serif); font-style: italic; font-weight: 600; font-size: 19px; letter-spacing: .04em; color: var(--ink-2); }
+.dice-badge.is-multi b { font-size: 44px; color: var(--akane); }
+.db-go { display: block; font-size: 13px; letter-spacing: .14em; }
+
+/* ---------- マイ旅しおりのモデルコース ---------- */
 .course-chip {
-  position: absolute; right: 10px; bottom: 10px; z-index: 3; display: flex; align-items: center; gap: 8px; max-width: calc(100% - 20px);
-  background: rgba(255, 253, 249, .96); border: 1px solid var(--line-2); border-radius: 14px; padding: 6px 8px 6px 12px; font-size: 12px; box-shadow: var(--sh-1);
+  position: absolute; right: 22px; bottom: 22px; z-index: 3; display: flex; align-items: center; gap: 8px; max-width: calc(100% - 44px);
+  background: var(--ivory); box-shadow: var(--frame); padding: 6px 8px 6px 12px; font-family: var(--font-ui); font-size: 12px; color: var(--ink);
 }
-.course-chip b { color: var(--terracotta-deep); }
-.course-chip-x { width: 24px; height: 24px; border-radius: 50%; background: var(--paper-2); font-weight: 900; }
-.course-line { fill: none; stroke: var(--terracotta); stroke-width: calc(5 * var(--lw, 1)); stroke-linecap: round; stroke-dasharray: 1 9; animation: dash .8s linear infinite; }
-.course-pin circle { fill: var(--paper); stroke: var(--terracotta); stroke-width: 2; }
-.course-pin text { fill: var(--terracotta-deep); font-size: 10px; font-weight: 900; }
-.course-pin.is-overnight circle { fill: var(--mustard); stroke: var(--paper); }
-.course-pin.is-overnight text { fill: #fff; }
+.course-chip b { font-family: var(--font-mincho); color: var(--akane); }
+.course-chip .ico { color: var(--brass); }
+.course-chip-x { display: inline-grid; place-items: center; width: 24px; height: 24px; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--rule); }
+.course-line { fill: none; stroke: var(--akane); stroke-opacity: .85; stroke-width: calc(3.6 * var(--lw, 1)); stroke-linecap: round; stroke-dasharray: .1 7; animation: dash 1.6s linear infinite; }
+.course-pin circle { fill: var(--ivory); stroke: var(--akane); stroke-width: 1.2; }
+.course-pin .course-pin-in { fill: none; stroke-width: .45; }
+.course-pin text { fill: var(--akane); font-family: var(--font-serif); font-style: italic; font-size: 11px; font-weight: 600; }
+.course-pin.is-overnight circle { fill: var(--gold-3); stroke: var(--brass); }
+.course-pin.is-overnight text { fill: var(--mustard-deep); font-family: var(--font-mincho); font-style: normal; font-size: 9px; font-weight: 700; }
+
 @media (max-width: 1040px) {
   .map-view { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 639px) {
-  .atlas { padding: 8px 8px 6px; border-radius: 18px; }
-  .atlas::before { inset: 4px; border-radius: 15px; }
+  .atlas { padding: 8px 8px 6px; }
   .atlas-head { padding: 2px 4px 6px; }
   .atlas-title { font-size: 16px; }
   .atlas-sub { font-size: 10px; }
-  .map-board { border-radius: 12px; }
   .map-svg { aspect-ratio: 584 / 960; }
-  .station-label { font-size: 21px; stroke-width: 5.5px; }
   .station-hit { r: 30; }
-  .pref-label { font-size: 24px; }
+  .pref-label { font-size: 23px; stroke-width: 4.5px; }
   .sea-label { font-size: 17px; }
   .sea-label-sm { font-size: 14px; }
   .waypoint-label { display: none; }
   .peak-label { font-size: 12px; }
-  .grat-label { display: none; }
   .map-legend { font-size: 10px; gap: 2px 10px; }
-  .dice-badge { font-size: 16px; top: 10px; }
-  .dice-badge b { font-size: 22px; }
+  .dice-badge { font-size: 14px; top: 18px; padding: 4px 24px 5px 34px; background-size: 100% 100%; background-image: linear-gradient(90deg, transparent 19px, var(--perf) 19px 20px, transparent 20px); }
+  .dice-badge b { font-size: 28px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .fx { display: none; }
+  .shin-flow, .ferry-line, .course-line, .smoke path, .station-wave { animation: none !important; }
 }
-.lg-share { width: 12px; height: 12px; border-radius: 50%; background: #e3e9f2; box-shadow: inset 0 0 0 1.5px #6f87a8; }
-.station-share { opacity: 0; transition: opacity .3s; }
-.station.is-shareholder .station-share { opacity: 1; }
 /* 地図の上の地域の演出（列車のまわり・駅のまわり） */
 .layer-region { pointer-events: none; }
-/* ---------- 分かれ道の行き先ボタン・望遠鏡 ---------- */
+
+/* ---------- 盤面の縁の経緯度の目盛り（js/map.js の buildFrame） ---------- */
+.map-frame { position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none; overflow: visible; }
+.mf-margin { fill: var(--ivory); fill-rule: evenodd; opacity: .94; }
+.mf-out { fill: none; stroke: var(--ink-2); stroke-width: .6; }
+.mf-in { fill: none; stroke: var(--ink); stroke-width: .9; }
+.mf-thin { fill: none; stroke: var(--ink-2); stroke-width: .5; }
+.mf-band { fill: var(--ink-2); }
+.mf-tick { fill: none; stroke: var(--ink-2); stroke-width: .7; }
+.mf-lab text { font-family: var(--font-serif); font-style: italic; font-weight: 600; font-size: var(--mf-fs, 9.5px); fill: var(--ink-2); letter-spacing: .02em; }
+
+/* ---------- 分かれ道の行き先ボタン：真鍮の細枠の方向板 ---------- */
 .map-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
 .dir-btn {
-  position: absolute; transform: translate(-50%, -50%); pointer-events: auto; display: grid; justify-items: center; gap: 0;
-  padding: 6px 12px 7px; border-radius: 14px; font-weight: 700; font-size: 13px; line-height: 1.35; white-space: nowrap;
-  color: #fff; background: linear-gradient(180deg, #e27d55, var(--terracotta)); box-shadow: 0 0 0 2px #fffdf9, 0 3px 0 var(--terracotta-deep), 0 8px 16px rgba(60, 40, 20, .25);
-  animation: dir-pop .35s cubic-bezier(.3, 1.6, .5, 1) both;
+  position: absolute; transform: translate(-50%, -50%); pointer-events: auto; display: grid; grid-template-columns: auto auto; align-items: center; justify-content: center; column-gap: 6px;
+  padding: 6px 12px 7px 9px; border-radius: 1px; font-family: var(--font-mincho); font-weight: 700; font-size: 13px; line-height: 1.35; letter-spacing: .06em; white-space: nowrap; color: var(--ink);
+  background: var(--ivory); box-shadow: 0 0 0 1px var(--brass), inset 0 0 0 2.5px var(--ivory), inset 0 0 0 3.1px rgba(184, 134, 11, .6), 0 6px 14px -8px rgba(44, 37, 35, .45);
+  animation: dir-pop .45s var(--ease) both; transition: transform .3s var(--ease), background-color .3s var(--ease), box-shadow .3s var(--ease);
 }
-.dir-btn small { font-size: 10px; font-weight: 500; opacity: .9; max-width: 12em; overflow: hidden; text-overflow: ellipsis; }
-.dir-arrow { display: inline-block; margin-right: 4px; font-size: 15px; }
-.dir-btn:hover, .dir-btn:focus-visible { filter: brightness(1.06); transform: translate(-50%, -50%) scale(1.06); }
+.dir-btn small { grid-column: 1 / -1; justify-self: center; margin-top: 1px; padding-top: 2px; border-top: 1px dashed var(--perf); font-family: var(--font-ui); font-size: 10px; font-weight: 500; letter-spacing: .04em; color: var(--ink-3); max-width: 12em; overflow: hidden; text-overflow: ellipsis; }
+.dir-arrow { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; color: var(--brass); box-shadow: inset 0 0 0 1px var(--brass); font-size: 13px; }
+.dir-arrow .ico { width: 13px; height: 13px; vertical-align: 0; transition: none; }
+.dir-btn:hover, .dir-btn:focus-visible { background: var(--gold-3); transform: translate(-50%, -50%) scale(1.04); box-shadow: 0 0 0 1px var(--akane), inset 0 0 0 2.5px var(--gold-3), inset 0 0 0 3.1px rgba(168, 56, 43, .5), 0 8px 16px -8px rgba(44, 37, 35, .5); outline: none; }
+.dir-btn:hover .dir-arrow, .dir-btn:focus-visible .dir-arrow { color: var(--akane); box-shadow: inset 0 0 0 1px var(--akane); }
+
+/* ---------- 望遠鏡（まだ止まっていない駅をのぞく吹き出し） ---------- */
 .map-scope {
-  position: absolute; z-index: 5; width: min(300px, calc(100% - 16px)); padding: 12px 14px 12px; border-radius: 14px;
-  background: var(--paper); box-shadow: 0 0 0 1px var(--line-2), var(--sh-2); font-size: 12.5px; line-height: 1.7;
-  animation: dir-pop .25s ease-out both; transform: none;
+  position: absolute; z-index: 5; width: min(300px, calc(100% - 16px)); padding: 12px 14px 12px; border-radius: 1px;
+  background: var(--ivory); box-shadow: var(--frame), 0 14px 30px -20px rgba(44, 37, 35, .55); font-family: var(--font-ui); font-size: 12.5px; line-height: 1.7; color: var(--ink);
+  animation: scope-in .35s var(--ease) both; transform: none;
 }
-.map-scope::before { content: ''; position: absolute; left: 50%; top: -7px; width: 14px; height: 14px; background: var(--paper); transform: translateX(-50%) rotate(45deg); box-shadow: -1px -1px 0 var(--line-2); }
-.map-scope.is-above::before { top: auto; bottom: -7px; box-shadow: 1px 1px 0 var(--line-2); }
-.scope-x { position: absolute; top: 4px; right: 6px; width: 28px; height: 28px; font-size: 18px; color: var(--ink-3); }
-.scope-title { font-size: 14px; padding-right: 24px; }
-.scope-title b { font-family: var(--font-mincho); font-size: 16px; }
+.map-scope::before { content: ''; position: absolute; left: 50%; top: -6px; width: 11px; height: 11px; background: var(--ivory); transform: translateX(-50%) rotate(45deg); box-shadow: -1px -1px 0 var(--rule); }
+.map-scope.is-above::before { top: auto; bottom: -6px; box-shadow: 1px 1px 0 var(--rule); }
+.scope-x { position: absolute; top: 4px; right: 6px; width: 28px; height: 28px; font-family: var(--font-serif); font-size: 20px; line-height: 1; color: var(--ink-3); }
+.scope-x:hover { color: var(--akane); }
+.scope-title { font-size: 13px; padding-right: 24px; padding-bottom: 4px; margin-bottom: 4px; border-bottom: 1px dashed var(--perf); }
+.scope-title .ico { color: var(--brass); }
+.scope-title b { font-family: var(--font-mincho); font-size: 16px; letter-spacing: .06em; }
 .scope-title small { font-size: 11px; color: var(--ink-3); }
 .scope-owner { color: var(--mustard-deep); font-weight: 700; }
 .scope-note { color: var(--ink-2); font-size: 11.5px; }
 @media (max-width: 639px) {
-  .dir-btn { font-size: 12px; padding: 5px 10px 6px; }
+  .dir-btn { font-size: 12px; padding: 5px 10px 6px 7px; column-gap: 5px; }
+  .dir-arrow { width: 18px; height: 18px; }
   .dir-btn small { display: none; }
 }
-.dice-badge.is-multi { padding: 6px 18px; border-radius: 18px; text-align: center; line-height: 1.3; }
-.dice-badge small { display: block; font-family: var(--font-ui); font-size: 11px; font-weight: 700; letter-spacing: .04em; opacity: .9; }
-.db-sum { font-size: 17px; }
-.dice-badge.is-multi b { font-size: 40px; color: #fff3cf; text-shadow: 0 2px 0 var(--terracotta-deep); }
-.db-go { display: block; font-size: 13px; letter-spacing: .1em; }
-.spot-beacon { fill: none; stroke: #e8b84a; stroke-width: 3; opacity: 0; animation: spot-beacon 2.4s ease-out infinite; animation-delay: calc(var(--i) * .8s); pointer-events: none; }
-.spot-pennant { animation: spot-wave 2.2s ease-in-out infinite; transform-origin: 0 -24px; pointer-events: none; }
-.spot-pole { stroke: #6e5d4f; stroke-width: 1.6; }
-.spot-cloth { fill: #d49a35; stroke: #8a5a14; stroke-width: .8; }
-.spot-text { font-family: var(--font-ui); font-weight: 900; font-size: 5.5px; fill: #fff; }
-.station.is-spotlight .station-ring { stroke: #e8b84a; stroke-width: 3; }
-/* ライン制覇の金の路線 */
-.gold-glow { fill: none; stroke: #f2c044; stroke-width: calc(13 * var(--lw, 1)); stroke-linecap: round; opacity: .8; filter: drop-shadow(0 0 3px rgba(240, 193, 75, .8)); animation: gold-pulse 2.6s ease-in-out infinite; }
+
+/* ---------- スポットライト駅：真鍮の細い輪と、線のペナント ---------- */
+.spot-beacon { fill: none; stroke: var(--brass); stroke-width: .9; opacity: 0; animation: spot-beacon 3.2s var(--ease) infinite; animation-delay: calc(var(--i) * 1.05s); pointer-events: none; }
+.spot-pennant { animation: spot-wave 3.4s ease-in-out infinite; transform-origin: 0 -24px; pointer-events: none; }
+.spot-pole { stroke: var(--ink); stroke-width: .9; stroke-linecap: round; }
+.spot-finial { fill: var(--brass); stroke: #7a5a0a; stroke-width: .4; }
+.spot-cloth { fill: var(--gold-3); stroke: var(--brass); stroke-width: .9; stroke-linejoin: round; }
+.spot-cloth-line { fill: none; stroke: var(--brass); stroke-width: .35; }
+.spot-text { font-family: var(--font-mincho); font-weight: 700; font-size: 5.4px; letter-spacing: .08em; fill: var(--ink); }
+.station.is-spotlight .st-ring { stroke: var(--brass); stroke-width: 2; }
+
+/* ---------- ライン制覇の金の路線：金箔の帯（光のフィルタは使わない） ---------- */
+.gold-glow { fill: none; stroke: url(#g-goldleaf); stroke-width: calc(10 * var(--lw, 1)); stroke-linecap: round; stroke-linejoin: round; opacity: .7; animation: gold-pulse 4s ease-in-out infinite; }
 .route:not(.is-gold) .gold-glow { display: none; }
-/* 王座奪還：自分の王冠とアバターが駅にドスン */
-.crown-drop-body { animation: crown-drop .75s cubic-bezier(.55, 0, .9, .4) both; }
-.crown-drop.is-landed .crown-drop-body { animation: crown-bounce .4s ease-out; }
-.crown-drop-disc { fill: #fffdf9; stroke: #d49a35; stroke-width: 3; }
+.route.is-gold .trunk-case, .route.is-gold .shin-case { stroke: #5c4512; }
+
+/* ---------- 王座奪還：自分の王冠とアバターが駅にすっと降りる ---------- */
+.crown-drop-body { animation: crown-drop .85s var(--ease) both; }
+.crown-drop.is-landed .crown-drop-body { animation: crown-settle .6s var(--ease); }
+.crown-drop-disc { fill: var(--ivory); stroke: var(--brass); stroke-width: 1.6; }
+.crown-drop-ring { fill: none; stroke: var(--brass); stroke-width: .5; }
 .crown-drop-av { width: 30px; height: 30px; border-radius: 50%; overflow: hidden; }
 .crown-drop-av svg { width: 100%; height: 100%; }
-.crown-drop-crown { fill: #f3d58c; stroke: #8a5a14; stroke-width: 1.4; stroke-linejoin: round; }
-.crown-drop-dust { fill: rgba(180, 150, 110, .4); opacity: 0; }
-.crown-drop.is-landed .crown-drop-dust { animation: dust 0.9s ease-out; }
+.crown-drop-crown { fill: var(--gold-3); stroke: var(--mustard-deep); stroke-width: 1; stroke-linejoin: round; }
+.crown-drop-band { fill: none; stroke: var(--mustard-deep); stroke-width: .6; }
+.crown-drop-dust { fill: rgba(184, 166, 142, .35); opacity: 0; }
+.crown-drop.is-landed .crown-drop-dust { animation: dust 1s var(--ease); }
+
 /* =====================================================================
  * カメラ（ズーム・パン）と3段階のセマンティック・ズーム（js/camera.js・js/map.js）
  * ===================================================================== */
 .map-svg { cursor: grab; }
 .map-svg.is-dragging { cursor: grabbing; }
 .map-svg.is-dragging .station { cursor: grabbing; }
-.cam-ctrl { position: absolute; right: 10px; bottom: 10px; z-index: 3; display: grid; gap: 6px; justify-items: end; }
+/* 右下のカメラのボタン：真鍮の細い枠の小さなプレート */
+.cam-ctrl { position: absolute; right: 22px; bottom: 22px; z-index: 3; display: grid; gap: 5px; justify-items: end; }
 .cam-btn {
-  display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; color: var(--ink);
-  background: rgba(255, 253, 249, .94); box-shadow: 0 0 0 1px var(--line-2), var(--sh-1); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px 5px 8px; border-radius: 1px;
+  font-family: var(--font-mincho); font-size: 12px; font-weight: 600; letter-spacing: .06em; color: var(--ink);
+  background: rgba(250, 246, 240, .95); box-shadow: 0 0 0 1px var(--brass), inset 0 0 0 2px rgba(250, 246, 240, .95), inset 0 0 0 2.5px rgba(184, 134, 11, .45);
+  transition: background-color .3s var(--ease), color .3s var(--ease);
 }
-.cam-btn:hover { background: #fff; }
+.cam-btn .ico { color: var(--brass); width: 15px; height: 15px; }
+.cam-btn:hover, .cam-btn:focus-visible { background: var(--gold-3); }
+.cam-btn:hover .ico, .cam-btn:focus-visible .ico { color: var(--akane); }
 .cam-zoom-row { display: inline-flex; align-items: center; gap: 4px; }
-.cam-sq { width: 32px; height: 32px; justify-content: center; padding: 0; font-size: 17px; }
-.cam-zoom { min-width: 42px; text-align: center; font-family: var(--font-mincho); font-weight: 700; font-size: 13px; padding: 3px 6px; border-radius: 999px; background: rgba(255, 253, 249, .9); box-shadow: 0 0 0 1px var(--line-2); }
+.cam-sq { width: 28px; height: 28px; justify-content: center; padding: 0; }
+.cam-sq .ico { width: 13px; height: 13px; }
+.cam-zoom {
+  min-width: 44px; text-align: center; font-family: var(--font-serif); font-style: italic; font-weight: 600; font-size: 15px; line-height: 1;
+  padding: 5px 6px 6px; color: var(--ink); background: rgba(250, 246, 240, .95); box-shadow: 0 0 0 1px var(--rule);
+}
 /* 駅名：俯瞰（1）は hub と、いまいる駅・スポットライト駅・トップオーナーの駅・行き先の候補だけ */
-.station-label { transition: opacity .35s; }
+.station-label { transition: opacity .35s var(--ease); }
 .map-svg[data-lod="1"] .station:not([data-tier="hub"]):not(.is-current):not(.is-spotlight):not(.is-acquired):not(.is-candidate):not(:focus-visible) .station-label,
 .map-svg[data-lod="2"] .station[data-tier="local"]:not(.is-current):not(.is-spotlight):not(.is-acquired):not(.is-candidate):not(:focus-visible) .station-label { opacity: 0; }
 /* 経由駅の名前はローカル（3）だけ、山の名前・区間のしるし・小さな海の名前・ご当地の演出はエリア（2）から */
-.waypoint-label, .peak-label, .route-badge, .sea-name-sm, .layer-region { transition: opacity .35s; }
+.waypoint-label, .peak-label, .route-badge, .sea-name-sm, .layer-region { transition: opacity .35s var(--ease); }
 .map-svg[data-lod="1"] .waypoint-label, .map-svg[data-lod="2"] .waypoint-label { opacity: 0; }
 .map-svg[data-lod="1"] .peak-label, .map-svg[data-lod="1"] .route-badge, .map-svg[data-lod="1"] .sea-name-sm, .map-svg[data-lod="1"] .layer-region { opacity: 0; }
-.map-svg[data-lod="3"] .pref-label { opacity: .55; }
-.pref-label { transition: opacity .35s; }
+.map-svg[data-lod="3"] .pref-label { opacity: .5; }
+.pref-label { transition: opacity .35s var(--ease); }
 /* ローカル寄り道モードの手帖のひとこと（いまいる駅だけ） */
-.station-preview { font-family: var(--font-mincho); font-size: 8.5px; font-weight: 600; fill: var(--ink-2); paint-order: stroke fill; stroke: rgba(250, 246, 240, .95); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; opacity: 0; transition: opacity .35s; }
+.station-preview { font-family: var(--font-mincho); font-weight: 600; fill: var(--ink-2); paint-order: stroke fill; stroke: rgba(243, 236, 225, .95); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; opacity: 0; transition: opacity .35s var(--ease); }
 .map-svg[data-lod="3"] .station.is-current .station-preview { opacity: 1; }
 @media (max-width: 639px) {
-  .cam-ctrl { right: 8px; bottom: 8px; gap: 5px; }
-  .cam-btn { padding: 6px 9px; }
+  .cam-ctrl { right: 17px; bottom: 17px; gap: 5px; }
   .cam-text { display: none; }
-  .cam-btn[data-cam] { width: 36px; height: 36px; justify-content: center; padding: 0; font-size: 16px; }
-  .cam-zoom-row .cam-btn { width: 32px; height: 32px; }
+  .cam-btn[data-cam] { width: 30px; height: 30px; justify-content: center; padding: 0; }
+  .cam-btn[data-cam] .ico { width: 15px; height: 15px; }
+  .cam-zoom-row .cam-btn { width: 28px; height: 28px; }
+  .cam-zoom { min-width: 36px; font-size: 13px; padding: 4px 4px 5px; }
 }
-@keyframes smoke { 0% { opacity: 0; transform: translate(0, 0) scale(.6); } 25% { opacity: .85; } 100% { opacity: 0; transform: translate(10px, -26px) scale(1.8); } }
-@keyframes flow { to { stroke-dashoffset: -600; } }
-@keyframes dash { to { stroke-dashoffset: -24; } }
-@keyframes wave { 0% { opacity: .8; transform: scale(1); } 100% { opacity: 0; transform: scale(3); } }
-@keyframes burst { from { opacity: .9; transform: scale(1); } to { opacity: 0; transform: scale(4); } }
+@keyframes shore-in { from { opacity: 0; } }
+@keyframes smoke { 0% { opacity: 0; transform: translate(0, 0) scale(.7); } 25% { opacity: .8; } 100% { opacity: 0; transform: translate(8px, -22px) scale(1.6); } }
+@keyframes flow { to { stroke-dashoffset: -640; } }
+@keyframes dash { to { stroke-dashoffset: -22; } }
+@keyframes wave { 0% { opacity: .85; transform: scale(1); } 100% { opacity: 0; transform: scale(2.6); } }
+@keyframes burst { from { opacity: .9; transform: scale(1); } to { opacity: 0; transform: scale(3.6); } }
 @keyframes steam-wave { 50% { transform: translateY(-2px); opacity: .5; } }
 @keyframes fx-rise { 0% { opacity: 0; transform: translate(0, 0) scale(.5); } 15% { opacity: .9; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.7); } }
 @keyframes fx-leaf { 0% { opacity: 0; transform: translate(0, 0) rotate(0) scale(.7); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(var(--dx) * 1.6), calc(var(--dy) * -.25)) rotate(var(--rot)) scale(1.1); } }
 @keyframes fx-steam { 0% { opacity: 0; transform: translate(0, 0) scaleY(.6); } 25% { opacity: .8; } 100% { opacity: 0; transform: translate(calc(var(--dx) * .4), calc(var(--dy) * 1.2)) scaleY(1.4); } }
 @keyframes fx-star { 0% { opacity: 0; transform: translate(0, 0) scale(.3) rotate(0); } 30% { opacity: 1; transform: translate(calc(var(--dx) * .4), calc(var(--dy) * .3)) scale(1.1) rotate(45deg); } 100% { opacity: 0; transform: translate(var(--dx), calc(var(--dy) * .6)) scale(.4) rotate(120deg); } }
-@keyframes badge-pop { from { transform: translateX(-50%) scale(.3); opacity: 0; } }
-@keyframes dir-pop { from { transform: translate(-50%, -50%) scale(.4); opacity: 0; } }
-@keyframes spot-beacon { 0% { r: 12; opacity: .95; } 100% { r: 40; opacity: 0; } }
-@keyframes spot-wave { 50% { transform: skewY(-5deg); } }
+@keyframes badge-pop { from { transform: translateX(-50%) translateY(-8px); opacity: 0; } }
+@keyframes dir-pop { from { transform: translate(-50%, -50%) scale(.92); opacity: 0; } }
+@keyframes scope-in { from { opacity: 0; translate: 0 -4px; } }
+@keyframes spot-beacon { 0% { r: 12; opacity: .9; } 100% { r: 38; opacity: 0; } }
+@keyframes spot-wave { 50% { transform: skewY(-3deg); } }
 @keyframes gold-pulse { 50% { opacity: .5; } }
-@keyframes crown-drop { from { transform: translateY(-220px); opacity: 0; } 70% { opacity: 1; } to { transform: translateY(0); } }
-@keyframes crown-bounce { 30% { transform: translateY(4px) scale(1.08, .9); } }
-@keyframes dust { 0% { opacity: .8; transform: scale(.4); } 100% { opacity: 0; transform: scale(2); } }
+@keyframes crown-drop { from { transform: translateY(-160px); opacity: 0; } 60% { opacity: 1; } to { transform: translateY(0); } }
+@keyframes crown-settle { 40% { transform: translateY(1.5px); } }
+@keyframes dust { 0% { opacity: .7; transform: scale(.5); } 100% { opacity: 0; transform: scale(1.8); } }

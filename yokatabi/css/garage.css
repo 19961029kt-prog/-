@@ -1,61 +1,143 @@
-/* 車両クラフト＆アバターの工房（js/garage.js・js/craft.js）。style.css のトークンを使う */
+/* 車両クラフト＆アバターの工房（js/garage.js・js/craft.js）。style.css のトークンを使う
+ * 箱は角丸＋影の白いカードをやめ、飾り枠（--frame：外枠1px＋内側3pxあけた細線）と硬券切符の切り欠きで組む。
+ * 数字・金額は Cormorant Garamond、名前は しっぽり明朝、補助の小さな字は Zen Kaku Gothic New。
+ */
 
-/* ---------- 車両クラフト＆アバター ---------- */
-.garage-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; margin-bottom: 14px; }
-.garage-head .card-kicker { justify-content: flex-start; }
-.garage-head .card-kicker::before { display: none; }
-.garage-title { font-family: var(--font-mincho); font-weight: 800; font-size: 28px; letter-spacing: .08em; }
-.garage-lead { font-size: 13px; color: var(--ink-2); max-width: 560px; }
+/* ---------- 見出しと財布 ---------- */
+.garage-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; margin-bottom: 16px; }
+.garage-eyebrow { display: flex; align-items: baseline; gap: 0 .2em; margin-bottom: 2px; }
+.garage-eyebrow span { margin-left: 1.1em; padding-left: 1.1em; border-left: 1px solid var(--rule); font-family: var(--font-mincho); font-weight: 700; font-size: 11px; letter-spacing: .3em; color: var(--ink-2); text-transform: none; }
+.garage-title { font-family: var(--font-mincho); font-weight: 700; font-size: 28px; letter-spacing: .1em; color: var(--ink); line-height: 1.5; }
+.garage-lead { font-family: var(--font-ui); font-size: 13px; color: var(--ink-2); max-width: 560px; line-height: 1.8; }
 .garage-wallet { display: flex; gap: 10px; flex-wrap: wrap; }
-.garage-wallet div { padding: 8px 14px; border-radius: 16px; background: var(--paper); border: 1px solid var(--line); box-shadow: var(--sh-1); min-width: 160px; }
-.garage-wallet dt { font-size: 11px; font-weight: 700; color: var(--ink-3); }
-.garage-wallet dd { font-family: var(--font-mincho); font-weight: 800; font-size: 22px; color: var(--mustard-deep); line-height: 1.4; }
-.garage-wallet dd small { font-family: var(--font-ui); font-size: 11px; font-weight: 700; color: var(--ink-3); }
-.garage-wallet dd b { font-size: 24px; }
-.stage { position: relative; border-radius: 22px; overflow: hidden; margin-bottom: 16px; background: #f6e6cf; box-shadow: 0 0 0 1px var(--line), var(--sh-2); }
-.stage-svg { width: 100%; height: auto; aspect-ratio: 800 / 300; }
-.stage-smoke circle { animation: stage-smoke 4s ease-out infinite; transform-box: fill-box; transform-origin: center; }
-.stage-smoke circle:nth-child(2) { animation-delay: 1.3s; }
-.stage-smoke circle:nth-child(3) { animation-delay: 2.6s; }
-.stage-ship { animation: ship-bob 3s ease-in-out infinite; }
-.stage-avatar-bob { animation: avatar-bob 1.4s ease-in-out infinite; }
-.stage-caption { position: absolute; left: 12px; bottom: 10px; padding: 2px 12px; border-radius: 99px; font-family: var(--font-mincho); font-weight: 700; font-size: 13px; background: rgba(255, 253, 249, .9); box-shadow: var(--sh-1); max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.stage .paper-confetti i { top: 20%; }
-.part-sec { margin-top: 18px; }
-.part-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
-.part-card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 18px; background: var(--paper); border: 1px solid var(--line); box-shadow: var(--sh-1); }
-.part-card.is-equipped { border: 2px solid var(--sage); background: linear-gradient(180deg, #f3f8f1, #fffdf9); }
-.part-card.is-locked .part-thumb { filter: saturate(.75); }
-.part-thumb { width: 100%; height: 112px; border-radius: 14px; display: grid; place-items: center; overflow: hidden; background: radial-gradient(circle at 50% 40%, #fffdf9, var(--paper-2)); box-shadow: inset 0 0 0 1px var(--line); }
-.part-info { flex: 1; }
+.garage-wallet div { padding: 9px 16px 8px; background: var(--paper) var(--fiber); box-shadow: var(--frame); min-width: 172px; }
+.garage-wallet dt { display: flex; align-items: center; gap: 6px; font-family: var(--font-ui); font-size: 11px; font-weight: 500; letter-spacing: .12em; color: var(--ink-3); }
+.garage-wallet dt .ico { color: var(--brass); width: 15px; height: 15px; }
+.garage-wallet dd { font-family: var(--font-serif); font-weight: 600; font-size: 24px; color: var(--ink); line-height: 1.35; font-variant-numeric: lining-nums; }
+.garage-wallet dd small { display: inline-block; font-family: var(--font-ui); font-size: 11px; font-weight: 500; color: var(--ink-3); line-height: 1.5; }
+.garage-wallet dd b { font-size: 26px; font-weight: 600; color: var(--brass); }
+
+/* ---------- プレビューステージ（銅版画の風景） ---------- */
+.stage { position: relative; padding: 6px; margin-bottom: 16px; background: var(--paper); box-shadow: var(--frame); }
+.stage-svg { display: block; width: 100%; height: auto; aspect-ratio: 800 / 300; }
+.stage-smoke path { animation: stage-smoke 6s var(--ease) infinite; transform-box: fill-box; transform-origin: center; opacity: 0; }
+.stage-smoke path:nth-child(2) { animation-delay: 2s; }
+.stage-smoke path:nth-child(3) { animation-delay: 4s; }
+.stage-ship { animation: ship-bob 5s ease-in-out infinite; }
+.stage-avatar-bob { animation: avatar-breathe 4.2s ease-in-out infinite; }
+.stage-caption {
+  position: absolute; left: 16px; bottom: 14px; max-width: calc(100% - 32px); padding: 3px 12px;
+  font-family: var(--font-mincho); font-weight: 700; font-size: 12.5px; letter-spacing: .06em; color: var(--ink);
+  background: var(--ivory); border: 1px solid var(--plate); box-shadow: inset 0 0 0 2px var(--ivory), inset 0 0 0 2.5px var(--rule);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.stage .gold-leaf, .stage .paper-confetti { z-index: 2; }
+
+/* ---------- 工房の切り替え ---------- */
+.garage .garage-seg { border-radius: 0; padding: 4px; gap: 4px; background: var(--paper); border: 0; box-shadow: var(--frame); margin-bottom: 8px; }
+.garage .garage-seg .seg-btn { display: inline-flex; align-items: center; gap: 7px; border-radius: 0; padding: 8px 16px; font-family: var(--font-mincho); font-weight: 700; letter-spacing: .08em; color: var(--ink-2); transition: background .35s var(--ease), color .35s var(--ease); }
+.garage .garage-seg .seg-btn .ico { width: 18px; height: 18px; color: var(--brass); }
+.garage .garage-seg .seg-btn.is-active { background: var(--forest); color: var(--cream); box-shadow: inset 0 0 0 1px var(--gold), inset 0 0 0 3px var(--forest), inset 0 0 0 3.5px rgba(197, 155, 39, .6); }
+.garage .garage-seg .seg-btn.is-active .ico { color: var(--gold-2); }
+
+/* ---------- 欄の見出し ---------- */
+.part-sec { margin-top: 26px; }
+.part-sec-title { gap: 8px 10px; padding-bottom: 8px; border-bottom: 1px dashed var(--perf); }
+.part-sec-title > .ico { width: 22px; height: 22px; color: var(--brass); }
+.part-sec-title .eyebrow { font-size: 11px; letter-spacing: .26em; color: var(--brass); }
+.part-sec-title > .part-sec-ja { font-family: var(--font-mincho); font-weight: 700; color: var(--ink); }
+
+/* ---------- パーツのカード（硬券の切符） ---------- */
+.part-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
+.part-card {
+  --notch: 123px; /* 切り欠きの高さ（サムネイルとミシン目の境） */
+  position: relative; display: flex; flex-direction: column; padding: 10px 12px 12px;
+  background: var(--paper) var(--fiber); box-shadow: var(--frame); transition: box-shadow .4s var(--ease);
+}
+/* 左右の半円の切り欠き：ページの地の色の丸を、カードの内側の半分だけ見せる */
+.part-card::before, .part-card::after {
+  content: ''; position: absolute; top: calc(var(--notch) - 7px); width: 14px; height: 14px; border-radius: 50%;
+  background: var(--ivory); border: 1px solid var(--rule);
+}
+.part-card::before { left: -7px; clip-path: inset(0 0 0 7px); }
+.part-card::after { right: -7px; clip-path: inset(0 7px 0 0); }
+.part-card.is-equipped { box-shadow: var(--frame-gold); }
+.part-thumb {
+  position: relative; height: 104px; margin-bottom: 9px; display: grid; place-items: center; overflow: hidden;
+  background: var(--antique); box-shadow: inset 0 0 0 1px var(--line);
+}
+.part-card.is-locked .part-thumb > svg { filter: grayscale(.25) sepia(.08); opacity: .88; }
 .thumb-svg { width: 88%; height: auto; max-height: 100%; overflow: visible; }
-.part-thumb .avatar-svg { width: auto; height: 104%; margin-top: 6px; }
-.thumb-trail { width: auto; height: 90%; border-radius: 12px; }
-.part-name { font-family: var(--font-mincho); font-weight: 800; font-size: 15px; line-height: 1.45; }
-.part-desc { font-size: 12px; color: var(--ink-2); line-height: 1.65; margin-top: 2px; }
-.part-perk { font-size: 11px; font-weight: 700; color: var(--sage-deep); margin-top: 2px; }
-.part-price { font-family: var(--font-mincho); font-weight: 800; font-size: 13px; color: var(--mustard-deep); }
-.part-action { display: flex; align-items: center; justify-content: center; min-height: 38px; }
-.part-btn { width: 100%; padding: 7px 12px; border-radius: 999px; font-weight: 900; font-size: 13px; color: var(--ink); background: var(--paper-2); border: 1.5px solid var(--line-2); white-space: nowrap; }
-.part-btn.is-buy { color: #fff; background: var(--terracotta); border-color: transparent; box-shadow: 0 2px 0 var(--terracotta-deep); }
-.part-btn.is-short { color: var(--ink-3); display: grid; line-height: 1.3; text-align: center; }
-.part-btn.is-short small { font-size: 10px; font-weight: 700; }
-.part-state.is-equipped { font-weight: 900; font-size: 13px; color: var(--sage-deep); }
-.earn-guide { margin-top: 24px; padding: 14px 18px; border-radius: 18px; background: var(--mustard-soft); border: 1.5px dashed #e0bb6f; }
-.earn-guide ul { display: grid; gap: 4px; font-size: 13px; }
-.earn-guide li::before { content: '・'; color: var(--mustard-deep); }
+.part-thumb .avatar-svg { width: auto; height: 104%; margin-top: 8px; }
+.thumb-trail { width: 100%; height: 100%; }
+.part-no { position: absolute; top: 4px; right: 7px; font-size: 11px; color: var(--ink-3); letter-spacing: .04em; }
+/* 装備中：朱肉の二重丸の判（少し傾けて押す） */
+.part-seal {
+  position: absolute; left: 8px; top: 8px; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%;
+  font-family: var(--font-mincho); font-weight: 700; font-size: 9px; letter-spacing: .02em; color: var(--akane);
+  border: 1.2px solid var(--akane); box-shadow: inset 0 0 0 2px var(--antique), inset 0 0 0 2.6px rgba(168, 56, 43, .8);
+  background: rgba(250, 246, 240, .55); transform: rotate(-6deg); opacity: .92;
+}
+.part-info { flex: 1; margin: 0 -12px; padding: 10px 12px 0; border-top: 1px dashed var(--perf); }
+.part-name { font-family: var(--font-mincho); font-weight: 700; font-size: 15px; line-height: 1.5; color: var(--ink); letter-spacing: .03em; }
+.part-desc { font-family: var(--font-ui); font-size: 12px; color: var(--ink-2); line-height: 1.7; margin-top: 3px; }
+.part-perk { display: flex; align-items: center; gap: 5px; margin-top: 5px; font-family: var(--font-ui); font-size: 11px; color: var(--sage-deep); }
+.part-perk .ico { color: var(--brass); width: 15px; height: 15px; }
+.part-price { margin-top: 6px; color: var(--ink); }
+.part-price .num, .part-btn .num { font-size: 19px; line-height: 1; }
+.part-price small, .part-btn small { font-family: var(--font-ui); font-size: 10.5px; margin-left: 2px; color: var(--ink-3); }
+.part-free { font-family: var(--font-mincho); font-size: 12px; letter-spacing: .2em; color: var(--ink-3); }
+.part-action { display: flex; align-items: center; justify-content: center; min-height: 40px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--perf); }
+.part-btn {
+  width: 100%; min-height: 34px; padding: 5px 10px; display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  font-family: var(--font-mincho); font-weight: 700; font-size: 13px; letter-spacing: .08em; color: var(--ink);
+  background: transparent; border: 1px solid var(--ink-2); border-radius: 0; white-space: nowrap;
+  transition: background .35s var(--ease), color .35s var(--ease), border-color .35s var(--ease);
+}
+.part-btn:hover { background: var(--ink); color: var(--paper); }
+.part-btn.is-buy { color: var(--akane); border-color: var(--akane); box-shadow: inset 0 0 0 2px var(--paper), inset 0 0 0 2.5px rgba(168, 56, 43, .45); }
+.part-btn.is-buy small, .part-btn-ja { font-family: var(--font-mincho); font-size: 12px; color: inherit; }
+.part-btn.is-buy:hover { background: var(--akane); color: var(--paper); }
+.part-btn.is-short { color: var(--ink-3); border: 1px dashed var(--perf); display: grid; grid-template-columns: auto auto; justify-content: center; column-gap: 6px; line-height: 1.25; }
+.part-btn.is-short .ico { grid-row: span 2; align-self: center; width: 16px; height: 16px; color: var(--ink-3); }
+.part-btn.is-short .num { font-size: 16px; color: var(--ink-2); }
+.part-btn.is-short > small { grid-column: 2; margin: 0; font-size: 10px; letter-spacing: .02em; }
+.part-btn.is-short:hover { background: transparent; color: var(--ink-2); border-color: var(--ink-3); }
+.part-state.is-equipped { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mincho); font-weight: 700; font-size: 13px; letter-spacing: .2em; color: var(--brass); }
+.part-state.is-equipped .ico { width: 17px; height: 17px; }
+
+/* ---------- 資金の貯めかた ---------- */
+.earn-guide { margin-top: 28px; padding: 16px 20px; background: var(--paper) var(--fiber); box-shadow: var(--frame); }
+.earn-guide .sec-title { padding-bottom: 8px; border-bottom: 1px dashed var(--perf); }
+.earn-guide ul { display: grid; gap: 6px; font-family: var(--font-ui); font-size: 13px; color: var(--ink-2); line-height: 1.75; }
+.earn-guide li { position: relative; padding-left: 16px; }
+.earn-guide li::before { content: ''; position: absolute; left: 2px; top: .72em; width: 6px; height: 6px; border: 1px solid var(--brass); transform: rotate(45deg); }
+.earn-guide b { font-weight: 700; color: var(--ink); }
+
 @media (max-width: 639px) {
   .garage-title { font-size: 22px; }
   .garage-wallet { width: 100%; }
-  .garage-wallet div { flex: 1; min-width: 0; padding: 6px 10px; }
-  .garage-wallet dd { font-size: 18px; }
-  .part-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  .part-card { padding: 10px; gap: 6px; }
-  .part-thumb { height: 92px; }
-  .part-name { font-size: 14px; }
+  .garage-wallet div { flex: 1; min-width: 0; padding: 7px 10px; }
+  .garage-wallet dd { font-size: 20px; }
+  .stage { padding: 4px; }
+  .stage-svg { aspect-ratio: 800 / 420; } /* 縦を少し足し、右の空と海を切って、列車とホームを大きく見せる */
+  .stage-caption { position: static; display: block; margin: 4px 0 0; max-width: none; font-size: 11.5px; text-align: center; white-space: normal; }
+  .garage .garage-seg { display: flex; }
+  .garage .garage-seg .seg-btn { flex: 1; justify-content: center; padding: 8px 6px; font-size: 13px; }
+  .part-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .part-card { --notch: 101px; padding: 8px 9px 10px; }
+  .part-info { margin: 0 -9px; padding: 9px 9px 0; }
+  .part-thumb { height: 84px; }
+  .part-seal { width: 34px; height: 34px; font-size: 8px; left: 5px; top: 5px; }
+  .part-name { font-size: 13.5px; }
   .part-desc { font-size: 11px; }
-  .part-btn { font-size: 12px; padding: 6px 8px; }
+  .part-btn { font-size: 12px; padding: 5px 6px; letter-spacing: .02em; }
+  .part-price .num, .part-btn .num { font-size: 17px; }
 }
-@keyframes stage-smoke { 0% { opacity: 0; transform: scale(.6); } 30% { opacity: .9; } 100% { opacity: 0; transform: translate(14px, -24px) scale(1.6); } }
-@keyframes ship-bob { 50% { transform: translate(600px, 226px) rotate(-3deg); } }
-@keyframes avatar-bob { 50% { transform: translateY(-4px); } }
+@keyframes stage-smoke { 0% { opacity: 0; transform: translate(0, 4px) scale(.7); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(16px, -20px) scale(1.35); } }
+@keyframes ship-bob { 50% { transform: translateY(-1.5px) rotate(-1.2deg); } }
+@keyframes avatar-breathe { 50% { transform: translateY(-1.5px); } }
+@media (prefers-reduced-motion: reduce) {
+  .stage-smoke path, .stage-ship, .stage-avatar-bob { animation: none; }
+  .stage-smoke path { opacity: .8; }
+}

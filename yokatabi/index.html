@@ -67,7 +67,7 @@
     <div class="hdr wrap">
       <div class="brand">
         <span class="brand-die" aria-hidden="true">
-          <svg viewBox="0 0 64 64"><rect x="8" y="10" width="46" height="46" rx="12" fill="#e9c99a" transform="rotate(-8 31 33)"/><g transform="rotate(-8 31 33)" fill="#b5893f"><circle cx="20" cy="22" r="4"/><circle cx="42" cy="22" r="4"/><circle cx="20" cy="44" r="4"/><circle cx="42" cy="44" r="4"/></g><circle cx="31" cy="33" r="5.2" fill="#b8322a" transform="rotate(-8 31 33)"/></svg>
+          <svg viewBox="0 0 64 64"><g transform="rotate(-8 32 32)"><rect x="11" y="11" width="42" height="42" rx="3" fill="#4a3525" stroke="#c59b27" stroke-width="1.2"/><rect x="14.5" y="14.5" width="35" height="35" rx="1.5" fill="none" stroke="#c59b27" stroke-width=".6" opacity=".7"/><g fill="#c59b27"><circle cx="22" cy="22" r="2.6"/><circle cx="42" cy="22" r="2.6"/><circle cx="22" cy="42" r="2.6"/><circle cx="42" cy="42" r="2.6"/></g><circle cx="32" cy="32" r="3.4" fill="#a8382b" stroke="#c59b27" stroke-width=".6"/></g></svg>
         </span>
         <div class="brand-text">
           <h1 class="logo-title"><span class="logo-brand">Q-TRIP</span> <span class="logo-name"><b>九州</b>よりみちダイス</span></h1>
@@ -76,7 +76,7 @@
       </div>
       <div class="hdr-actions">
         <button id="btn-avatar" class="avatar-btn" data-tab-jump="garage" aria-label="旅人アバター（着せ替え）をひらく"><span id="hdr-avatar"></span><span class="hdr-name"><small>旅人</small><b id="hdr-name">あなた</b></span></button>
-        <button id="btn-sharecard" class="hdr-share" aria-label="手帖シェアカードを発行する"><span aria-hidden="true">📸</span><span class="hdr-share-text">手帖カード</span></button>
+        <button id="btn-sharecard" class="hdr-share" aria-label="手帖シェアカードを発行する"><i data-ico="camera"></i><span class="hdr-share-text">手帖カード</span></button>
         <button id="btn-mute" class="icon-btn" aria-pressed="false" aria-label="サウンドをミュートする"></button>
       </div>
     </div>
@@ -109,10 +109,10 @@
 
   <nav class="tabs-nav" role="tablist" aria-label="表示切替">
     <div class="wrap tabs">
-      <button class="tab is-active" role="tab" data-tab="map" aria-selected="true"><span class="tab-icon" aria-hidden="true">🗺️</span><span>すごろくマップ</span></button>
-      <button class="tab" role="tab" data-tab="collection" aria-selected="false"><span class="tab-icon" aria-hidden="true">📖</span><span>オーナー<wbr>刻印手帖</span></button>
-      <button class="tab" role="tab" data-tab="garage" aria-selected="false"><span class="tab-icon" aria-hidden="true">🚂</span><span>車両クラフト＆<wbr>アバター</span></button>
-      <button class="tab" role="tab" data-tab="letters" aria-selected="false"><span class="tab-icon" aria-hidden="true">📮</span><span>旅の便り＆<wbr>フォト地図</span></button>
+      <button class="tab is-active" role="tab" data-tab="map" aria-selected="true"><i class="tab-icon" data-ico="map"></i><span class="tab-text"><span class="tab-no"><i>01</i>/ ROUTE MAP</span><span class="tab-ja">すごろくマップ</span></span></button>
+      <button class="tab" role="tab" data-tab="collection" aria-selected="false"><i class="tab-icon" data-ico="ledger"></i><span class="tab-text"><span class="tab-no"><i>02</i>/ LEDGER</span><span class="tab-ja">オーナー<wbr>刻印手帖</span></span></button>
+      <button class="tab" role="tab" data-tab="garage" aria-selected="false"><i class="tab-icon" data-ico="locomotive"></i><span class="tab-text"><span class="tab-no"><i>03</i>/ LOCOMOTIVE</span><span class="tab-ja">車両クラフト＆<wbr>アバター</span></span></button>
+      <button class="tab" role="tab" data-tab="letters" aria-selected="false"><i class="tab-icon" data-ico="postcard"></i><span class="tab-text"><span class="tab-no"><i>04</i>/ POSTCARD</span><span class="tab-ja">旅の便り＆<wbr>フォト地図</span></span></button>
     </div>
   </nav>
 
@@ -121,7 +121,7 @@
     <section data-view="map" class="map-view">
       <div class="atlas">
         <div class="atlas-head">
-          <h2 class="atlas-title">九州よりみち路線図</h2>
+          <h2 class="atlas-title"><span class="eyebrow"><i>No. 01</i>Route Map of Kyushu</span>九州よりみち路線図</h2>
           <p class="atlas-sub">海岸線・山地・線路・駅は、実際の地図データから描いています</p>
         </div>
         <div id="spotlight-bar" class="spotlight-bar" aria-live="polite"></div>
@@ -132,9 +132,9 @@
           <div id="map-scope" class="map-scope" role="dialog" aria-label="望遠鏡" hidden></div>
           <div id="dice-badge" class="dice-badge" hidden></div>
           <div id="course-chip" class="course-chip" hidden>
-            <span>🧳 <b id="course-chip-title"></b></span>
+            <span><i data-ico="suitcase"></i> <b id="course-chip-title"></b></span>
             <button id="btn-course-trip" class="link-btn">しおりへ</button>
-            <button id="btn-clear-course" class="course-chip-x" aria-label="ルート表示を消す">×</button>
+            <button id="btn-clear-course" class="course-chip-x" aria-label="ルート表示を消す"><i data-ico="close"></i></button>
           </div>
         </div>
         <div class="map-legend" aria-hidden="true">
@@ -152,7 +152,7 @@
 
       <aside class="side">
         <div class="panel dice-panel">
-          <p class="card-kicker"><span>よりみちダイス</span></p>
+          <p class="card-kicker"><span class="eyebrow">The Dice</span><span>よりみちダイス</span></p>
           <div class="dice-row">
             <div id="die" class="dice-tray" aria-hidden="true"></div>
             <div class="dice-out">
@@ -161,14 +161,14 @@
             </div>
           </div>
           <div id="ticket-deck" class="ticket-deck" aria-label="特別切符の手札"></div>
-          <button id="btn-dice" class="dice-btn"><span aria-hidden="true">🎲</span> よりみちダイスを振る</button>
+          <button id="btn-dice" class="dice-btn"><i data-ico="dice"></i> よりみちダイスを振る</button>
           <div id="ticket-bar" class="ticket-bar"></div>
           <p id="guide" class="guide" aria-live="polite">読み込み中…</p>
           <div id="dice-confetti" class="confetti-anchor" aria-hidden="true"></div>
         </div>
 
         <div class="panel current-panel">
-          <p class="card-kicker"><span>いまいる駅</span></p>
+          <p class="card-kicker"><span class="eyebrow">Now Stopping</span><span>いまいる駅</span></p>
           <div class="current-row">
             <h2 id="current-name" class="current-name">–</h2>
             <span id="current-pref" class="chip chip-pref"></span>
@@ -180,26 +180,26 @@
         </div>
 
         <div class="panel mini-collection">
-          <p class="card-kicker"><span>旅の手帖</span></p>
+          <p class="card-kicker"><span class="eyebrow">Ledger</span><span>旅の手帖</span></p>
           <div class="mini-head">
-            <h3 class="mini-title">📖 オーナー刻印手帖</h3>
+            <h3 class="mini-title"><i data-ico="ledger"></i> オーナー刻印手帖</h3>
             <span id="mini-count" class="chip chip-gold">0 / 15</span>
           </div>
           <p class="mini-sub">総資産 <b id="mini-assets">0万円</b></p>
           <div id="mini-grid" class="mini-grid"></div>
           <button class="ghost-btn wide" data-tab-jump="collection">手帖をひらく</button>
-          <button id="btn-trip-cta" class="trip-cta wide" disabled>🧳 旅しおり</button>
+          <button id="btn-trip-cta" class="trip-cta wide" disabled><i data-ico="suitcase"></i> 旅しおり</button>
         </div>
 
         <div class="panel how">
-          <p class="card-kicker"><span>あそびかた</span></p>
+          <p class="card-kicker"><span class="eyebrow">How to Travel</span><span>あそびかた</span></p>
           <p class="how-lead"><b>Q-TRIP 九州よりみちダイス</b>は、九州の路線図をすごろく盤にした旅の手帖。よりみちしながら、駅ごとの名物と秘湯に出会えます。</p>
           <ol class="how-list">
             <li><b>よりみちダイス</b>を振ると、出た目の数だけ列車が線路を1駅ずつ進みます。分かれ道では進む路線を選べます（駅をタップしても移動はせず、望遠鏡でのぞくだけ）。</li>
             <li>止まった駅で<b>寄り道手帖</b>と現地スナップが解放され、車窓とまちの寄り道ノート・名産品・宿がわかります。</li>
             <li>手帖のボタンからお取り寄せ・宿の予約をしたら、その日のうちに<b>注文完了画面のスクショ</b>でオーナー権に立候補。ショップ・注文日・金額の3点を読み取って確かめます。</li>
             <li>駅ごとの<b>累計購入金額の1位がトップオーナー</b>。追う側は<b>下克上ボーナス×1.3</b>、上位3名は<b>共同株主</b>として配当を受け取れます。</li>
-            <li>いつも1駅が<b>🎯 スポットライト駅</b>。ピタリと止まると一番乗りのご祝儀とレア切符。<b>特別切符</b>でダイスを2〜4個同時に振ったり、出目を選んだりできます。ダイス7回ごとに<b>週末の大精算まつり</b>、ラインの全駅で株主になると<b>ライン制覇</b>で配当2倍。</li>
+            <li>いつも1駅が<b>スポットライト駅</b>。ピタリと止まると一番乗りのご祝儀とレア切符。<b>特別切符</b>でダイスを2〜4個同時に振ったり、出目を選んだりできます。ダイス7回ごとに<b>週末の大精算まつり</b>、ラインの全駅で株主になると<b>ライン制覇</b>で配当2倍。</li>
             <li>配当や<b>旅の便り</b>（写真のポストカード）・いいね・手帖カードのシェアで貯まった<b>クラフト資金</b>（ゲームの中だけのもの）で、列車の改造やアバターの着せ替えができます。</li>
           </ol>
         </div>
@@ -222,9 +222,9 @@
         </div>
       </div>
       <div class="seg" role="tablist" aria-label="手帖の切り替え">
-        <button class="seg-btn is-active" role="tab" data-sub-tab="stamps">📖 <span class="seg-more">オーナーの</span>切手</button>
-        <button class="seg-btn" role="tab" data-sub-tab="album">🧾 レシート<span class="seg-more">アルバム</span></button>
-        <button class="seg-btn" role="tab" data-sub-tab="trip">🧳 <span class="seg-more">マイ</span>旅しおり</button>
+        <button class="seg-btn is-active" role="tab" data-sub-tab="stamps"><i data-ico="stamp"></i> <span class="seg-more">オーナーの</span>切手</button>
+        <button class="seg-btn" role="tab" data-sub-tab="album"><i data-ico="receipt"></i> レシート<span class="seg-more">アルバム</span></button>
+        <button class="seg-btn" role="tab" data-sub-tab="trip"><i data-ico="suitcase"></i> <span class="seg-more">マイ</span>旅しおり</button>
       </div>
       <div data-sub="stamps">
         <section id="rank-ladder" class="rank-ladder" aria-label="称号の道"></section>

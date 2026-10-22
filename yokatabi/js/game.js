@@ -1,11 +1,11 @@
-// 旅のゲームの仕組み（上品な「旅の手帖」のまま、思わず声が出る5つの仕掛け）
-//   1) 🎯 スポットライト駅：いつも1駅が「次に目指す駅」に選ばれる。ダイスでピタリと止まると、一番乗りのご祝儀（クラフト資金）とレア切符。
+// 旅のゲームの仕組み（上品な「旅の手帖」のまま、思わず声が出る5つの仕掛け）。絵文字は使わず、アイコンは js/icons.js の線画
+//   1) スポットライト駅：いつも1駅が「次に目指す駅」に選ばれる。ダイスでピタリと止まると、一番乗りのご祝儀（クラフト資金）とレア切符。
 //      すぐにルーレットで次のスポットライト駅が決まる
 //   2) 特別切符の手札（最大5枚）：二連・三連・四連（クルーズ周遊は3回つづけて）のダイス、ピタリ指定切符（1〜6を選ぶ）。
 //      駅に止まったとき・ご祝儀・工房の切符売り場で手に入る
-//   3) 👑 ライン制覇：ラインの全駅で上位3名に入ると、そのラインの配当が2倍になり、路線が金色に光る
-//   4) 📊 週末の大精算まつり：ダイス7回（旅の1週間）ごとに、観光収益といいねの収益をカウントアップして振り込む
-//   5) 🎉 旅のごほうびサプライズ／寄り道ハプニング（止まった駅で約25%）と、⚡ 王座奪還の演出（1位を追い越した瞬間）
+//   3) ライン制覇：ラインの全駅で上位3名に入ると、そのラインの配当が2倍になり、路線が金色に光る
+//   4) 週末の大精算まつり：ダイス7回（旅の1週間）ごとに、観光収益といいねの収益をカウントアップして振り込む
+//   5) 旅のごほうびサプライズ／寄り道ハプニング（止まった駅で約25%）と、王座奪還の演出（1位を追い越した瞬間）
 // お金は、すべてゲームの中だけのクラフト資金（Store.ledger に入出金として残し、残高は毎回数え直す）。
 (function () {
   'use strict';
@@ -14,6 +14,7 @@
   const G = () => D.meta.game;
   const $ = (sel, r = document) => r.querySelector(sel);
   const esc = (s) => api.esc(s);
+  const I = (name, opts) => YT.Icon.svg(name, opts);
   const rnd = (n) => Math.floor(Math.random() * n);
   const reduce = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const wait = (ms) => new Promise((r) => setTimeout(r, reduce() ? Math.min(ms, 120) : ms));
@@ -60,15 +61,18 @@
     box.className = 'gm-rain';
     for (let i = 0; i < n; i++) {
       const p = document.createElement('i');
+      // 金箔・真鍮のリーフが、裏返りながらゆっくり舞い落ちる（原色の紙吹雪は使わない）
       p.style.left = `${Math.random() * 100}%`;
-      p.style.setProperty('--d', `${Math.random() * 1.4}s`);
-      p.style.setProperty('--x', `${(Math.random() - 0.5) * 160}px`);
-      p.style.setProperty('--r', `${Math.random() * 720 - 360}deg`);
-      p.style.background = ['#f3d58c', '#d49a35', '#fff3cf', '#d96b43', '#e2b54d'][i % 5];
+      p.style.setProperty('--d', `${Math.random() * 1.8}s`);
+      p.style.setProperty('--t', `${3.6 + Math.random() * 2.4}s`);
+      p.style.setProperty('--x', `${(Math.random() - 0.5) * 140}px`);
+      p.style.setProperty('--r', `${Math.random() * 300 - 150}deg`);
+      p.style.setProperty('--w', `${6 + Math.random() * 8}px`);
+      p.style.setProperty('--c', ['#d4af37', '#e6c665', '#faf0ca', '#c59b27', '#b8860b'][i % 5]);
       box.appendChild(p);
     }
     root.appendChild(box);
-    setTimeout(() => box.remove(), 4200);
+    setTimeout(() => box.remove(), 8200);
   }
   // 数字のカウントアップ（チャリン、チャリン）
   function countUp(el, to, { ms = 1100, sound = true } = {}) {
@@ -123,9 +127,9 @@
     if (!bar || !sp) return;
     const s = D.byId[sp.id];
     const n = hops(YT.Store.get().currentStationId, sp.id);
-    const t = THEME()[sp.theme] || { icon: '🎯', label: '' };
-    bar.innerHTML = `<span class="sb-target">🎯 スポットライト駅：<b>${esc(s.name)}駅</b>まで最短あと<b class="sb-n">${n == null ? '—' : n}</b>マス！</span>
-      <span class="sb-theme">今週の旬 ${t.icon} ${esc(t.label)}</span>
+    const t = THEME()[sp.theme] || { icon: 'target', label: '' };
+    bar.innerHTML = `<span class="sb-target">${I('target')} スポットライト駅：<b>${esc(s.name)}駅</b>まで最短あと<b class="sb-n">${n == null ? '—' : n}</b>マス！</span>
+      <span class="sb-theme">今週の旬 ${I(t.icon)} ${esc(t.label)}</span>
       <span class="sb-hint">ピタリと止まると、一番乗りのご祝儀 ${api.yenBig(G().spotlight.rewardMin)}〜${api.yenBig(G().spotlight.rewardMax)}＋レア切符</span>`;
     YT.Map.setSpotlight(sp.id);
   }
@@ -140,12 +144,12 @@
     YT.Sound.jackpot();
     const def = ticketDef(kind);
     await overlay(
-      `<p class="gm-kicker">🎯 スポットライト駅にピタ止め！</p>
-       <h2 class="gm-title gm-jackpot">🎉 ${esc(s.name)}駅<br>一番乗り到着！！</h2>
+      `<p class="gm-kicker">${I('target')} スポットライト駅にピタ止め！</p>
+       <h2 class="gm-title gm-jackpot">${esc(s.name)}駅<br>一番乗り到着！！</h2>
        <p class="gm-msg">駅の観光案内所から、ようこそ記念のご祝儀をいただきました！</p>
        <p class="gm-amount" data-amount>+0万円</p>
        <div class="gm-ticket ${t ? '' : 'is-full'}">${ticketCard(kind)}<p>${t ? `レア切符『${esc(def.name)}』を手に入れた！` : '手札がいっぱいで、レア切符は受け取れませんでした'}</p></div>
-       <button class="primary-btn" data-gm-close>🎡 次のスポットライト駅を決める</button>`,
+       <button class="primary-btn" data-gm-close>${I('roulette')} 次のスポットライト駅を決める</button>`,
       {
         cls: 'gm-gold',
         onOpen: (box) => {
@@ -166,7 +170,7 @@
     for (let i = 0; i < steps; i++) seq.push(names[rnd(names.length)]);
     seq.push(D.byId[next.id].name);
     await overlay(
-      `<p class="gm-kicker">🎡 次のスポットライト駅は…</p>
+      `<p class="gm-kicker">${I('roulette')} 次のスポットライト駅は…</p>
        <div class="gm-roulette"><span data-roll>…</span></div>
        <p class="gm-msg" data-roll-msg>&nbsp;</p>
        <button class="ghost-btn" data-gm-close hidden data-roll-done>旅をつづける</button>`,
@@ -186,7 +190,7 @@
           renderBar();
           YT.Sound.surprise();
           const t = THEME()[next.theme] || { icon: '', label: '' };
-          $('[data-roll-msg]', box).innerHTML = `今週の旬は ${t.icon} ${esc(t.label)}。<b>${esc(D.byId[next.id].name)}駅</b>まで最短あと<b>${hops(YT.Store.get().currentStationId, next.id)}</b>マス！`;
+          $('[data-roll-msg]', box).innerHTML = `今週の旬は ${t.icon ? I(t.icon) : ''} ${esc(t.label)}。<b>${esc(D.byId[next.id].name)}駅</b>まで最短あと<b>${hops(YT.Store.get().currentStationId, next.id)}</b>マス！`;
           $('[data-roll-done]', box).hidden = false;
           $('[data-roll-done]', box).focus({ preventScroll: true });
         },
@@ -207,18 +211,18 @@
     const t = YT.Store.addTicket(kind, G().deckMax);
     const def = ticketDef(kind);
     if (!t) {
-      api.toast(`🎫 手札がいっぱい（${G().deckMax}枚）なので、『${def.name}』は受け取れませんでした。切符を使ってから集めましょう`);
+      api.toast(`手札がいっぱい（${G().deckMax}枚）なので、『${def.name}』は受け取れませんでした。切符を使ってから集めましょう`);
       return null;
     }
     YT.Sound.ticket();
-    api.toast(`${def.icon} ${why}『${def.name}』を手に入れた！（手札 ${YT.Store.get().deck.length}/${G().deckMax}）`, 'toast-green');
+    api.toast(`${why}『${def.name}』を手に入れた！（手札 ${YT.Store.get().deck.length}/${G().deckMax}）`, 'toast-green', def.icon);
     renderDeck();
     return t;
   }
   function ticketCard(kind, { uid = '', armed = false, small = false } = {}) {
     const d = ticketDef(kind);
     return `<span class="tk-card tk-${esc(kind)} ${armed ? 'is-armed' : ''} ${small ? 'is-small' : ''}" ${uid ? `data-deck="${esc(uid)}" role="button" tabindex="0" aria-pressed="${armed}"` : ''} title="${esc(d.desc)}">
-        <span class="tk-icon" aria-hidden="true">${d.icon}</span>
+        <span class="tk-icon" aria-hidden="true">${I(d.icon)}</span>
         <span class="tk-name">${esc(d.name)}</span>
         <span class="tk-dice">${d.pick ? '出目を選ぶ' : `ダイス×${d.dice}${d.turns ? `・${d.turns}回` : ''}`}</span>
       </span>`;
@@ -228,8 +232,8 @@
     if (!box) return;
     const st = YT.Store.get();
     const cruise = st.cruiseLeft > 0;
-    box.innerHTML = `<p class="td-head"><span>🎫 特別切符</span><small>手札 ${st.deck.length}/${G().deckMax}</small></p>
-      ${cruise ? `<p class="td-cruise">✨ クルーズ周遊中：あと<b>${st.cruiseLeft}</b>回、ダイス4個で振れます</p>` : ''}
+    box.innerHTML = `<p class="td-head"><span>${I('ticketPunch')} 特別切符</span><small>手札 ${st.deck.length}/${G().deckMax}</small></p>
+      ${cruise ? `<p class="td-cruise">${I('sparkle')} クルーズ周遊中：あと<b>${st.cruiseLeft}</b>回、ダイス4個で振れます</p>` : ''}
       <div class="td-cards">${st.deck.length ? st.deck.map((t) => ticketCard(t.kind, { uid: t.uid, armed: st.armed === t.uid, small: true })).join('') : '<span class="td-empty">駅に止まったときや、スポットライト駅のご祝儀、工房の切符売り場で手に入ります</span>'}</div>
       ${st.armed && !cruise ? `<p class="td-armed">次のダイスで『${esc(ticketDef(st.deck.find((t) => t.uid === st.armed).kind).name)}』を使います（もう一度押すと取り消し）</p>` : ''}`;
   }
@@ -237,7 +241,7 @@
     const c = e.target.closest('[data-deck]');
     if (!c || api.isBusy()) return;
     const st = YT.Store.get();
-    if (st.cruiseLeft > 0) return api.toast('✨ クルーズ周遊中は、ほかの切符は使えません');
+    if (st.cruiseLeft > 0) return api.toast('クルーズ周遊中は、ほかの切符は使えません', '', 'sparkle');
     YT.Store.arm(st.armed === c.dataset.deck ? null : c.dataset.deck);
     YT.Sound.click();
     renderDeck();
@@ -246,14 +250,14 @@
   // 次のダイスの振り方：{ count（ダイスの数）, pick（出目を選ぶ）, label, consume（振ったら切符を使う） }
   function nextRoll() {
     const st = YT.Store.get();
-    if (st.cruiseLeft > 0) return { count: 4, label: '✨ クルーズ周遊', consume: () => YT.Store.setCruise(st.cruiseLeft - 1) };
+    if (st.cruiseLeft > 0) return { count: 4, label: 'クルーズ周遊', consume: () => YT.Store.setCruise(st.cruiseLeft - 1) };
     const t = st.deck.find((x) => x.uid === st.armed);
     if (!t) return { count: 1, label: '', consume: () => {} };
     const d = ticketDef(t.kind);
     return {
       count: d.dice || 1,
       pick: !!d.pick,
-      label: `${d.icon} ${d.name}`,
+      label: d.name,
       consume: () => {
         YT.Store.useTicket(t.uid);
         if (d.turns) YT.Store.setCruise(d.turns - 1); // 使った1回を含めて turns 回
@@ -266,7 +270,7 @@
     const sp = spot();
     const n = sp ? hops(YT.Store.get().currentStationId, sp.id) : null;
     return overlay(
-      `<p class="gm-kicker">🎯 ピタリ指定切符</p>
+      `<p class="gm-kicker">${I('target')} ピタリ指定切符</p>
        <h2 class="gm-title">出目を選んでください</h2>
        ${sp ? `<p class="gm-msg">スポットライト駅 <b>${esc(D.byId[sp.id].name)}駅</b>まで、最短あと<b>${n}</b>マス${n >= 1 && n <= 6 ? '。ピタ止めのチャンス！' : ''}</p>` : ''}
        <div class="gm-picks">${[1, 2, 3, 4, 5, 6].map((v) => `<button class="gm-pick ${v === n ? 'is-hint' : ''}" data-gm-close="${v}">${v}</button>`).join('')}</div>
@@ -282,7 +286,7 @@
     const bal = YT.Craft.balance();
     const full = YT.Store.get().deck.length >= G().deckMax;
     box.innerHTML = `<section class="panel shop">
-        <h2 class="shop-title">🎫 鉄道クラフト工房の切符売り場</h2>
+        <h2 class="shop-title"><span class="eyebrow"><i>No. 03</i>Ticket Office</span>${I('ticketPunch')} 鉄道クラフト工房の切符売り場</h2>
         <p class="shop-lead">クラフト資金で特別切符を買えます（手札は最大${G().deckMax}枚。いま ${YT.Store.get().deck.length}枚）。</p>
         <div class="shop-grid">${G().tickets
           .map(
@@ -300,7 +304,7 @@
     if (!YT.Store.addTicket(def.id, G().deckMax)) return api.toast('手札がいっぱいです');
     YT.Store.spend(def.price);
     YT.Sound.craft();
-    api.toast(`${def.icon} 『${def.name}』を買いました（−${api.yen(def.price)}）`, 'toast-green');
+    api.toast(`『${def.name}』を買いました（−${api.yen(def.price)}）`, 'toast-green', def.icon);
     api.renderAll();
   }
 
@@ -316,9 +320,9 @@
       YT.Sound.stamp();
       setTimeout(() => YT.Sound.fanfare(), 300);
       await overlay(
-        `<p class="gm-kicker">👑 ライン制覇</p>
+        `<p class="gm-kicker">${I('crown')} ライン制覇</p>
          <div class="gm-stamp" aria-hidden="true"><svg viewBox="0 0 220 220"><circle cx="110" cy="110" r="100" class="ls-ring"/><circle cx="110" cy="110" r="88" class="ls-ring ls-thin"/>
-           <text x="110" y="92" text-anchor="middle" class="ls-crown">👑</text><text x="110" y="128" text-anchor="middle" class="ls-big">完全制覇</text>
+           <path class="ls-crown" transform="translate(86 58) scale(2)" d="M4 17.5L3 7.5l5 4 4-6.5 4 6.5 5-4-1 10z M4 20h16"/><text x="110" y="128" text-anchor="middle" class="ls-big">完全制覇</text>
            <text x="110" y="156" text-anchor="middle" class="ls-small">ライン配当 ×${G().lineBonus}</text></svg></div>
          <h2 class="gm-title">${esc(l.name)}<br>完全制覇！！</h2>
          <p class="gm-msg">${l.stations.map((id) => `${esc(D.byId[id].name)}駅`).join('・')}のすべてで共同株主以上に。<br>このラインの配当が<b>${G().lineBonus}倍</b>になり、地図の路線が金色に輝きます。</p>
@@ -337,7 +341,7 @@
       const me = YT.Ownership.you(s.id);
       if (!me || !me.dividend) return;
       const amount = Math.round((me.dividend * G().tourismRate) / 10) * 10;
-      if (amount > 0) rows.push({ label: `${s.name}駅`, sub: `${me.rank === 1 ? '👑 トップオーナー' : `📈 ${me.rank}位・共同株主`}${me.lineBonus ? `・${me.lineBonus}制覇×${G().lineBonus}` : ''}`, amount });
+      if (amount > 0) rows.push({ label: `${s.name}駅`, sub: `${me.rank === 1 ? 'トップオーナー' : `${me.rank}位・共同株主`}${me.lineBonus ? `・${me.lineBonus}制覇×${G().lineBonus}` : ''}`, amount });
     });
     return rows;
   }
@@ -351,13 +355,13 @@
     const total = tourism + likeMoney;
     YT.Sound.drumroll();
     await overlay(
-      `<p class="gm-kicker">📊 旅の1週間（ダイス${G().settleEvery}回）おつかれさまでした</p>
+      `<p class="gm-kicker">${I('chart')} 旅の1週間（ダイス${G().settleEvery}回）おつかれさまでした</p>
        <h2 class="gm-title">週末の大精算まつり<small>第${week}週</small></h2>
        <ol class="gm-ledger">
          <li class="gl-sec">① オーナー・株主の駅の観光収益</li>
          ${rows.length ? rows.map((r, i) => `<li class="gl-row" data-row="${i}"><span>${esc(r.label)}<small>${esc(r.sub)}</small></span><b data-v="${r.amount}">+0万円</b></li>`).join('') : '<li class="gl-row gl-empty"><span>まだありません（オーナーや共同株主になると、毎週ここに入ります）</span><b>—</b></li>'}
          <li class="gl-sec">② 旅の便りに届いたいいねの収益</li>
-         <li class="gl-row" data-row="likes"><span>❤️ ${newLikes}いいね<small>1いいね ${api.yen(D.meta.craft.likeReceivedBonus)}</small></span><b data-v="${likeMoney}">+0万円</b></li>
+         <li class="gl-row" data-row="likes"><span><em>${I('heart')} ${newLikes}いいね</em><small>1いいね ${api.yen(D.meta.craft.likeReceivedBonus)}</small></span><b data-v="${likeMoney}">+0万円</b></li>
        </ol>
        <p class="gm-total">合計 <b data-total>+0万円</b></p>
        <p class="gm-msg" data-settle-msg>&nbsp;</p>
@@ -380,7 +384,7 @@
           YT.Sound.dokan();
           goldRain(box.parentNode, 40);
           $('[data-total]', box).classList.add('is-paid');
-          $('[data-settle-msg]', box).innerHTML = `💰 ドカン！ <b>${api.yenBig(total)}</b>をクラフト資金へ振り込みました`;
+          $('[data-settle-msg]', box).innerHTML = `${I('coins')} ドカン！ <b>${api.yenBig(total)}</b>をクラフト資金へ振り込みました`;
           api.renderAll();
           $('[data-settle-done]', box).hidden = false;
           $('[data-settle-done]', box).focus({ preventScroll: true });
@@ -404,7 +408,7 @@
         const list = mine();
         const s = list[rnd(list.length)];
         const amount = Math.max(1000, Math.round((s.assetValue * 0.6) / 500) * 500);
-        return { title: '🎉 旅のごほうびサプライズ！', msg: `あなたが株主の『${s.name}駅』の${s.products[0].name}が、海外で話題沸騰！ 臨時ボーナスが届きました。`, amount };
+        return { icon: 'sparkle', title: '旅のごほうびサプライズ！', msg: `あなたが株主の『${s.name}駅』の${s.products[0].name}が、海外で話題沸騰！ 臨時ボーナスが届きました。`, amount };
       },
     },
     {
@@ -413,24 +417,25 @@
       run: () => {
         const ids = Object.keys(YT.Store.getPostcards());
         const s = D.byId[ids[rnd(ids.length)]];
-        return { title: '📸 旅のごほうびサプライズ！', msg: `あなたが投函した『${s.name}駅』のポストカードが、九州の観光ガイドの表紙に選ばれました！ 特別賞与です。`, amount: 2500 };
+        return { icon: 'camera', title: '旅のごほうびサプライズ！', msg: `あなたが投函した『${s.name}駅』のポストカードが、九州の観光ガイドの表紙に選ばれました！ 特別賞与です。`, amount: 2500 };
       },
     },
     {
       id: 'market', kind: 'good', weight: 2,
       when: () => true,
-      run: (here) => ({ title: '🧺 旅のごほうびサプライズ！', msg: `${here.name}駅の近くで、地元の方から「旅のおみやげに」と${here.products[1] ? here.products[1].name : here.products[0].name}をどっさり。旅人仲間に配ったら、お礼がたくさん届きました。`, amount: 1000 + rnd(3) * 500 }),
+      run: (here) => ({ icon: 'basket', title: '旅のごほうびサプライズ！', msg: `${here.name}駅の近くで、地元の方から「旅のおみやげに」と${here.products[1] ? here.products[1].name : here.products[0].name}をどっさり。旅人仲間に配ったら、お礼がたくさん届きました。`, amount: 1000 + rnd(3) * 500 }),
     },
     {
       id: 'gift', kind: 'good', weight: 2,
       when: () => YT.Store.get().deck.length < G().deckMax,
-      run: () => ({ title: '🚃 旅のごほうびサプライズ！', msg: '駅のホームで出会った車掌さんから「よかったら旅のお供に」と、特別切符をいただきました。', ticket: 'express2' }),
+      run: () => ({ icon: 'ticket', title: '旅のごほうびサプライズ！', msg: '駅のホームで出会った車掌さんから「よかったら旅のお供に」と、特別切符をいただきました。', ticket: 'express2' }),
     },
     {
       id: 'feast', kind: 'oops', weight: 2,
       when: () => true,
       run: (here) => ({
-        title: '🍜 寄り道ハプニング！',
+        icon: 'bowl',
+        title: '寄り道ハプニング！',
         msg: `${here.name}駅の名物「${here.products[0].name}」の誘惑に負けて、ついハシゴ……お代 −${api.yen(300)}。と思いきや、店の大将と意気投合して、特別切符をもらいました！`,
         amount: -300,
         ticket: YT.Store.get().deck.length < G().deckMax ? 'express2' : null,
@@ -439,7 +444,7 @@
     {
       id: 'updraft', kind: 'oops', weight: 1,
       when: () => D.stations.some((s) => s.regionTheme === 'onsen'),
-      run: () => ({ title: '🌋 寄り道ハプニング！', msg: '桜島の気まぐれな上昇気流に、列車ごとふわり。好きな温泉駅へひとっ飛びできます！', warp: true }),
+      run: () => ({ icon: 'volcano', title: '寄り道ハプニング！', msg: '桜島の気まぐれな上昇気流に、列車ごとふわり。好きな温泉駅へひとっ飛びできます！', warp: true }),
     },
   ];
   async function maybeSurprise(id) {
@@ -457,8 +462,8 @@
     if (out.warp) {
       const onsen = D.stations.filter((s) => s.regionTheme === 'onsen' && s.id !== here.id);
       const v = await overlay(
-        `<p class="gm-kicker">${esc(out.title)}</p><p class="gm-msg">${esc(out.msg)}</p>
-         <div class="gm-warps">${onsen.map((s) => `<button class="gm-warp" data-gm-close="${esc(s.id)}">♨ ${esc(s.name)}駅</button>`).join('')}</div>
+        `<p class="gm-kicker">${I(out.icon)} ${esc(out.title)}</p><p class="gm-msg">${esc(out.msg)}</p>
+         <div class="gm-warps">${onsen.map((s) => `<button class="gm-warp" data-gm-close="${esc(s.id)}">${I('onsen')} ${esc(s.name)}駅</button>`).join('')}</div>
          <button class="link-btn" data-gm-close="stay">いまの駅にとどまる</button>`,
         { cls: 'gm-small' }
       );
@@ -468,7 +473,7 @@
     if (out.amount) YT.Store.addLedger(ev.kind === 'good' ? 'surprise' : 'happening', out.msg.slice(0, 40), out.amount);
     const t = out.ticket ? YT.Store.addTicket(out.ticket, G().deckMax) : null;
     await overlay(
-      `<p class="gm-kicker">${esc(out.title)}</p>
+      `<p class="gm-kicker">${I(out.icon)} ${esc(out.title)}</p>
        <p class="gm-msg">${esc(out.msg)}</p>
        ${out.amount ? `<p class="gm-amount ${out.amount < 0 ? 'is-minus' : ''}" data-amount>${out.amount < 0 ? `−${api.yen(-out.amount)}` : '+0万円'}</p>` : ''}
        ${t ? `<div class="gm-ticket">${ticketCard(t.kind)}<p>『${esc(ticketDef(t.kind).name)}』を手に入れた！</p></div>` : ''}
@@ -492,11 +497,12 @@
   async function throneSteal(id, prev) {
     const s = D.byId[id];
     const av = prev && prev.avatarConfig ? YT.Craft.avatarSvg(prev.avatarConfig, { crop: true, id: 'ts-prev' }) : '';
-    const crown = '<svg viewBox="0 0 120 80" class="ts-crown-svg"><path d="M8,70 L8,22 L34,46 L60,6 L86,46 L112,22 L112,70 Z" fill="#d49a35" stroke="#7a5a1e" stroke-width="4" stroke-linejoin="round"/><circle cx="60" cy="40" r="7" fill="#c2352b"/></svg>';
+    // 真鍮の王冠の線画（塗りは淡い金箔、細い真鍮の線、茜の石ひとつ）
+    const crown = '<svg viewBox="0 0 120 80" class="ts-crown-svg"><path d="M10,70 L8,22 L34,44 L60,8 L86,44 L112,22 L110,70 Z" fill="#faf0ca" stroke="#b8860b" stroke-width="1.6" stroke-linejoin="round"/><path d="M16,62 L104,62" stroke="#b8860b" stroke-width="1"/><path d="M14,70 L106,70" stroke="#b8860b" stroke-width="1.6"/><circle cx="60" cy="44" r="5" fill="#a8382b" stroke="#b8860b" stroke-width="1"/><circle cx="34" cy="52" r="2.4" fill="none" stroke="#b8860b"/><circle cx="86" cy="52" r="2.4" fill="none" stroke="#b8860b"/></svg>';
     await overlay(
-      `<p class="gm-kicker">⚡ 王座奪還</p>
+      `<p class="gm-kicker">${I('bolt')} 王座奪還</p>
        <div class="ts-stage" aria-hidden="true">
-         <div class="ts-prev"><span class="ts-av">${av}</span><span class="ts-name">${esc(prev ? `${prev.icon} ${prev.userName}` : '前のオーナー')}</span></div>
+         <div class="ts-prev"><span class="ts-av">${av}</span><span class="ts-name">${esc(prev ? prev.userName : '前のオーナー')}</span></div>
          <div class="ts-crown"><span class="ts-half ts-l">${crown}</span><span class="ts-half ts-r">${crown}</span></div>
          <svg viewBox="0 0 60 140" class="ts-bolt"><path d="M38,0 L10,74 L30,74 L18,140 L54,52 L32,52 L48,0 Z"/></svg>
        </div>

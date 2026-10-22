@@ -23,7 +23,7 @@
     const rows = (s.rivals || []).map((r) => ({
       userId: `rival:${r.id}`,
       userName: (R[r.id] || {}).name || r.id,
-      icon: (R[r.id] || {}).icon || '🧳',
+      icon: (R[r.id] || {}).icon || 'suitcase',
       avatarConfig: (R[r.id] || {}).avatar || null,
       isYou: false,
       totalAmount: r.amount,
@@ -35,7 +35,7 @@
       rows.push({
         userId: 'you',
         userName: youName(),
-        icon: '🎒',
+        icon: 'bag',
         avatarConfig: { ...Store.get().equipped },
         isYou: true,
         totalAmount: mine.reduce((n, p) => n + p.scored, 0),

@@ -279,18 +279,34 @@
   }
 
   // ---------- 査収スタンプ（Q-TRIP 旅の領収書・到着日と駅名・検証済みのしるし）----------
+  // 朱肉のかすれ：輪や字をわずかに揺らし（feDisplacementMap）、細かな粒で抜く。ハンコごとに seed を変えて同じかすれにしない
+  let inkSeq = 0;
+  function inkFilter(id, seed) {
+    return `<filter id="${id}" x="-8%" y="-8%" width="116%" height="116%">
+        <feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="2" seed="${seed}" result="warp"/>
+        <feDisplacementMap in="SourceGraphic" in2="warp" scale="2.4" xChannelSelector="R" yChannelSelector="G" result="inked"/>
+        <feTurbulence type="fractalNoise" baseFrequency="1.9" numOctaves="1" seed="${seed + 7}" result="grain"/>
+        <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.2 1.55" result="holes"/>
+        <feComposite in="inked" in2="holes" operator="in"/>
+      </filter>`;
+  }
+  // 査収済のハンコ：二重の枠・日付の刻印・少し傾けて押した朱肉のかすれ
   function receiptStampSvg(date, stationName = '') {
+    const id = `rs-ink-${++inkSeq}`;
     return `<svg viewBox="0 0 170 124" class="receipt-stamp-svg" aria-hidden="true">
-      <rect x="4" y="4" width="162" height="116" rx="12" class="rs-ring"/>
-      <rect x="10" y="10" width="150" height="104" rx="8" class="rs-ring rs-thin"/>
-      <text x="85" y="38" text-anchor="middle" class="rs-big">【査収済】</text>
-      <text x="85" y="58" text-anchor="middle" class="rs-mid">Q-TRIP 旅の領収書</text>
-      <line x1="24" y1="67" x2="146" y2="67" class="rs-line"/>
-      <text x="85" y="86" text-anchor="middle" class="rs-date">${stationName ? `${stationName}駅 ` : ''}${date}</text>
-      <g transform="translate(85 102)"><circle r="9" class="rs-ring rs-thin"/><path d="M-4.5,0 L-1,3.6 L5,-3.6" class="rs-check"/></g>
-      <text x="100" y="106" class="rs-verified">検証済</text>
+      <defs>${inkFilter(id, 3 + (inkSeq % 9))}</defs>
+      <g filter="url(#${id})" transform="rotate(-6 85 62)">
+        <rect x="5" y="5" width="160" height="114" rx="5" class="rs-ring"/>
+        <rect x="11" y="11" width="148" height="102" rx="3" class="rs-ring rs-thin"/>
+        <text x="85" y="40" text-anchor="middle" class="rs-big">査 収 済</text>
+        <text x="85" y="57" text-anchor="middle" class="rs-mid">Q-TRIP 旅の領収書</text>
+        <line x1="24" y1="66" x2="146" y2="66" class="rs-line"/>
+        <text x="85" y="86" text-anchor="middle" class="rs-date">${stationName ? `${stationName}駅　` : ''}${date}</text>
+        <g transform="translate(72 101)"><circle r="7.5" class="rs-ring rs-thin"/><path d="M-3.6,0 L-.8,2.8 L4,-2.8" class="rs-check"/></g>
+        <text x="84" y="105" class="rs-verified">検証済</text>
+      </g>
     </svg>`;
   }
 
-  YT.Receipts = { put, get, del, clear, thumbUrl, fingerprint, loadImage, thumbnail, recognize, parse, normalizeText, findDates, matchItem, stationWords, receiptStampSvg, TESS };
+  YT.Receipts = { put, get, del, clear, thumbUrl, fingerprint, loadImage, thumbnail, recognize, parse, normalizeText, findDates, matchItem, stationWords, receiptStampSvg, inkFilter, TESS };
 })();

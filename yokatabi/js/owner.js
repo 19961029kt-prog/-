@@ -21,7 +21,8 @@
   const elapsed = () => (pending() ? Date.now() - pending().clickedAt : 0);
   const ready = () => elapsed() >= minAway();
   const viaLabel = (p) => (p.via === 'stay' ? `${p.provider}で予約手配` : `${p.provider}で手配`);
-  const viaIcon = (p) => (p.via === 'stay' ? '♨' : '🎁');
+  const I = (name, opts) => YT.Icon.svg(name, opts); // 線画のアイコン（絵文字は使わない）
+  const viaIcon = (p) => I(p.via === 'stay' ? 'onsen' : 'gift');
   const yenJP = (v) => `¥${Number(v).toLocaleString('ja-JP')}`;
   const isSheetOpen = () => !document.getElementById('owner-sheet').hidden;
   // 立候補できるのは、この駅の手帖のボタンからショップ・宿をひらいたことがあるとき
@@ -40,7 +41,7 @@
       if (!ready()) {
         early = true;
         Sound.gentle();
-        api.toast('🧭 まだ寄り道の途中（ショップ視察中）のようです。注文や予約が済んだら、スクショでオーナー権に立候補しましょう', 'toast-green');
+        api.toast('まだ寄り道の途中（ショップ視察中）のようです。注文や予約が済んだら、スクショでオーナー権に立候補しましょう', 'toast-green');
         api.refreshModal(p.stationId);
         return;
       }
@@ -59,28 +60,32 @@
 
   // 風景印：駅名・日付・山と波の絵を二重の輪で囲んだ、丸い記念の印（朱の印肉＋金の箔押しの輪）。オーナー証の切手の消印に使う
   function sealSvg(s, date) {
+    const fid = `seal-ink-${s.id}-${Math.random().toString(36).slice(2, 7)}`;
+    // 消印は少し傾けて、朱肉のかすれ（receipts.js と同じフィルタ）をかける
     return `<svg viewBox="-60 -60 120 120" class="seal-svg" aria-hidden="true">
-      <defs><path id="seal-arc-${s.id}" d="M-41,0 A41,41 0 0 1 41,0"/></defs>
-      <circle r="56" class="seal-foil"/>
-      <circle r="51" class="seal-ink-ring"/><circle r="45" class="seal-ink-ring seal-ink-thin"/>
-      <text class="seal-arc"><textPath href="#seal-arc-${s.id}" startOffset="50%" text-anchor="middle">九州よりみち トップオーナー</textPath></text>
-      <path d="M-30,14 L-16,-2 L-8,6 L4,-10 L20,10 L30,14" class="seal-art"/>
-      <path d="M-32,22 Q-24,18 -16,22 T0,22 T16,22 T32,22" class="seal-art"/>
-      <text y="2" text-anchor="middle" class="seal-name">${api.esc(s.name)}</text>
-      <text y="38" text-anchor="middle" class="seal-date">${api.esc(date)}</text>
+      <defs><path id="seal-arc-${s.id}" d="M-41,0 A41,41 0 0 1 41,0"/>${Receipts.inkFilter(fid, 5)}</defs>
+      <g filter="url(#${fid})" transform="rotate(-6)">
+        <circle r="56" class="seal-foil"/>
+        <circle r="51" class="seal-ink-ring"/><circle r="45" class="seal-ink-ring seal-ink-thin"/>
+        <text class="seal-arc"><textPath href="#seal-arc-${s.id}" startOffset="50%" text-anchor="middle">九州よりみち トップオーナー</textPath></text>
+        <path d="M-30,14 L-16,-2 L-8,6 L4,-10 L20,10 L30,14" class="seal-art"/>
+        <path d="M-32,22 Q-24,18 -16,22 T0,22 T16,22 T32,22" class="seal-art"/>
+        <text y="2" text-anchor="middle" class="seal-name">${api.esc(s.name)}</text>
+        <text y="38" text-anchor="middle" class="seal-date">${api.esc(date)}</text>
+      </g>
     </svg>`;
   }
 
   // ---------- 厳格3点チェック ----------
   function checkRow(key, num, title, detail) {
-    return `<li class="check is-wait" data-check="${key}"><span class="check-icon" aria-hidden="true">⏳</span>
+    return `<li class="check is-wait" data-check="${key}"><span class="check-icon" aria-hidden="true">${I('hourglass')}</span>
         <span class="check-body"><b>【チェック${num}：${title}】</b><span class="check-detail">${detail || '審査を待っています'}</span></span></li>`;
   }
   function setCheck(key, state, detail) {
     const li = $(`[data-check="${key}"]`);
     if (!li) return;
     li.className = `check is-${state}`;
-    li.querySelector('.check-icon').textContent = { ok: '✅', ng: '❌', warn: '⚠️', wait: '⏳' }[state];
+    li.querySelector('.check-icon').innerHTML = I({ ok: 'check', ng: 'close', warn: 'warning', wait: 'hourglass' }[state]);
     li.querySelector('.check-detail').innerHTML = detail;
   }
   // スクショの文字から3点を確かめる。ショップは「この駅の手帖から開いたショップ」、日付は「この駅に停車した日」と比べる
@@ -137,17 +142,17 @@
           <div class="deed-station">
             <span class="chip chip-pref">${esc(s.prefecture)}</span>
             <p class="deed-name">${esc(s.name)}<small>駅</small></p>
-            <p class="deed-value">いまのトップオーナー <b>${esc(top.icon)} ${esc(top.userName)}</b>（累計 ${yenJP(top.totalAmount)}）${me ? `／あなた ${me.rank}位（${yenJP(me.totalAmount)}）` : ''}</p>
-            ${upset ? `<p class="deed-bonus">⚔ 下克上ボーナス：いまの1位ではないので、申告額を <b>×${D.meta.owner.upsetBonus}</b> で数えます</p>` : ''}
-            <p class="deed-arrival">🚉 この駅に停車した日：<b>${arrival ? esc(arrival.replace(/-/g, '/')) : '記録なし'}</b>${p ? `　手配先：<b>${esc(p.provider)}</b>` : ''}</p>
+            <p class="deed-value">いまのトップオーナー <b>${esc(top.userName)}</b>（累計 ${yenJP(top.totalAmount)}）${me ? `／あなた ${me.rank}位（${yenJP(me.totalAmount)}）` : ''}</p>
+            ${upset ? `<p class="deed-bonus">${I('swords')} 下克上ボーナス：いまの1位ではないので、申告額を <b>×${D.meta.owner.upsetBonus}</b> で数えます</p>` : ''}
+            <p class="deed-arrival">${I('calendar')} この駅に停車した日：<b>${arrival ? esc(arrival.replace(/-/g, '/')) : '記録なし'}</b>${p ? `　手配先：<b>${esc(p.provider)}</b>` : ''}</p>
           </div>
           <label class="drop" data-drop>
             <input type="file" accept="image/*" data-file hidden>
             <span class="drop-empty">
-              <span class="drop-icon" aria-hidden="true">🧾</span>
+              <span class="drop-icon" aria-hidden="true">${I('receipt')}</span>
               <b>注文完了・予約完了の画面のスクショを、ここに置いてください</b>
               <small>ドラッグ＆ドロップ、またはタップして画像を選ぶ</small>
-              <span class="drop-ai">✨ AIスマート読取：金額とショップを自動で読み取ります（端末の中だけで処理）</span>
+              <span class="drop-ai">${I('search')} AIスマート読取：金額とショップを自動で読み取ります（端末の中だけで処理）</span>
             </span>
             <span class="drop-preview" hidden>
               <img alt="置いたスクショ" data-preview>
@@ -190,7 +195,7 @@
     $('[data-confirm]').disabled = !(sheet.file && sheet.done && v && pass);
     if (c) {
       setCheck('amount', v ? 'ok' : 'warn', v ? (c.amount.ok && v === sheet.parsed.amount ? c.amount.detail : `購入金額 <b>${yenJP(v)}</b>（手で直した金額）`) : c.amount.detail);
-      $('[data-verdict]').innerHTML = pass && v ? '🟢 <b>審査基準クリア</b>：「実績を確定して刻印する」で査収済のハンコを押します' : pass ? '金額を入れると確定できます' : '🔴 審査基準を満たしていません。条件に合うスクショを置き直してください（画像をタップで選び直せます）';
+      $('[data-verdict]').innerHTML = pass && v ? `${I('seal')} <b>審査基準クリア</b>：「実績を確定して刻印する」で査収済のハンコを押します` : pass ? '金額を入れると確定できます' : `${I('warning')} 審査基準を満たしていません。条件に合うスクショを置き直してください（画像をタップで選び直せます）`;
       $('[data-verdict]').className = `apply-verdict ${pass && v ? 'is-ok' : 'is-ng'}`;
     }
     if (!v) {
@@ -199,7 +204,7 @@
     }
     const pv = Ownership.preview(sheet.id, v);
     line.innerHTML = `ランキングに入る額 <b>${yenJP(pv.scored)}</b>${pv.upset ? `（${yenJP(v)} × 下克上 ${D.meta.owner.upsetBonus}）` : ''} → 累計 ${yenJP(pv.total)}、<b>${pv.rankAfter}位</b>${
-      pv.rankAfter === 1 ? '　👑 トップオーナーになります！' : `（1位まであと ${yenJP(pv.toTop)}＝お買い物 ${yenJP(pv.needToTop)} ぶん）`
+      pv.rankAfter === 1 ? `　${I('crown')} トップオーナーになります！` : `（1位まであと ${yenJP(pv.toTop)}＝お買い物 ${yenJP(pv.needToTop)} ぶん）`
     }${pv.rankAfter <= D.meta.owner.shareholders && pv.rankAfter > 1 ? '　共同株主として配当を受け取れます' : ''}`;
   }
 
@@ -216,7 +221,7 @@
     const hash = await Receipts.fingerprint(file);
     if (Store.hasReceiptHash(hash)) {
       Sound.gentle();
-      status.textContent = '⚠ このスクショは、もう記録されています。別のお買い物・予約のスクショを置いてください';
+      status.textContent = 'このスクショは、もう記録されています。別のお買い物・予約のスクショを置いてください';
       return;
     }
     let loaded;
@@ -235,7 +240,7 @@
     $('[data-checks]').hidden = false;
     ['shop', 'date', 'amount'].forEach((k) => setCheck(k, 'wait', '審査中…'));
     $('[data-confirm]').disabled = true;
-    status.innerHTML = '<b class="scan-label">AIスマート読取</b>🔍 旅のレシート・スクショを厳格審査中…';
+    status.innerHTML = '<b class="scan-label">AIスマート読取</b>' + I('search') + ' 旅のレシート・スクショを厳格審査中…';
     Sound.click();
     // 心地よく待てるよう、読み取りが速く終わっても約1.5秒は審査の演出を見せる
     const minWait = new Promise((r) => setTimeout(r, (D.meta.owner.scanSeconds || 1.5) * 1000));
@@ -246,8 +251,8 @@
       text = await Receipts.recognize(file, (m) => {
         if (!isSheetOpen() || !sheet) return;
         const pct = Math.round((m.progress || 0) * 100);
-        if (/loading|initializ/.test(m.status)) status.innerHTML = `<b class="scan-label">AIスマート読取</b>🔍 厳格審査の準備中…（初回だけ、文字認識を読み込みます ${pct}%）`;
-        else if (/recogniz/.test(m.status)) status.innerHTML = `<b class="scan-label">AIスマート読取</b>🔍 旅のレシート・スクショを厳格審査中… ${pct}%`;
+        if (/loading|initializ/.test(m.status)) status.innerHTML = `<b class="scan-label">AIスマート読取</b>${I('search')} 厳格審査の準備中…（初回だけ、文字認識を読み込みます ${pct}%）`;
+        else if (/recogniz/.test(m.status)) status.innerHTML = `<b class="scan-label">AIスマート読取</b>${I('search')} 旅のレシート・スクショを厳格審査中… ${pct}%`;
       });
       parsed = Receipts.parse(text, D.meta.owner.shops, D.meta.owner.maxAmount);
     } catch (e) {
@@ -277,7 +282,7 @@
     status.innerHTML = failed
       ? '自動で読み取れませんでした（通信や画像の状態によります）。もう一度お試しください'
       : pass
-        ? '✨ 審査が終わりました。金額を確かめてください'
+        ? `${I('check')} 審査が終わりました。金額を確かめてください`
         : '審査が終わりました。満たしていない項目があります';
     if (pass) Sound.diceSettle();
     else Sound.gentle();
@@ -363,7 +368,7 @@
       if (!p || p.stationId !== id) return '';
       const esc = api.esc;
       return `<section class="pending-panel" aria-live="polite">
-          <div class="pending-compass" aria-hidden="true"><span>🧭</span></div>
+          <div class="pending-compass" aria-hidden="true"><span>${I('compass')}</span></div>
           <div class="pending-body">
             <p class="pending-title">現在ショップ・宿を視察手配中です…</p>
             <p class="pending-sub"><span class="via-badge">${viaIcon(p)} ${esc(viaLabel(p))}</span>「${esc(p.item)}」 <span class="pending-time">視察 <b data-owner-elapsed>${elapsedText()}</b></span></p>
@@ -373,7 +378,7 @@
                 : '注文や予約が済んだら、完了画面のスクショを撮って、この画面に戻ってきてください。オーナー権の立候補届がひらきます。'
             }</p>
             <div class="pending-actions">
-              <button class="primary-btn" data-candidacy="${esc(id)}">🧾 オーナー権に立候補する（レシート証明を提出）</button>
+              <button class="primary-btn" data-candidacy="${esc(id)}">${I('receipt')} オーナー権に立候補する（レシート証明を提出）</button>
               <button class="link-btn" data-owner-cancel>手配をとりやめる</button>
             </div>
           </div>
