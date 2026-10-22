@@ -281,10 +281,6 @@ svg { display: block; }
 }
 .share-btn:hover { background: var(--walnut); }
 .x-logo { font-family: var(--font-serif); font-weight: 700; }
-.badge-scenic text { fill: var(--terracotta-deep); font-size: 11px; }
-.seal-disc { stroke: #fffdf9; stroke-width: 1.6; }
-.seal-ring { fill: none; stroke: rgba(255, 248, 225, .9); stroke-width: .9; stroke-dasharray: 1.6 1.6; }
-.seal-crown { fill: #fff3cf; stroke: #8a5a14; stroke-width: 1.1; stroke-linejoin: round; pointer-events: none; }
 
 /* ---------- 右側のパネル ---------- */
 .side { display: grid; gap: 18px; align-content: start; }
@@ -981,8 +977,6 @@ body.modal-open { overflow: hidden; }
 .chip-share { color: #3a4d5c; border-color: rgba(95, 138, 139, .55); }
 .chip-share .ico { color: var(--sea-ink); }
 .chip-sea .ico { color: var(--sea-ink); }
-.share-disc { fill: var(--porcelain); stroke: var(--sea-ink); stroke-width: 1; }
-.share-char { font-family: var(--font-mincho); font-weight: 800; font-size: 7.5px; fill: #3a4d5c; pointer-events: none; }
 /* ランキングは、罫で区切った台帳の行 */
 .ranking { display: grid; gap: 0; box-shadow: 0 0 0 1px var(--rule); background: var(--paper); }
 .rk { display: grid; grid-template-columns: 38px 1fr auto; grid-template-areas: "no name amt" "no share share"; gap: 0 12px; align-items: center; padding: 10px 14px; }

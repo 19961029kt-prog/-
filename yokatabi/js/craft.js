@@ -124,7 +124,7 @@
     caldera: { body: '#1E1A18', upper: '#1E1A18', roof: '#14110F', edge: '#0E0C0B', line: '#C59B27', glass: '#E2D3AE', light: true },
     // ゴールデン・パティスリー号：アンティークゴールドに漆黒の格子
     patisserie: { body: '#A8873F', upper: '#1E1A18', roof: '#1E1A18', edge: '#2C2523', line: '#E6C665', glass: '#E8D9B4', light: true },
-    // ロイヤル・セブンズ号：ロイヤルマルーンに金の紋章と唐草
+    // ロイヤル・マルーン号：ロイヤルマルーンに金の紋章と唐草
     royal: { body: '#5E1F2B', upper: '#5E1F2B', roof: '#3A121A', edge: '#2A0C13', line: '#C59B27', glass: '#E6D6B0', light: true },
   };
   const pal = (id) => LIVERY[id] || LIVERY.hidamari;
