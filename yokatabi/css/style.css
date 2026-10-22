@@ -707,7 +707,8 @@ body.modal-open { overflow: hidden; }
 
 /* ---------- 旅の巻頭言 ---------- */
 /* 縦組みの本文：明朝・句点ごとに改段。幅が足りなければ横にスクロール（右から読む） */
-.preface-tate { writing-mode: vertical-rl; text-orientation: mixed; height: min(470px, 58vh); max-width: 100%; overflow-x: auto; overflow-y: hidden; margin-inline: auto; font-family: var(--font-mincho); color: var(--ink); }
+/* 幅と高さを両方決めておく（iPhone の Safari は、縦書きの箱の大きさをグリッドの中でうまく数えられず、下にはみ出すため） */
+.preface-tate { writing-mode: vertical-rl; text-orientation: mixed; flex: none; box-sizing: border-box; contain: size; width: 100%; height: min(470px, 58vh); height: min(470px, 58svh); overflow-x: auto; overflow-y: hidden; font-family: var(--font-mincho); color: var(--ink); }
 .preface-title { font-weight: 800; font-size: 21px; line-height: 1.9; letter-spacing: .16em; margin-left: 18px; }
 .preface-body { font-size: 15px; line-height: 2.05; letter-spacing: .12em; color: var(--ink-2); }
 .preface-body span { display: block; }
@@ -733,8 +734,9 @@ body.modal-open { overflow: hidden; }
 .cover-brand { font-family: var(--font-serif); font-weight: 600; font-size: 26px; letter-spacing: .3em; text-indent: .3em; margin-top: 10px; }
 .cover-name { font-family: var(--font-mincho); font-weight: 700; font-size: 17px; letter-spacing: .24em; color: var(--gold-3); }
 .cover-sub { font-family: var(--font-serif); font-style: italic; font-size: 11px; letter-spacing: .24em; opacity: .8; }
-.cover-page { display: grid; justify-items: center; gap: 18px; padding: 28px 28px 26px; background: var(--fiber), var(--ivory); box-shadow: inset 0 0 0 1px var(--rule), inset 8px 0 14px -10px rgba(44, 37, 35, .35); }
-.cover-eyebrow { justify-self: start; }
+.cover-page { display: flex; flex-direction: column; align-items: center; gap: 18px; min-width: 0; padding: 28px 28px 26px; background: var(--fiber), var(--ivory); box-shadow: inset 0 0 0 1px var(--rule), inset 8px 0 14px -10px rgba(44, 37, 35, .35); }
+.cover-eyebrow { align-self: flex-start; }
+.cover-go { flex: none; }
 .cover-go { min-width: 15em; justify-content: center; }
 /* ② マップ右上の真鍮の羅針盤ボタン（直径32px） */
 .compass-btn { position: absolute; top: 12px; right: 12px; z-index: 4; width: 32px; height: 32px; padding: 0; border-radius: 50%; background: rgba(250, 246, 240, .92); box-shadow: 0 0 0 1px rgba(110, 93, 79, .5), 0 4px 10px -6px rgba(44, 37, 35, .6); transition: transform .5s var(--ease), background .4s var(--ease); }
@@ -761,8 +763,8 @@ body.modal-open { overflow: hidden; }
 .veil-nums small { font-size: 12px; color: var(--ink-3); margin-left: 2px; }
 .veil-note { font-size: 11px; color: var(--ink-3); margin-top: 10px; }
 /* ③ 手帖の栞のページ：罫の入った生成りの紙に、縦組み */
-.preface-leaf { display: grid; justify-items: center; gap: 14px; padding: 26px 20px 24px; background: var(--fiber), var(--ivory); box-shadow: var(--frame); }
-.preface-leaf .eyebrow { justify-self: start; }
+.preface-leaf { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 26px 20px 24px; background: var(--fiber), var(--ivory); box-shadow: var(--frame); }
+.preface-leaf .eyebrow { align-self: flex-start; }
 @media (max-width: 639px) {
   .cover { align-items: start; padding: 12px; }
   .cover-book { grid-template-columns: 1fr; }
@@ -772,7 +774,7 @@ body.modal-open { overflow: hidden; }
   .cover-brand { font-size: 19px; margin-top: 0; text-indent: 0; }
   .cover-name { font-size: 14px; }
   .cover-page { padding: 20px 14px 18px; gap: 14px; }
-  .preface-tate { height: min(440px, 56vh); }
+  .preface-tate { height: min(440px, 56vh); height: min(440px, 56svh); }
   .preface-title { font-size: 18px; margin-left: 12px; }
   .preface-body { font-size: 14px; line-height: 1.9; letter-spacing: .08em; }
   .compass-btn { top: 8px; right: 8px; }
