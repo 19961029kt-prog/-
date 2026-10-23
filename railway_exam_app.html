@@ -118,6 +118,7 @@ body{font-family:"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;background:#
   <div class="card" data-mode="year" onclick="selMode(this)"><div class="card-title">📅 年度別</div><div class="card-desc">試験種別を選んで全問を順番に解く</div></div>
   <div class="card" data-mode="genre" onclick="selMode(this)"><div class="card-title">🏷️ ジャンル別</div><div class="card-desc">分野・テーマごとに絞って練習する</div></div>
   <div class="card" data-mode="random" onclick="selMode(this)"><div class="card-title">🔀 ランダム</div><div class="card-desc">全試験からシャッフルして出題する</div></div>
+  <div class="card" data-mode="bookmark" onclick="selMode(this)"><div class="card-title">📌 苦手問題</div><div class="card-desc">付箋をつけた問題だけを集中練習する（<span id="bookmark-count">－</span>）</div></div>
   <div class="section-label">解答スタイル</div>
   <div class="row">
     <div class="card" data-style="practice" onclick="selStyle(this)"><div class="card-title">👁️ 練習モード</div><div class="card-desc">解答のたびに正誤を確認</div></div>
@@ -148,6 +149,7 @@ body{font-family:"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;background:#
     <span class="badge badge-blue" id="q-badge"></span>
     <span class="badge badge-purple" id="q-genre"></span>
     <span class="badge badge-gray" id="q-id"></span>
+    <button id="bookmark-btn" class="btn" style="font-size:12px;padding:.25rem .65rem;margin-left:auto" onclick="toggleBookmark(quizItems[curIdx].id)">📌 付箋する</button>
   </div>
   <div id="q-content"></div>
   <div id="q-feedback"></div>
@@ -4243,6 +4245,7 @@ YEARS.forEach(y => {
 
 /* ===== APP STATE ===== */
 let curMode="", curStyle="", quizItems=[], curIdx=0, answers=[], selAns="", answered=false, origItems=[];
+let bookmarks = new Set(); // 付箋中の問題ID一覧（ローカルキャッシュ）
 
 /* =====================================================================================
  * アカウント機能（Firebase Authentication 匿名サインイン）
@@ -4295,6 +4298,37 @@ function hashPin(pin) {
   let h = 0;
   for(let i=0; i<pin.length; i++) h = (Math.imul(h, 31) + pin.charCodeAt(i)) >>> 0;
   return 'p' + h.toString(36);
+}
+
+/* =====================================================================================
+ * 付箋（苦手問題マーク）機能
+ * users/{nickname}/bookmarks/list ドキュメントに { ids: [...] } で保存する。
+ * ===================================================================================== */
+function bookmarkDocRef() {
+  return userDocRef().collection('bookmarks').doc('list');
+}
+async function loadBookmarks() {
+  if(!currentUser) return;
+  try {
+    const doc = await bookmarkDocRef().get();
+    bookmarks = new Set(doc.exists && doc.data().ids ? doc.data().ids : []);
+  } catch(e) { bookmarks = new Set(); }
+}
+async function toggleBookmark(qid) {
+  if(bookmarks.has(qid)) bookmarks.delete(qid); else bookmarks.add(qid);
+  try { await bookmarkDocRef().set({ ids: [...bookmarks] }); } catch(e) {}
+  updateBookmarkBtn(qid);
+  // ホームの苦手問題カードを更新
+  const bc = document.getElementById('bookmark-count');
+  if(bc) bc.textContent = `${bookmarks.size}問`;
+}
+function updateBookmarkBtn(qid) {
+  const btn = document.getElementById('bookmark-btn');
+  if(!btn) return;
+  const on = bookmarks.has(qid);
+  btn.textContent = on ? '📌 付箋中' : '📌 付箋する';
+  btn.style.color = on ? '#d97706' : '';
+  btn.style.borderColor = on ? '#d97706' : '';
 }
 
 // 「ログイン／新規登録」ボタン：ニックネーム＋暗証番号を検証し、未登録なら新規登録、登録済みなら照合のうえホームへ進む
@@ -4363,7 +4397,10 @@ function signOutUser() {
 
 // ホーム画面の「ユーザー情報バー」と「中断データの再開ボタン」を最新状態に描画する（Firestoreから非同期取得）
 async function renderHome() {
+  await loadBookmarks();
   const bar = document.getElementById('home-userbar');
+  const bc = document.getElementById('bookmark-count');
+  if(bc) bc.textContent = `${bookmarks.size}問`;
   if(bar) {
     bar.innerHTML = `<div class="card" style="cursor:default;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
       <div><div class="card-title">👤 ${currentUser} さん</div><div class="card-desc">学習記録はクラウド（Firebase）に自動保存されます</div></div>
@@ -4441,6 +4478,7 @@ function buildTopicLabel() {
   if(curMode==='genre') {
     return selGenreVal ? selGenreVal : 'ジャンル別';
   }
+  if(curMode==='bookmark') return '苦手問題';
   return 'ランダム出題';
 }
 
@@ -4669,6 +4707,13 @@ async function goConfig() {
       const pause = pauseBadge(null, g);
       return `<div class="card" data-genre="${g}" onclick="selGenre(this)"><div class="card-title">${g}</div><div class="card-desc" style="display:flex;justify-content:space-between;align-items:center"><span>${countGenre(g)}問収録</span><span>${badge}${pause}</span></div></div>`;
     }).join('');
+  } else if(curMode==="bookmark") {
+    document.getElementById('cfg-title').textContent="苦手問題";
+    document.getElementById('cfg-sub').textContent="付箋をつけた問題を練習します";
+    const bCount = bookmarks.size;
+    html = bCount
+      ? `<div class="card selected" style="border:2px solid #d97706;background:#fffbeb"><div class="card-title">📌 付箋中の問題</div><div class="card-desc">全${bCount}問（付箋をつけた問題）</div></div>`
+      : `<div class="card" style="cursor:default;color:#9ca3af"><div class="card-title">📌 付箋なし</div><div class="card-desc">クイズ中の「📌 付箋する」ボタンで問題に付箋をつけてください</div></div>`;
   } else {
     document.getElementById('cfg-title').textContent="ランダム出題";
     document.getElementById('cfg-sub').textContent="全問からシャッフルして出題します";
@@ -4693,6 +4738,11 @@ function startQuiz() {
   } else if(curMode==="genre") {
     if(!selGenreVal){alert("ジャンルを選択してください");return;}
     pool=allQuestions().filter(q=>q.genre===selGenreVal);
+  } else if(curMode==="bookmark") {
+    if(!bookmarks.size){alert("付箋がついている問題がありません。クイズ中の「📌 付箋する」ボタンで付箋をつけてください");return;}
+    const byId = {}; allQuestions().forEach(q=>{ byId[q.id]=q; });
+    pool = [...bookmarks].map(id=>byId[id]).filter(Boolean);
+    for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
   } else {
     pool=allQuestions();
     for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
@@ -4717,6 +4767,9 @@ function renderQ() {
   document.getElementById('q-genre').textContent = q.genre;
   document.getElementById('q-id').textContent = q.id;
   document.getElementById('q-feedback').innerHTML = '';
+  // 付箋ボタンの状態を更新
+  const bmBtn = document.getElementById('bookmark-btn');
+  if(bmBtn) { const on=bookmarks.has(q.id); bmBtn.textContent=on?'📌 付箋中':'📌 付箋する'; bmBtn.style.color=on?'#d97706':''; bmBtn.style.borderColor=on?'#d97706':''; }
   selAns=""; answered=false;
 
   // Build question content
