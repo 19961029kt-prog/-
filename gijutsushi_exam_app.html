@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>技術士第一次試験 過去問アプリ（電気電子部門）</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;background:#f5f4f0;color:#1a1a1a;min-height:100vh;font-size:14px;line-height:1.7}
+.app{max-width:760px;margin:0 auto;padding:1.5rem 1rem 3rem}
+.header{text-align:center;margin-bottom:1.5rem;padding:1.25rem;background:#fff;border-radius:12px;border:1px solid #e0dfd8}
+.header h1{font-size:18px;font-weight:600;margin-bottom:3px}
+.header p{font-size:12px;color:#888}
+.screen{display:none}.screen.active{display:block}
+.section-label{font-size:11px;font-weight:600;color:#888;letter-spacing:.06em;text-transform:uppercase;margin:1.2rem 0 .5rem}
+.card{background:#fff;border:1px solid #e0dfd8;border-radius:10px;padding:.9rem 1.1rem;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
+.card:hover{border-color:#aaa}
+.card.selected{border:2px solid #0f766e;background:#f0fdfa}
+.card.disabled{opacity:.5;cursor:not-allowed}
+.card-title{font-size:14px;font-weight:600}
+.card-desc{font-size:12px;color:#666;margin-top:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row .card{flex:1;min-width:130px;margin-bottom:0}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 18px;border:1px solid #d0cfc8;border-radius:7px;font-size:13px;font-weight:500;color:#1a1a1a;background:#fff;cursor:pointer;transition:background .12s}
+.btn:hover{background:#f5f4f0}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-primary{background:#0f766e;color:#fff;border-color:#0f766e}
+.btn-primary:hover{background:#115e59;border-color:#115e59}
+.btn-outline{background:transparent;color:#0f766e;border-color:#0f766e}
+.btn-outline:hover{background:#f0fdfa}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:1.25rem}
+/* Progress */
+.progress-wrap{margin-bottom:1rem}
+.progress-bar{height:5px;background:#e0dfd8;border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:#0f766e;border-radius:3px;transition:width .3s}
+.progress-txt{font-size:11px;color:#888;text-align:right;margin-top:3px}
+/* Quiz */
+.q-meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.6rem;align-items:center}
+.badge{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap}
+.badge-blue{background:#ccfbf1;color:#0f766e}
+.badge-purple{background:#ede9fe;color:#6d28d9}
+.badge-gray{background:#f1f0ea;color:#666}
+.q-box{background:#fff;border:1px solid #e0dfd8;border-radius:10px;padding:1rem 1.1rem;margin-bottom:.8rem}
+.q-num{font-size:12px;font-weight:700;color:#888;margin-bottom:.4rem}
+.q-lead{margin-bottom:.6rem;font-size:14px}
+.q-note{font-size:12px;color:#555;margin-bottom:.5rem;border-left:2px solid #d0cfc8;padding-left:.5rem}
+.q-img{margin:.7rem 0}
+.q-img img{max-width:100%;border:1px solid #e0dfd8;border-radius:6px;margin-bottom:.5rem}
+.q-table{border-collapse:collapse;margin:.5rem 0;font-size:13px}
+.q-table td,.q-table th{border:1px solid #d0cfc8;padding:3px 8px}
+.gogun{background:#fafaf8;border:1px solid #e0dfd8;border-radius:6px;padding:.5rem .8rem;margin-top:.6rem;font-size:13px;line-height:1.9}
+.gogun-item{margin-bottom:.1rem}
+/* Choices */
+.choice{display:flex;align-items:flex-start;gap:8px;padding:9px 12px;border:1px solid #e0dfd8;border-radius:7px;margin-bottom:6px;cursor:pointer;font-size:13px;background:#fff;transition:all .12s;line-height:1.6}
+.choice:hover{border-color:#aaa;background:#fafaf8}
+.choice.selected{border:2px solid #0f766e;background:#f0fdfa;color:#115e59}
+.choice.correct{border:2px solid #16a34a;background:#f0fdf4;color:#15803d}
+.choice.wrong{border:2px solid #dc2626;background:#fef2f2;color:#b91c1c}
+.choice-key{font-weight:700;min-width:18px;flex-shrink:0}
+/* Feedback */
+.feedback{padding:10px 14px;border-radius:7px;margin-top:8px;font-size:13px;line-height:1.65;border-left:3px solid}
+.feedback.ok{background:#f0fdf4;color:#15803d;border-color:#16a34a}
+.feedback.ng{background:#fef2f2;color:#b91c1c;border-color:#dc2626}
+/* Result */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1.25rem}
+.stat{background:#fff;border:1px solid #e0dfd8;border-radius:9px;padding:.8rem;text-align:center}
+.stat-val{font-size:26px;font-weight:700;line-height:1}
+.stat-lbl{font-size:11px;color:#888;margin-top:4px}
+.score-bar{height:6px;background:#e0dfd8;border-radius:3px;margin-top:6px;overflow:hidden}
+.score-fill{height:100%;border-radius:3px;background:#0f766e}
+.result-list{border:1px solid #e0dfd8;border-radius:9px;overflow:hidden;max-height:400px;overflow-y:auto}
+.result-row{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid #e0dfd8;font-size:12px}
+.result-row:last-child{border-bottom:none}
+.result-row:nth-child(even){background:#fafaf8}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot.ok{background:#16a34a}.dot.ng{background:#dc2626}.dot.skip{background:#aaa}
+.result-q{flex:1;min-width:0}
+.result-q-meta{font-size:10px;color:#888;margin-bottom:1px}
+.result-q-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.result-mark{font-size:13px;font-weight:700}
+.mark-ok{color:#16a34a}.mark-ng{color:#dc2626}.mark-skip{color:#aaa}
+.notice{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:.7rem 1rem;font-size:12px;color:#92400e;margin-bottom:1rem}
+.pass-box{border-radius:9px;padding:.8rem 1rem;margin-bottom:1rem;font-size:13px;border:1px solid}
+.pass-box.ok{background:#f0fdf4;border-color:#86efac;color:#15803d}
+.pass-box.ng{background:#fef2f2;border-color:#fca5a5;color:#b91c1c}
+@media(max-width:480px){.stat-grid{grid-template-columns:repeat(2,1fr)}.row{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="header">
+  <h1>⚡ 技術士第一次試験 過去問アプリ</h1>
+  <p>2021・2022・2023・2024・2025年度試験｜基礎科目・適性科目・専門科目（電気電子部門）</p>
+</div>
+
+<!-- SIGN-IN -->
+<div id="s-profile" class="screen active">
+  <div class="card" style="cursor:default;text-align:center;padding:1.4rem 1.1rem">
+    <div class="card-title">🔐 ニックネームと暗証番号でログイン／新規登録</div>
+    <div class="card-desc" style="margin:.5rem 0 1rem;line-height:1.8">ニックネームと暗証番号（半角数字4〜8桁）を入力してください。<br>初めて使うニックネームの場合は自動的に新規登録され、テスト結果や学習履歴、クイズの中断データがそのアカウントにクラウド（Firebase）保存されます。<br>2回目以降は、同じニックネームと暗証番号を入力すれば、続きから学習できます。</div>
+    <input type="text" id="signin-nickname" maxlength="20" placeholder="ニックネームを入力（例：ぎじゅつ太郎）" style="width:100%;max-width:320px;padding:.7rem .9rem;border:1px solid #ccc;border-radius:8px;font-size:15px;margin-bottom:.6rem;box-sizing:border-box">
+    <br>
+    <input type="password" id="signin-password" inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8" placeholder="暗証番号（半角数字4〜8桁）" style="width:100%;max-width:320px;padding:.7rem .9rem;border:1px solid #ccc;border-radius:8px;font-size:15px;margin-bottom:.9rem;box-sizing:border-box;letter-spacing:.15em">
+    <br>
+    <button class="btn btn-primary" id="signin-btn" onclick="signIn()">▶ ログイン／新規登録</button>
+    <div id="signin-status" style="font-size:12px;color:#888;margin-top:.7rem"></div>
+  </div>
+</div>
+
+<!-- HOME -->
+<div id="s-home" class="screen">
+  <div id="home-userbar"></div>
+  <div id="home-resume"></div>
+  <div id="home-empty"></div>
+  <div class="section-label">出題モード</div>
+  <div class="card" data-mode="year" onclick="selMode(this)"><div class="card-title">📅 年度別</div><div class="card-desc">年度・科目を選んで全問を順番に解く</div></div>
+  <div class="card" data-mode="genre" onclick="selMode(this)"><div class="card-title">🏷️ 分野別</div><div class="card-desc">基礎科目の5群・適性科目・専門の分野ごとに練習する</div></div>
+  <div class="card" data-mode="random" onclick="selMode(this)"><div class="card-title">🔀 ランダム</div><div class="card-desc">科目を選んで全年度からシャッフルして出題する</div></div>
+  <div class="section-label">解答スタイル</div>
+  <div class="row">
+    <div class="card" data-style="practice" onclick="selStyle(this)"><div class="card-title">👁️ 練習モード</div><div class="card-desc">解答のたびに正誤と解説を確認</div></div>
+    <div class="card" data-style="test" onclick="selStyle(this)"><div class="card-title">📋 テストモード</div><div class="card-desc">全問終了後にまとめて採点</div></div>
+  </div>
+  <div class="btns"><button class="btn btn-primary" onclick="goConfig()">次へ →</button></div>
+</div>
+
+<!-- CONFIG -->
+<div id="s-config" class="screen">
+  <h2 id="cfg-title" style="font-size:17px;font-weight:600;margin-bottom:3px"></h2>
+  <p id="cfg-sub" style="font-size:12px;color:#888;margin-bottom:.8rem"></p>
+  <div id="cfg-body"></div>
+  <div class="btns">
+    <button class="btn" onclick="showScreen('s-home')">← 戻る</button>
+    <button class="btn btn-primary" onclick="startQuiz()">▶ 開始</button>
+  </div>
+</div>
+
+<!-- QUIZ -->
+<div id="s-quiz" class="screen">
+  <div class="progress-wrap" style="display:flex;align-items:center;gap:8px">
+    <div style="flex:1"><div class="progress-bar"><div class="progress-fill" id="prog"></div></div></div>
+    <div class="progress-txt" id="prog-txt"></div>
+    <button class="btn" style="font-size:12px;padding:.3rem .7rem;white-space:nowrap" onclick="pauseQuiz()">⏸ 中断</button>
+  </div>
+  <div class="q-meta">
+    <span class="badge badge-blue" id="q-badge"></span>
+    <span class="badge badge-purple" id="q-genre"></span>
+    <span class="badge badge-gray" id="q-id"></span>
+  </div>
+  <div id="q-content"></div>
+  <div id="q-feedback"></div>
+  <div class="btns" id="q-btns"></div>
+</div>
+
+<!-- RESULT -->
+<div id="s-result" class="screen">
+  <h2 style="font-size:18px;font-weight:600;margin-bottom:3px">採点結果</h2>
+  <p id="res-sub" style="font-size:12px;color:#888;margin-bottom:1rem"></p>
+  <div id="res-pass"></div>
+  <div class="stat-grid" id="res-stats"></div>
+  <div class="result-list" id="res-list"></div>
+  <div class="btns">
+    <button class="btn btn-primary" onclick="showScreen('s-home')">🏠 トップへ</button>
+    <button class="btn btn-outline" onclick="reviewWrong()">🔁 間違いを復習</button>
+    <button class="btn" onclick="retryAll()">↩ もう一度</button>
+  </div>
+</div>
+
+<!-- MYPAGE -->
+<div id="s-mypage" class="screen">
+  <h2 style="font-size:18px;font-weight:600;margin-bottom:3px">📖 学習記録（マイページ）</h2>
+  <p style="font-size:12px;color:#888;margin-bottom:1rem"><span id="mypage-username"></span> さんのこれまでの成績</p>
+  <div id="mypage-body"></div>
+  <div class="btns"><button class="btn btn-primary" onclick="showScreen('s-home')">🏠 ホームへ戻る</button></div>
+</div>
+
+</div>
+
+<!-- Firebase SDK（Compat形式）：鉄道設計技士アプリと同じプロジェクトを使い、同じニックネーム・暗証番号でログインできる -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDcAYS-oyuEhENDq4GlMDuwD5JgHBdiJ6o",
+  authDomain: "tetsudousekkeigishi.firebaseapp.com",
+  projectId: "tetsudousekkeigishi",
+  storageBucket: "tetsudousekkeigishi.firebasestorage.app",
+  messagingSenderId: "860734172441",
+  appId: "1:860734172441:web:0658914b934e97c0ea6988",
+  measurementId: "G-R4NX32GMQP"
+};
+firebase.initializeApp(firebaseConfig);
+</script>
+
+<script>
+/* ===== 図版（キー → data URI）。問題の img にキーを指定すると問題文の下に表示される ===== */
+const IMGS = {
+};
+
+/* =====================================================================================
+ * 試験科目の定義
+ *   kiso    : 基礎科目（5群×6問＝30問から各群3問、計15問を選択して解答。50%以上で合格）
+ *   tekisei : 適性科目（15問すべて解答。50%以上で合格）
+ *   senmon  : 専門科目・電気電子部門（35問から25問を選択して解答。50%以上で合格）
+ * 本番は選択解答だが、このアプリでは収録した全問を出題し、正解率で合否の目安を示す。
+ * ===================================================================================== */
+const EXAMS = {
+  kiso:    {name:"基礎科目", short:"基礎", icon:"📘", desc:"5群×6問（本番は各群3問・計15問を選択）", passPct:50},
+  tekisei: {name:"適性科目", short:"適性", icon:"⚖️", desc:"技術士法第4章・技術者倫理 全15問", passPct:50},
+  senmon:  {name:"専門科目（電気電子部門）", short:"専門", icon:"⚡", desc:"全35問（本番は25問を選択）", passPct:50}
+};
+const EXAM_KEYS = Object.keys(EXAMS);
+const KISO_GROUPS = ["1群 設計・計画","2群 情報・論理","3群 解析","4群 材料・化学・バイオ","5群 環境・エネルギー・技術"];
+
+/* =====================================================================================
+ * 問題データベース
+ * 形式：DB_RAW[年度][科目キー] = [ 問題, ... ]
+ *   問題 = {
+ *     id      : 問題番号（例 "Ⅰ-1-1"、"Ⅱ-15"、"Ⅲ-35"）
+ *     genre   : 分野（基礎は KISO_GROUPS のいずれか、適性は「技術士法・倫理」、専門は電力・回路等）
+ *     lead    : 問題文（改行は \n、表や数式は HTML 可）
+ *     choices : 選択肢の配列（通常5つ。①〜⑤として表示）
+ *     answer  : 正答の番号（1〜5）
+ *     exp     : 解説（任意）
+ *     img     : 図のキーまたはキー配列（任意。IMGS を参照）
+ *   }
+ * 出典：公益社団法人日本技術士会 技術士第一次試験 過去問題・正答
+ * ===================================================================================== */
+const DB_RAW = {
+"2025": { kiso: [], tekisei: [], senmon: [] },
+"2024": { kiso: [], tekisei: [], senmon: [] },
+"2023": { kiso: [], tekisei: [], senmon: [] },
+"2022": { kiso: [], tekisei: [], senmon: [] },
+"2021": { kiso: [], tekisei: [], senmon: [] }
+};
+
+const YEARS = Object.keys(DB_RAW).sort().reverse();
+const DB = {};
+YEARS.forEach(y => {
+  DB[y] = {};
+  EXAM_KEYS.forEach(ex => {
+    DB[y][ex] = (DB_RAW[y][ex] || []).map(q => Object.assign({}, q, {
+      id: y + '-' + q.id,
+      qno: q.id,
+      year: y,
+      examType: ex
+    }));
+  });
+});
+
+/* ===== APP STATE ===== */
+let curMode="", curStyle="", quizItems=[], curIdx=0, answers=[], selAns=null, answered=false, origItems=[];
+let selExamVal="", selGenreVal="", selRandomVal="";
+
+/* =====================================================================================
+ * アカウント機能（鉄道設計技士アプリと同じ仕組み）
+ *   ・Firebase 匿名サインイン（セキュリティルール用）＋「ニックネーム＋暗証番号」で本人確認
+ *   ・users/{ニックネーム} を共有し、このアプリの記録は gijutsushi_history / gijutsushi_save に分けて保存する
+ * ===================================================================================== */
+const auth = firebase.auth();
+const db = firebase.firestore();
+const NICKNAME_KEY = 'examapp_nickname';
+
+let currentUser = "";
+
+function userDocRef() {
+  return db.collection('users').doc(currentUser);
+}
+function sanitizeNickname(raw) {
+  return (raw || '').trim().replace(/\//g, '').slice(0, 20);
+}
+function sanitizePin(raw) {
+  const s = (raw || '').trim();
+  return /^[0-9]{4,8}$/.test(s) ? s : '';
+}
+// 暗証番号を平文のまま保存しないための簡易ハッシュ（鉄道設計技士アプリと同じ計算式。同じ暗証番号で両方にログインできる）
+function hashPin(pin) {
+  let h = 0;
+  for(let i=0; i<pin.length; i++) h = (Math.imul(h, 31) + pin.charCodeAt(i)) >>> 0;
+  return 'p' + h.toString(36);
+}
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function signIn() {
+  const status = document.getElementById('signin-status');
+  const nickInput = document.getElementById('signin-nickname');
+  const pinInput = document.getElementById('signin-password');
+  const btn = document.getElementById('signin-btn');
+  const nickname = sanitizeNickname(nickInput ? nickInput.value : '');
+  const pin = sanitizePin(pinInput ? pinInput.value : '');
+  if(!nickname) {
+    status.textContent = 'ニックネームを入力してください（1〜20文字、"/"は使用できません）';
+    nickInput.focus();
+    return;
+  }
+  if(!pin) {
+    status.textContent = '暗証番号は半角数字4〜8桁で入力してください';
+    pinInput.focus();
+    return;
+  }
+  nickInput.value = nickname;
+  btn.disabled = true;
+  status.textContent = '確認中…';
+  try {
+    if(!auth.currentUser) await auth.signInAnonymously();
+    const ref = db.collection('users').doc(nickname);
+    const snap = await ref.get();
+    const pinHash = hashPin(pin);
+    const profile = (snap.exists && snap.data() && snap.data().profile) || null;
+    if(profile && profile.pinHash) {
+      if(profile.pinHash !== pinHash) {
+        status.textContent = 'このニックネームは既に登録されています。ニックネームまたは暗証番号のいずれかを変更して、もう一度お試しください。';
+        return;
+      }
+    } else {
+      await ref.set({ profile: { pinHash: pinHash, updatedAt: firebase.firestore.FieldValue.serverTimestamp() } }, { merge: true });
+    }
+    try { localStorage.setItem(NICKNAME_KEY, nickname); } catch(e) {}
+    currentUser = nickname;
+    pinInput.value = '';
+    status.textContent = '';
+    await renderHome();
+    showScreen('s-home');
+  } catch(err) {
+    status.textContent = '通信エラーが発生しました。電波状況を確認の上、再度お試しください。（' + err.message + '）';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function signOutUser() {
+  if(!confirm('サインアウトしますか？再度学習を始める際はニックネームと暗証番号の入力が必要になります（同じものを入力すれば、これまでの学習記録の続きから利用できます）。')) return;
+  try { localStorage.removeItem(NICKNAME_KEY); } catch(e) {}
+  currentUser = "";
+  document.getElementById('signin-nickname').value = '';
+  document.getElementById('signin-password').value = '';
+  document.getElementById('signin-status').textContent = '';
+  showScreen('s-profile');
+}
+
+async function renderHome() {
+  document.getElementById('home-userbar').innerHTML = `<div class="card" style="cursor:default;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+      <div><div class="card-title">👤 ${esc(currentUser)} さん</div><div class="card-desc">学習記録はクラウド（Firebase）に自動保存されます</div></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn" onclick="showMyPage()">📖 学習記録</button>
+        <button class="btn" onclick="signOutUser()">🚪 サインアウト</button>
+      </div>
+    </div>`;
+  document.getElementById('home-empty').innerHTML = allQuestions().length ? '' :
+    '<div class="notice">問題データがまだ収録されていません。過去問データを追加すると出題できるようになります。</div>';
+  const resumeArea = document.getElementById('home-resume');
+  resumeArea.innerHTML = '<div class="card-desc" style="padding:.4rem 0">中断データを確認しています…</div>';
+  const save = await loadSave();
+  if(save) {
+    resumeArea.innerHTML = `<div class="card" style="cursor:default;border:2px solid #0f766e;background:#f0fdfa">
+        <div class="card-title">⏸ 中断中のクイズがあります</div>
+        <div class="card-desc">${esc(save.topic||'')} ${save.itemIds.length}問中 ${save.curIdx+1}問目で中断（保存日時：${save.savedAt ? new Date(save.savedAt).toLocaleString('ja-JP') : '-'}）</div>
+        <div class="btns" style="margin-top:.7rem">
+          <button class="btn btn-primary" onclick="resumeQuiz()">▶ 途中から再開する</button>
+          <button class="btn btn-outline" onclick="discardSave()">中断データを削除</button>
+        </div>
+      </div>`;
+  } else {
+    resumeArea.innerHTML = '';
+  }
+}
+
+/* ===== 学習記録（users/{ニックネーム}/gijutsushi_history） ===== */
+function historyCollectionRef() {
+  return userDocRef().collection('gijutsushi_history');
+}
+async function loadHistory() {
+  if(!currentUser) return [];
+  try {
+    const snap = await historyCollectionRef().orderBy('createdAt', 'desc').limit(50).get();
+    return snap.docs.map(d => d.data());
+  } catch(e) {
+    console.error('学習履歴の取得に失敗しました', e);
+    return [];
+  }
+}
+async function addHistoryRecord(record) {
+  if(!currentUser) return;
+  try {
+    await historyCollectionRef().add(Object.assign({}, record, {
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }));
+  } catch(e) {
+    console.error('学習履歴の保存に失敗しました', e);
+  }
+}
+function formatRecordDate(d) {
+  const dt = d || new Date();
+  const hh = String(dt.getHours()).padStart(2,'0');
+  const mi = String(dt.getMinutes()).padStart(2,'0');
+  return `${dt.getMonth()+1}/${dt.getDate()} ${hh}:${mi}`;
+}
+function buildTopicLabel() {
+  if(curMode==='year') {
+    const [year, exam] = (selExamVal||'').split('-');
+    return year && exam ? `${year}年度 ${EXAMS[exam].short}` : '年度別';
+  }
+  if(curMode==='genre') return selGenreVal || '分野別';
+  if(curMode==='review') return '間違いの復習';
+  return selRandomVal ? `ランダム（${selRandomVal==='all'?'全科目':EXAMS[selRandomVal].short}）` : 'ランダム出題';
+}
+
+let mypageHistory = [];
+async function showMyPage() {
+  document.getElementById('mypage-username').textContent = currentUser;
+  document.getElementById('mypage-body').innerHTML = '<div class="notice">学習記録を読み込んでいます…</div>';
+  showScreen('s-mypage');
+  await renderMyPage();
+}
+async function renderMyPage() {
+  const history = await loadHistory();
+  mypageHistory = history;
+  const body = document.getElementById('mypage-body');
+  if(!history.length) {
+    body.innerHTML = '<div class="notice">まだ学習記録がありません。クイズに挑戦すると、ここに結果が表示されます。</div>';
+    return;
+  }
+  body.innerHTML = history.map((h, idx) => {
+    const wrongs = h.wrongs || [];
+    const wrongHtml = wrongs.length
+      ? `<div class="gogun">${wrongs.map(w => `<div class="gogun-item">✗ ${esc(w.id)}（${esc(w.genre)}）：${esc(w.lead)}…</div>`).join('')}</div>
+         <button class="btn btn-outline" style="margin-top:.5rem;font-size:12px;padding:.4rem .8rem" onclick="reviewFromHistory(${idx})">📚 この記録の間違えた問題を復習する</button>`
+      : '<div style="font-size:12px;color:#888;margin-top:.5rem">間違えた問題はありませんでした 🎉</div>';
+    return `<div class="q-box">
+      <div class="q-meta" style="margin-bottom:.5rem">
+        <span class="badge badge-gray">${esc(h.date)}</span>
+        <span class="badge badge-blue">${esc(h.topic || h.modeLabel)}</span>
+        <span class="badge badge-purple">${esc(h.styleLabel)}</span>
+      </div>
+      <div style="font-size:14px;margin-bottom:.4rem">${h.totalOk} / ${h.total} 問正解（正解率 <strong>${h.pct}%</strong>）</div>
+      <div class="score-bar"><div class="score-fill" style="width:${h.pct}%"></div></div>
+      ${wrongHtml}
+    </div>`;
+  }).join('');
+}
+function startWithItems(items, style) {
+  curMode = 'review'; curStyle = style;
+  quizItems = items; origItems = [...items];
+  answers = new Array(items.length).fill(null);
+  curIdx = 0; selAns = null; answered = false;
+  renderQ(); showScreen('s-quiz');
+}
+async function reviewFromHistory(idx) {
+  const wrongs = (mypageHistory[idx] && mypageHistory[idx].wrongs) || [];
+  if(!wrongs.length) { alert('この記録には間違えた問題がありません'); return; }
+  const byId = questionsById();
+  const items = wrongs.map(w => byId[w.id]).filter(Boolean);
+  if(!items.length) { alert('該当する問題データが見つかりませんでした'); return; }
+  startWithItems(items, 'practice');
+}
+
+/* ===== 中断・再開（users/{ニックネーム}/gijutsushi_save/current） ===== */
+function saveDocRef() {
+  return userDocRef().collection('gijutsushi_save').doc('current');
+}
+async function saveProgress() {
+  if(!currentUser || !quizItems.length) return;
+  const data = {
+    mode: curMode, style: curStyle,
+    selExam: selExamVal, selGenre: selGenreVal, selRandom: selRandomVal,
+    topic: buildTopicLabel(),
+    itemIds: quizItems.map(q => q.id),
+    origIds: origItems.map(q => q.id),
+    answers: answers,
+    curIdx: curIdx,
+    savedAt: Date.now()
+  };
+  try { await saveDocRef().set(data); }
+  catch(e) { console.error('中断データの保存に失敗しました', e); }
+}
+async function loadSave() {
+  if(!currentUser) return null;
+  try {
+    const doc = await saveDocRef().get();
+    return doc.exists ? doc.data() : null;
+  } catch(e) {
+    console.error('中断データの取得に失敗しました', e);
+    return null;
+  }
+}
+async function pauseQuiz() {
+  await saveProgress();
+  await renderHome();
+  showScreen('s-home');
+}
+async function clearSave() {
+  if(!currentUser) return;
+  try { await saveDocRef().delete(); }
+  catch(e) { console.error('中断データの削除に失敗しました', e); }
+}
+async function discardSave() {
+  await clearSave();
+  await renderHome();
+}
+async function resumeQuiz() {
+  const save = await loadSave();
+  if(!save) { alert('中断データが見つかりませんでした'); return; }
+  const byId = questionsById();
+  const items = save.itemIds.map(id => byId[id]).filter(Boolean);
+  const origs = save.origIds.map(id => byId[id]).filter(Boolean);
+  if(items.length !== save.itemIds.length) {
+    alert('一部の問題データが見つからなかったため、中断データを破棄します');
+    await clearSave(); await renderHome();
+    return;
+  }
+  curMode = save.mode; curStyle = save.style;
+  selExamVal = save.selExam || ""; selGenreVal = save.selGenre || ""; selRandomVal = save.selRandom || "";
+  quizItems = items; origItems = origs;
+  answers = save.answers; curIdx = save.curIdx;
+  selAns = null; answered = false;
+  renderQ();
+  showScreen('s-quiz');
+}
+
+/* ===== UTILS ===== */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+function allQuestions(exam) {
+  let all = [];
+  YEARS.forEach(y => EXAM_KEYS.forEach(ex => { if(!exam || exam===ex) all = all.concat(DB[y][ex]); }));
+  return all;
+}
+function questionsById() {
+  const byId = {};
+  allQuestions().forEach(q => { byId[q.id] = q; });
+  return byId;
+}
+function shuffle(a) {
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+
+/* ===== HOME ===== */
+function selMode(el) {
+  document.querySelectorAll('[data-mode]').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  curMode = el.dataset.mode;
+}
+function selStyle(el) {
+  document.querySelectorAll('[data-style]').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  curStyle = el.dataset.style;
+}
+
+/* ===== CONFIG ===== */
+// 分野の並び順：基礎の1〜5群 → 適性 → 専門（収録順）
+function genreList() {
+  const seen = [];
+  EXAM_KEYS.forEach(ex => {
+    const gs = [...new Set(allQuestions(ex).map(q=>q.genre))];
+    if(ex==='kiso') gs.sort((a,b)=>KISO_GROUPS.indexOf(a)-KISO_GROUPS.indexOf(b));
+    gs.forEach(g => seen.push({exam:ex, genre:g}));
+  });
+  return seen;
+}
+function historyStatusBadge(records) {
+  if(!records || !records.length) return '<span style="color:#9ca3af;font-size:12px">未実施</span>';
+  const last = records[0];
+  const pct = last.pct != null ? Math.round(last.pct) : null;
+  const scoreStr = (last.totalOk != null && last.total != null) ? `${last.totalOk}/${last.total}問正解` : (pct != null ? `${pct}%` : '');
+  const color = pct == null ? '#6b7280' : pct >= 70 ? '#16a34a' : pct >= 50 ? '#d97706' : '#dc2626';
+  return `<span style="font-size:12px;color:${color};font-weight:600">${scoreStr}</span><span style="font-size:11px;color:#9ca3af;margin-left:6px">${records.length}回実施</span>`;
+}
+function cardHtml(attr, val, title, desc, right, disabled) {
+  const click = disabled ? '' : `onclick="selCfg(this,'${attr}')"`;
+  return `<div class="card${disabled?' disabled':''}" data-${attr}="${esc(val)}" ${click}><div class="card-title">${title}</div><div class="card-desc" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>${desc}</span><span>${right}</span></div></div>`;
+}
+
+async function goConfig() {
+  if(!curMode){alert("出題モードを選択してください");return;}
+  if(!curStyle){alert("解答スタイルを選択してください");return;}
+  selExamVal = selGenreVal = selRandomVal = "";
+  const [hist, save] = await Promise.all([loadHistory(), loadSave()]);
+  const histByTopic = {};
+  hist.forEach(h => { if(h.topic) (histByTopic[h.topic] = histByTopic[h.topic] || []).push(h); });
+  function pauseBadge(topic) {
+    if(!save || save.topic !== topic) return '';
+    return `<span style="font-size:12px;color:#0f766e;font-weight:600;margin-left:6px">⏸ ${save.curIdx||0}/${(save.itemIds||[]).length}問 中断中</span>`;
+  }
+  const status = topic => historyStatusBadge(histByTopic[topic]) + pauseBadge(topic);
+  let html = "";
+  const title = document.getElementById('cfg-title'), sub = document.getElementById('cfg-sub');
+  if(curMode==="year"){
+    title.textContent="年度・科目を選択";
+    sub.textContent="解きたい試験を選んでください";
+    YEARS.forEach(y=>{
+      html += `<div class="section-label">${y}年度（令和${Number(y)-2018}年度）</div>`;
+      EXAM_KEYS.forEach(ex=>{
+        const n = DB[y][ex].length;
+        const e = EXAMS[ex];
+        html += cardHtml('exam', `${y}-${ex}`, `${e.icon} ${y}年度 ${e.name}`, n ? `${n}問収録｜${e.desc}` : '未収録', n ? status(`${y}年度 ${e.short}`) : '', !n);
+      });
+    });
+  } else if(curMode==="genre"){
+    title.textContent="分野を選択";
+    sub.textContent="学習したい分野を選んでください（全年度から出題）";
+    let lastExam = "";
+    genreList().forEach(({exam, genre})=>{
+      if(exam!==lastExam){ html += `<div class="section-label">${EXAMS[exam].name}</div>`; lastExam = exam; }
+      const n = allQuestions(exam).filter(q=>q.genre===genre).length;
+      html += cardHtml('genre', genre, esc(genre), `${n}問収録`, status(genre), false);
+    });
+    if(!html) html = '<div class="notice">問題データがまだ収録されていません。</div>';
+  } else {
+    title.textContent="ランダム出題";
+    sub.textContent="科目を選ぶと、全年度からシャッフルして出題します";
+    [...EXAM_KEYS, 'all'].forEach(ex=>{
+      const n = ex==='all' ? allQuestions().length : allQuestions(ex).length;
+      const label = ex==='all' ? '🔀 全科目からランダム' : `${EXAMS[ex].icon} ${EXAMS[ex].name}からランダム`;
+      const topic = `ランダム（${ex==='all'?'全科目':EXAMS[ex].short}）`;
+      html += cardHtml('random', ex, label, n ? `全年度 合計${n}問` : '未収録', n ? status(topic) : '', !n);
+    });
+  }
+  document.getElementById('cfg-body').innerHTML = html;
+  showScreen('s-config');
+}
+function selCfg(el, attr) {
+  document.querySelectorAll(`[data-${attr}]`).forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  const v = el.dataset[attr];
+  if(attr==='exam') selExamVal = v;
+  else if(attr==='genre') selGenreVal = v;
+  else selRandomVal = v;
+}
+
+/* ===== QUIZ ===== */
+function startQuiz() {
+  let pool = [];
+  if(curMode==="year") {
+    if(!selExamVal){alert("試験を選択してください");return;}
+    const [year, exam] = selExamVal.split('-');
+    pool = [...DB[year][exam]];
+  } else if(curMode==="genre") {
+    if(!selGenreVal){alert("分野を選択してください");return;}
+    pool = allQuestions().filter(q=>q.genre===selGenreVal);
+  } else {
+    if(!selRandomVal){alert("科目を選択してください");return;}
+    pool = shuffle(allQuestions(selRandomVal==='all' ? null : selRandomVal));
+  }
+  if(!pool.length){alert("問題が見つかりませんでした");return;}
+  quizItems=pool; origItems=[...pool];
+  answers=new Array(pool.length).fill(null);
+  curIdx=0; selAns=null; answered=false;
+  renderQ(); showScreen('s-quiz');
+}
+
+function getSrc(q) {
+  return `${q.year}年度 ${EXAMS[q.examType].short}`;
+}
+const CIRCLED = ['①','②','③','④','⑤','⑥','⑦','⑧'];
+
+function renderQ() {
+  const q = quizItems[curIdx];
+  const tot = quizItems.length;
+  document.getElementById('prog').style.width = (curIdx/tot*100)+'%';
+  document.getElementById('prog-txt').textContent = `${curIdx+1} / ${tot} 問`;
+  document.getElementById('q-badge').textContent = getSrc(q);
+  document.getElementById('q-genre').textContent = q.genre;
+  document.getElementById('q-id').textContent = q.qno;
+  document.getElementById('q-feedback').innerHTML = '';
+  answered = false;
+  // テストモードで既に解答済みの問題（中断再開時など）は選択状態を復元する
+  selAns = (curStyle==='test' && typeof answers[curIdx]==='number') ? answers[curIdx] : null;
+
+  let html = `<div class="q-box"><div class="q-num">${esc(q.qno)}</div>`;
+  html += `<div class="q-lead">${q.lead.replace(/\n/g,'<br>')}</div>`;
+  if(q.note) html += `<div class="q-note">${q.note}</div>`;
+  if(q.img) {
+    const imgsHtml = (Array.isArray(q.img) ? q.img : [q.img]).filter(k=>IMGS[k]).map(k=>`<img src="${IMGS[k]}" alt="図">`).join('');
+    if(imgsHtml) html += `<div class="q-img">${imgsHtml}</div>`;
+  }
+  html += '</div>';
+  q.choices.forEach((c,ci)=>{
+    html += `<div class="choice${selAns===ci+1?' selected':''}" onclick="pickChoice(${ci+1})" id="ch-${ci}"><span class="choice-key">${CIRCLED[ci]}</span><span>${c.replace(/\n/g,'<br>')}</span></div>`;
+  });
+  document.getElementById('q-content').innerHTML = html;
+
+  const isLast = curIdx>=quizItems.length-1;
+  document.getElementById('q-btns').innerHTML = curStyle==='practice'
+    ? `<button class="btn btn-primary" id="check-btn" onclick="checkAnswer()" disabled>✓ 確認する</button><button class="btn" onclick="skipQ()">スキップ</button>`
+    : `<button class="btn btn-primary" onclick="nextQ()">${isLast?'採点する →':'次の問題 →'}</button><button class="btn" onclick="skipQ()">スキップ</button>`;
+  saveProgress();
+}
+
+function pickChoice(n) {
+  if(answered) return;
+  const q = quizItems[curIdx];
+  q.choices.forEach((_,ci)=>document.getElementById(`ch-${ci}`).classList.toggle('selected', ci+1===n));
+  selAns = n;
+  if(curStyle==='test') {
+    answers[curIdx] = n;
+    saveProgress();
+  } else {
+    document.getElementById('check-btn').removeAttribute('disabled');
+  }
+}
+
+function checkAnswer() {
+  if(answered || selAns===null) return;
+  answered = true;
+  const q = quizItems[curIdx];
+  answers[curIdx] = selAns;
+  const isOk = selAns === q.answer;
+  q.choices.forEach((_,ci)=>{
+    const el = document.getElementById(`ch-${ci}`);
+    el.classList.remove('selected');
+    if(ci+1===q.answer) el.classList.add('correct');
+    else if(ci+1===selAns) el.classList.add('wrong');
+  });
+  document.getElementById('q-feedback').innerHTML = `<div class="feedback ${isOk?'ok':'ng'}"><strong>${isOk?'✓ 正解':'✗ 不正解'}</strong>　正答：<strong>${CIRCLED[q.answer-1]}</strong>${q.exp?'<br>'+q.exp:''}</div>`;
+  const isLast = curIdx>=quizItems.length-1;
+  document.getElementById('q-btns').innerHTML = `<button class="btn btn-primary" onclick="nextQ()">${isLast?'採点する →':'次の問題 →'}</button>`;
+  saveProgress();
+}
+
+function nextQ() {
+  if(answers[curIdx]===null) answers[curIdx]='－';
+  curIdx++;
+  if(curIdx>=quizItems.length){showResult();return;}
+  renderQ();
+}
+function skipQ(){answers[curIdx]='－';nextQ();}
+
+/* ===== RESULT ===== */
+function judge(q, ans) {
+  if(typeof ans !== 'number') return 'skip';
+  return ans===q.answer ? 'ok' : 'ng';
+}
+
+async function showResult() {
+  const res = quizItems.map((q,i)=>judge(q,answers[i]));
+  const total = quizItems.length;
+  const totalOk = res.filter(r=>r==='ok').length;
+  const totalNg = res.filter(r=>r==='ng').length;
+  const totalSk = res.filter(r=>r==='skip').length;
+  const pct = Math.round(totalOk/total*100);
+  const gcolor = pct>=70 ? '#16a34a' : pct>=50 ? '#d97706' : '#dc2626';
+  const grade = pct>=70 ? '余裕あり 🎉' : pct>=50 ? '合格ライン 💪' : '要復習 📚';
+
+  document.getElementById('res-sub').textContent = `${buildTopicLabel()}｜全${total}問 ／ 正解率 ${pct}%`;
+  // 合格基準（各科目50%以上）の目安を科目ごとに表示する
+  const byExam = {};
+  quizItems.forEach((q,i)=>{ const e = byExam[q.examType] = byExam[q.examType] || {ok:0,n:0}; e.n++; if(res[i]==='ok') e.ok++; });
+  document.getElementById('res-pass').innerHTML = Object.keys(byExam).map(ex=>{
+    const e = byExam[ex], p = Math.round(e.ok/e.n*100), ok = p >= EXAMS[ex].passPct;
+    return `<div class="pass-box ${ok?'ok':'ng'}"><strong>${EXAMS[ex].name}</strong>：${e.ok}/${e.n}問（${p}%）→ ${ok?'合格基準（50%以上）を満たしています':'合格基準（50%以上）に届いていません'}</div>`;
+  }).join('');
+  document.getElementById('res-stats').innerHTML = `
+    <div class="stat"><div class="stat-val" style="color:#16a34a">${totalOk}</div><div class="stat-lbl">正解</div></div>
+    <div class="stat"><div class="stat-val" style="color:#dc2626">${totalNg}</div><div class="stat-lbl">不正解</div></div>
+    <div class="stat"><div class="stat-val" style="color:#aaa">${totalSk}</div><div class="stat-lbl">未回答</div></div>
+    <div class="stat"><div class="stat-val" style="color:${gcolor}">${pct}%</div><div class="stat-lbl">${grade}<div class="score-bar"><div class="score-fill" style="width:${pct}%;background:${gcolor}"></div></div></div></div>`;
+  document.getElementById('res-list').innerHTML = quizItems.map((q,i)=>{
+    const st = res[i];
+    const mark = st==='ok' ? '○' : st==='ng' ? `✗ ${CIRCLED[answers[i]-1]}→${CIRCLED[q.answer-1]}` : '－';
+    return `<div class="result-row">
+      <div class="dot ${st}"></div>
+      <div class="result-q">
+        <div class="result-q-meta">${getSrc(q)} ${esc(q.qno)} ｜ ${esc(q.genre)}</div>
+        <div class="result-q-text">${esc(q.lead.replace(/<[^>]+>/g,'').substring(0,50))}…</div>
+      </div>
+      <div class="result-mark mark-${st}">${mark}</div>
+    </div>`;
+  }).join('');
+
+  const wrongs = quizItems.filter((q,i)=>res[i]!=='ok')
+    .map(q=>({id:q.id, genre:q.genre, lead:q.lead.replace(/<[^>]+>/g,'').substring(0,40)}));
+  const modeLabels = {year:'年度別',genre:'分野別',random:'ランダム',review:'復習'};
+  await addHistoryRecord({
+    date: formatRecordDate(),
+    topic: buildTopicLabel(),
+    modeLabel: modeLabels[curMode]||curMode,
+    styleLabel: curStyle==='practice'?'練習モード':'テストモード',
+    pct, totalOk, total,
+    wrongs
+  });
+  await clearSave();
+  showScreen('s-result');
+}
+
+function reviewWrong() {
+  const wrongs = quizItems.filter((q,i)=>judge(q,answers[i])!=='ok');
+  if(!wrongs.length){alert("間違えた問題はありませんでした！");return;}
+  startWithItems(wrongs, 'practice');
+}
+function retryAll() {
+  quizItems=[...origItems]; answers=new Array(origItems.length).fill(null);
+  curIdx=0; selAns=null; answered=false;
+  renderQ(); showScreen('s-quiz');
+}
+
+/* ===== 起動時：匿名サインインを済ませ、前回のニックネームだけ入力欄に補完する ===== */
+auth.onAuthStateChanged(async (user) => {
+  const status = document.getElementById('signin-status');
+  if(user) {
+    const nickInput = document.getElementById('signin-nickname');
+    let saved = null;
+    try { saved = localStorage.getItem(NICKNAME_KEY); } catch(e) {}
+    if(saved && !nickInput.value) nickInput.value = saved;
+    if(currentUser) {
+      await renderHome();
+      const active = document.querySelector('.screen.active');
+      if(!active || active.id === 's-profile') showScreen('s-home');
+    } else {
+      showScreen('s-profile');
+    }
+  } else {
+    currentUser = "";
+    status.textContent = '';
+    showScreen('s-profile');
+    auth.signInAnonymously().catch(err => {
+      status.textContent = '通信エラーが発生しました。電波状況を確認の上、再度お試しください。（' + err.message + '）';
+    });
+  }
+});
+</script>
+</body>
+</html>
