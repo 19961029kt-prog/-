@@ -66,6 +66,34 @@ body{font-family:"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;background:#
 .feedback{padding:10px 14px;border-radius:7px;margin-top:8px;font-size:13px;line-height:1.65;border-left:3px solid}
 .feedback.ok{background:#f0fdf4;color:#15803d;border-color:#16a34a}
 .feedback.ng{background:#fef2f2;color:#b91c1c;border-color:#dc2626}
+/* Cheat Sheet */
+.cs-nav{font-size:11px;font-family:inherit;border:1px solid #d4d0c8;background:#fff;color:#555;border-radius:20px;padding:2px 10px;cursor:pointer}
+.cs-nav.law{border-color:#c0392b;color:#c0392b;background:#fdf0ef}
+.cs-nav.wire{border-color:#c47000;color:#c47000;background:#fef8ec}
+.cs-nav.comm{border-color:#0f766e;color:#0f766e;background:#f0fafa}
+.cs-nav.sig{border-color:#1d5c2e;color:#1d5c2e;background:#f0faf3}
+.cs-nav.phys{border-color:#6d28d9;color:#6d28d9;background:#f5f0ff}
+.cs-nav.elec{border-color:#1e40af;color:#1e40af;background:#eff6ff}
+.cs-sec{border-radius:8px;border:1px solid #e0dfd8;overflow:hidden;margin-bottom:8px}
+.cs-head{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;cursor:pointer;font-weight:700;font-size:13px}
+.cs-arrow{font-size:11px;color:#888}
+.cs-sec.law  .cs-head{background:#fdf0ef;border-left:3px solid #c0392b;color:#c0392b}
+.cs-sec.wire .cs-head{background:#fef8ec;border-left:3px solid #c47000;color:#c47000}
+.cs-sec.comm .cs-head{background:#f0fafa;border-left:3px solid #0f766e;color:#0f766e}
+.cs-sec.sig  .cs-head{background:#f0faf3;border-left:3px solid #1d5c2e;color:#1d5c2e}
+.cs-sec.phys .cs-head{background:#f5f0ff;border-left:3px solid #6d28d9;color:#6d28d9}
+.cs-sec.elec .cs-head{background:#eff6ff;border-left:3px solid #1e40af;color:#1e40af}
+.cs-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.cs-body.hidden{display:none}
+.cs-topic{border:1px solid #e8e5de;border-radius:5px;overflow:hidden}
+.cs-th{font-size:11.5px;font-weight:700;padding:4px 9px;background:#f3f2ee;color:#555}
+.cs-items{padding:6px 9px;display:flex;flex-direction:column;gap:3px}
+.cs-item{font-size:12px;line-height:1.6;padding-left:10px;position:relative}
+.cs-item::before{content:"▸";position:absolute;left:0;color:#bbb;font-size:10px;top:3px}
+.cs-formula{font-family:monospace;font-size:11.5px;background:#f5f4f1;border-radius:4px;padding:6px 10px;border-left:3px solid #d0cfc8;white-space:pre-wrap;line-height:1.7}
+.cs-k{display:inline;font-family:monospace;font-size:11px;font-weight:700;background:#fef08a;color:#713f12;padding:0 3px;border-radius:3px}
+.cs-ok{display:inline;font-size:12px;font-weight:700;background:#dcfce7;color:#166534;padding:0 3px;border-radius:3px}
+.cs-ng{display:inline;font-size:12px;font-weight:700;background:#fee2e2;color:#991b1b;padding:0 3px;border-radius:3px;text-decoration:line-through}
 /* Result */
 .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1.25rem}
 .stat{background:#fff;border:1px solid #e0dfd8;border-radius:9px;padding:.8rem;text-align:center}
@@ -124,7 +152,7 @@ body{font-family:"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;background:#
     <div class="card" data-style="practice" onclick="selStyle(this)"><div class="card-title">👁️ 練習モード</div><div class="card-desc">解答のたびに正誤を確認</div></div>
     <div class="card" data-style="test" onclick="selStyle(this)"><div class="card-title">📋 テストモード</div><div class="card-desc">全問終了後にまとめて採点</div></div>
   </div>
-  <div class="btns"><button class="btn btn-primary" onclick="goConfig()">次へ →</button></div>
+  <div class="btns"><button class="btn btn-primary" onclick="goConfig()">次へ →</button><button class="btn" onclick="showScreen('s-cheatsheet')">📋 直前まとめ</button></div>
 </div>
 
 <!-- CONFIG -->
@@ -175,6 +203,226 @@ body{font-family:"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;background:#
   <p style="font-size:12px;color:#888;margin-bottom:1rem"><span id="mypage-username"></span> さんのこれまでの成績</p>
   <div id="mypage-body"></div>
   <div class="btns"><button class="btn btn-primary" onclick="showScreen('s-home')">🏠 ホームへ戻る</button></div>
+</div>
+
+<!-- 直前まとめ（チートシート）画面 -->
+<div id="s-cheatsheet" class="screen">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
+    <h2 style="margin:0;font-size:17px;font-weight:700">📋 直前まとめ</h2>
+    <button class="btn btn-primary" onclick="showScreen('s-home')">🏠 ホームへ戻る</button>
+  </div>
+  <!-- ジャンルナビ -->
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+    <button class="cs-nav law"  onclick="csJump('cs-law')">法規（54問）</button>
+    <button class="cs-nav wire" onclick="csJump('cs-wire')">電車線路（34問）</button>
+    <button class="cs-nav comm" onclick="csJump('cs-comm')">通信・情報（39問）</button>
+    <button class="cs-nav sig"  onclick="csJump('cs-sig')">信号・保安（32問）</button>
+    <button class="cs-nav phys" onclick="csJump('cs-phys')">物理・数学（15問）</button>
+    <button class="cs-nav elec" onclick="csJump('cs-elec')">電気回路（9問）</button>
+  </div>
+
+  <!-- 法規 -->
+  <div class="cs-sec law" id="cs-law">
+    <div class="cs-head" onclick="csToggle(this)"><span>⚖️ 法規</span><span class="cs-arrow">▾</span></div>
+    <div class="cs-body">
+      <div class="cs-topic"><div class="cs-th">鉄道事業法 — 事業種別</div><div class="cs-items">
+        <div class="cs-item">第一種：<span class="cs-ok">自ら敷設</span>した線路で自ら運送</div>
+        <div class="cs-item">第二種：<span class="cs-ok">他人が敷設</span>した線路を使用して運送（「自ら敷設」は×）</div>
+        <div class="cs-item">第三種：線路を第一種・第二種に使用<em>させるため</em>敷設</div>
+        <div class="cs-item">許可は「路線」および「事業の種別」について行う</div>
+        <div class="cs-item">一時的需要 → <span class="cs-k">期間を限定</span>した許可が可能</div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">鉄道事故等報告規則</div><div class="cs-items">
+        <div class="cs-item">速報義務の死傷者基準：<span class="cs-k">5人以上</span>（<span class="cs-ng">3人</span>は×）</div>
+        <div class="cs-item">本線運転支障：<span class="cs-k">1時間以上</span>で速報対象</div>
+        <div class="cs-item">速報対象：遮断機なし踏切の死亡 / 係員誤取扱・施設故障に起因</div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">技術基準省令 — 用語定義</div><div class="cs-items">
+        <div class="cs-item">本線 = <span class="cs-ok">列車</span>の運転に常用（「車両」は×）</div>
+        <div class="cs-item">停車場 = 駅・信号場・操車場</div>
+        <div class="cs-item">鉄道信号 = 信号・合図・標識（<span class="cs-ng">転てつ器</span>は含まない）</div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">実施基準の届出</div><div class="cs-items">
+        <div class="cs-item">届出先：<span class="cs-k">地方運輸局長</span></div>
+        <div class="cs-item">2以上の管轄区域 → <span class="cs-ok">主たる事務所所在地の局長</span>1か所のみ</div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">バリアフリー法</div><div class="cs-items">
+        <div class="cs-item">基本方針を定めるのは：<span class="cs-k">主務大臣</span>（鉄道事業者ではない）</div>
+        <div class="cs-item">地方公共団体への事前届出義務：<span class="cs-ng">なし</span></div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">鉄道施設変更手続き</div><div class="cs-items">
+        <div class="cs-item">工事計画 → 国土交通大臣の <span class="cs-k">認可</span> → 完成後 <span class="cs-k">検査</span> 申請</div>
+        <div class="cs-item">認可・検査の権限 → <span class="cs-ok">地方運輸局長</span>に委任</div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">認定鉄道事業者制度（認可必要＝簡略化対象外）</div><div class="cs-items">
+        <div class="cs-item">電気方式・電車線の<span class="cs-ok">標準電圧</span>の変更</div>
+        <div class="cs-item">長さ <span class="cs-k">1 km以上</span>にわたる軌道中心線の変更</div>
+        <div class="cs-item">変電所の新設 / 監視所新設を伴う遠隔自動制御装置の新設</div>
+        <div class="cs-item"><span class="cs-ok">軽微（簡略化OK）</span>：受電電圧・変成機器総容量の変更</div>
+        <div class="cs-item">認可申請に添付：<span class="cs-k">設計確認書</span></div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">安全管理規程</div><div class="cs-items">
+        <div class="cs-item">選任義務：安全統括管理者 ＋ <span class="cs-k">施設管理者</span>（第三種は統括のみ）</div>
+        <div class="cs-item">経験要件：通算 <span class="cs-k">5年以上</span></div>
+        <div class="cs-item">大臣命令解任後 <span class="cs-k">5年</span>を経過しない者 → 選任不可</div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">踏切道改良促進法</div><div class="cs-items">
+        <div class="cs-item">踏切道指定：<span class="cs-k">国土交通大臣</span></div>
+        <div class="cs-item">指定基準：1時間の遮断時間 <span class="cs-k">45分以上</span></div>
+        <div class="cs-item">改良費用：鉄道事業者 ＆ <span class="cs-k">道路管理者</span>が協議</div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">踏切保安設備 — 時間・高さ</div><div class="cs-items">
+        <div class="cs-item">警報開始〜遮断動作終了：<span class="cs-k">15秒</span>標準（最低<span class="cs-k">10秒</span>）</div>
+        <div class="cs-item">遮断動作終了〜列車到達：<span class="cs-k">30秒</span>標準（最低<span class="cs-k">15秒</span>）</div>
+        <div class="cs-item">遮断かんの高さ：<span class="cs-k">0.8 m</span> / 有効高さ：<span class="cs-k">4.5 m以上</span></div>
+        <div class="cs-item">踏切交差角：<span class="cs-k">45度以上</span></div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">架空通信線の高さ / 無線従事者</div><div class="cs-items">
+        <div class="cs-item">鉄道・軌道を横断：レール面上 <span class="cs-k">6 m以上</span></div>
+        <div class="cs-item">道路上：道路面上 <span class="cs-k">5 m以上</span>（<span class="cs-ng">4.5 m</span>は×）</div>
+        <div class="cs-item">免許を行うのは：<span class="cs-k">総務大臣</span>（内閣総理大臣は×）</div>
+        <div class="cs-item">欠格期間：<span class="cs-k">2年</span>（<span class="cs-ng">3年</span>は×）</div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- 電車線路 -->
+  <div class="cs-sec wire" id="cs-wire">
+    <div class="cs-head" onclick="csToggle(this)"><span>⚡ 電車線路</span><span class="cs-arrow">▾</span></div>
+    <div class="cs-body">
+      <div class="cs-topic"><div class="cs-th">ちょう架方式</div><div class="cs-items">
+        <div class="cs-item">カテナリ式：ちょう架線でトロリ線を吊る / ハンガ間隔：<span class="cs-k">5 m</span></div>
+        <div class="cs-item">剛体ちょう架式 ≠ 直接ちょう架式（直接式は架線なしで直接取付）</div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">トロリ線 — 仕様と管理</div><div class="cs-items">
+        <div class="cs-item">本線の公称断面積：<span class="cs-k">85 mm²以上</span></div>
+        <div class="cs-item">偏いの基準：<span class="cs-k">250 mm以内</span></div>
+        <div class="cs-item">最高許容温度（硬銅）：<span class="cs-k">90 ℃</span></div>
+        <div class="cs-item">摩耗測定：<span class="cs-ok">しゅう面幅（摩耗幅）</span>を計測</div>
+        <div class="cs-item">径間中央を低くする設備：<span class="cs-k">プレサグ</span></div>
+        <div class="cs-item">波動伝搬速度：張力の<span class="cs-k">平方根</span>に比例</div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">摩耗限度条件式</div><div class="cs-items">
+        <div class="cs-formula">A/α ＞ T/σ　（A:残存断面積 α:引張強さ T:張力 σ:安全率）</div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">がいし / 接近・交差</div><div class="cs-items">
+        <div class="cs-item">懸垂がいし：支持・引留 / 長幹がいし：可動ブラケット等</div>
+        <div class="cs-item">撥水処理：<span class="cs-k">シリコーンコンパウンド</span>を塗布</div>
+        <div class="cs-item">離隔距離：<span class="cs-k">0.6 m以上</span>（絶縁板設置で<span class="cs-k">0.25 m</span>まで縮小可）</div>
+        <div class="cs-item">踏切の電車線最低高さ：<span class="cs-k">5 m</span></div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- 通信・情報 -->
+  <div class="cs-sec comm" id="cs-comm">
+    <div class="cs-head" onclick="csToggle(this)"><span>📡 通信・情報</span><span class="cs-arrow">▾</span></div>
+    <div class="cs-body">
+      <div class="cs-topic"><div class="cs-th">電波法 基本</div><div class="cs-items">
+        <div class="cs-item">電波の定義：<span class="cs-k">300万 MHz（3 THz）以下</span>の電磁波 / 電波速度：光速と同じ</div>
+        <div class="cs-item">自由空間伝搬損失：距離の<span class="cs-k">2乗</span>に比例</div>
+        <div class="cs-item">無線局免許有効期間：<span class="cs-k">5年を超えない範囲</span> / 申請先：<span class="cs-k">総合通信局長</span></div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">鉄道無線</div><div class="cs-items">
+        <div class="cs-item">列車無線：<span class="cs-k">150 MHz帯（VHF）</span>または<span class="cs-k">400 MHz帯（UHF）</span></div>
+        <div class="cs-item">電波が障害物を回り込む現象：<span class="cs-ok">回折</span>（屈折は×）</div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">トランスポンダ（ATS-P 等）</div><div class="cs-items">
+        <div class="cs-item">変調方式：<span class="cs-k">FSK（周波数偏移変調）</span></div>
+        <div class="cs-item">フレーム構成：<span class="cs-ok">HDLCフレーム</span> / フラグ：<span class="cs-k">0x7E</span></div>
+        <div class="cs-item">誤り検出：<span class="cs-k">CRC（巡回冗長検査）</span></div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">PCM伝送 / OSI参照モデル</div><div class="cs-items">
+        <div class="cs-item">PCM処理順：<span class="cs-k">標本化 → 量子化 → 符号化</span></div>
+        <div class="cs-item">複数アナログ多重：<span class="cs-ok">TDM（時分割）</span> / 光ファイバ多重：<span class="cs-ok">WDM（波長分割）</span></div>
+        <div class="cs-item"><span class="cs-k">L1</span>物理 / <span class="cs-k">L2</span>データリンク / <span class="cs-k">L3</span>ネットワーク(経路選択) / <span class="cs-k">L4</span>トランスポート</div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">漏話 / 情報セキュリティ</div><div class="cs-items">
+        <div class="cs-item">電磁誘導電圧：電力線の<span class="cs-k">電流に比例</span></div>
+        <div class="cs-item">近端漏話（NEXT）：<span class="cs-ok">送信側</span> / 遠端漏話（FEXT）：<span class="cs-ok">受信側</span></div>
+        <div class="cs-item">漏話減衰量：信号10 dBm、漏話−50 dBm → <span class="cs-k">60 dB</span></div>
+        <div class="cs-item">情報格付3観点：<span class="cs-k">機密性・完全性・可用性</span>（可逆性は含まない）</div>
+        <div class="cs-item">IDS：<span class="cs-ok">検知</span>のみ（遮断はIPS）</div>
+        <div class="cs-item">VPN=仮想専用線 / PoE=LAN経由電力供給 / DNS=ドメイン→IP変換</div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">通話記録装置</div><div class="cs-items">
+        <div class="cs-item">記録内容：<span class="cs-k">音声と時刻</span> / 保存期間：<span class="cs-k">直近1日分以上</span></div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- 信号・保安 -->
+  <div class="cs-sec sig" id="cs-sig">
+    <div class="cs-head" onclick="csToggle(this)"><span>🚦 信号・保安</span><span class="cs-arrow">▾</span></div>
+    <div class="cs-body">
+      <div class="cs-topic"><div class="cs-th">鉄道信号の定義</div><div class="cs-items">
+        <div class="cs-item">信号：<span class="cs-ok">列車または車両の運転に関し</span>表示 / 合図：係員相互間</div>
+        <div class="cs-item">主体信号機：安全を保証する区域を有する</div>
+        <div class="cs-item">従属信号機：主体信号機の<span class="cs-k">予告</span> / 信号附属機：進路を現示</div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">連動装置 — 鎖錠の種類</div><div class="cs-items">
+        <div class="cs-item"><span class="cs-k">てっ査鎖錠</span>：軌道上に列車がいるときの鎖錠</div>
+        <div class="cs-item"><span class="cs-k">保留鎖錠</span>：進路が構成されている間の鎖錠</div>
+        <div class="cs-item"><span class="cs-k">進路鎖錠</span>：進路構成時の各転てつ器の鎖錠</div>
+        <div class="cs-item">直接鎖錠方式：転てつ機<span class="cs-ok">内部</span>で直接鎖錠（外部鎖錠と異なる）</div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">ATS / ATC</div><div class="cs-items">
+        <div class="cs-item">ATS変周：車上子と地上子が結合 → <span class="cs-ok">地上で発振停止</span></div>
+        <div class="cs-item">ATS防護停止位置：<span class="cs-k">防護区域の最外方の車両接触限界</span>まで</div>
+        <div class="cs-item">ATS-P変調：<span class="cs-k">FSK</span> / 誤り検出：<span class="cs-k">CRC</span></div>
+        <div class="cs-item">ATC連続速度制御：<span class="cs-ok">速度パターン式</span>ブレーキ制御</div>
+        <div class="cs-item">車上主体型ATC情報伝送：<span class="cs-k">デジタル変調</span></div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">列車運転状況記録装置</div><div class="cs-items">
+        <div class="cs-item">記録：<span class="cs-k">時間・速度・位置</span>等 / 音声・気温：<span class="cs-ng">記録対象外</span></div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- 物理・数学 -->
+  <div class="cs-sec phys" id="cs-phys">
+    <div class="cs-head" onclick="csToggle(this)"><span>📐 物理・数学</span><span class="cs-arrow">▾</span></div>
+    <div class="cs-body">
+      <div class="cs-topic"><div class="cs-th">運動方程式・列車抵抗</div><div class="cs-items">
+        <div class="cs-formula">F = (W/g)·a + R　（F:引張力 W:質量 a:加速度 R:走行抵抗）
+勾配抵抗 ≈ W × (‰/1000)
+曲線抵抗（目安）= 800/R [N/kN]</div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">制動距離</div><div class="cs-items">
+        <div class="cs-formula">L = V²/(254·φ) [m]　（V:速度[km/h] φ:粘着係数）
+または L = v²/(2a) [m]　（v:速度[m/s] a:減速度[m/s²]）</div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">対数・デシベル</div><div class="cs-items">
+        <div class="cs-formula">電力比[dB] = 10·log₁₀(P₂/P₁)
+電圧比[dB] = 20·log₁₀(V₂/V₁)
+10 dB → 電力10倍　6 dB ≈ 電圧2倍</div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- 電気回路 -->
+  <div class="cs-sec elec" id="cs-elec">
+    <div class="cs-head" onclick="csToggle(this)"><span>🔌 電気回路</span><span class="cs-arrow">▾</span></div>
+    <div class="cs-body">
+      <div class="cs-topic"><div class="cs-th">直流・交流の基礎</div><div class="cs-items">
+        <div class="cs-formula">V=IR　P=VI=I²R=V²/R
+直列：R=R₁+R₂　並列：1/R=1/R₁+1/R₂
+Z=√(R²+(XL−XC)²)　XL=2πfL　XC=1/(2πfC)
+共振：f₀=1/(2π√LC)　力率：cosφ=R/Z</div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">変圧器</div><div class="cs-items">
+        <div class="cs-formula">V₁/V₂ = N₁/N₂ = I₂/I₁（理想変圧器）
+効率 η = P出力/(P出力+鉄損+銅損)</div>
+      </div></div>
+      <div class="cs-topic"><div class="cs-th">電気方式</div><div class="cs-items">
+        <div class="cs-item">直流1500 V：在来線標準 / 交流25 kV：新幹線・一部在来線</div>
+        <div class="cs-item">AT饋電：<span class="cs-k">オートトランス</span>（AT）方式、誘導障害を低減</div>
+        <div class="cs-item">BT饋電：<span class="cs-k">吸上変圧器</span>（BT）方式</div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="btns" style="margin-top:1.5rem"><button class="btn btn-primary" onclick="showScreen('s-home')">🏠 ホームへ戻る</button></div>
 </div>
 
 
@@ -4623,6 +4871,26 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo(0,0);
+}
+
+// チートシート — セクションの折りたたみ
+function csToggle(head) {
+  const body = head.nextElementSibling;
+  const arrow = head.querySelector('.cs-arrow');
+  body.classList.toggle('hidden');
+  arrow.textContent = body.classList.contains('hidden') ? '▸' : '▾';
+}
+// チートシート — ジャンプ＆展開
+function csJump(id) {
+  const el = document.getElementById(id);
+  if(!el) return;
+  const body = el.querySelector('.cs-body');
+  const arrow = el.querySelector('.cs-arrow');
+  if(body && body.classList.contains('hidden')) {
+    body.classList.remove('hidden');
+    if(arrow) arrow.textContent = '▾';
+  }
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /* ===== HOME ===== */
