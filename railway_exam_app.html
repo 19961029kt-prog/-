@@ -4925,9 +4925,7 @@ function historyStatusBadge(records) {
   const last = records[0];
   const count = records.length;
   const pct = last.pct != null ? Math.round(last.pct) : null;
-  const scoreStr = (last.totalOk != null && last.totalSubs != null)
-    ? `${last.totalOk}/${last.totalSubs}問正解`
-    : (pct != null ? `${pct}%` : '');
+  const scoreStr = pct != null ? `正答率 ${pct}%` : '';
   const color = pct == null ? '#6b7280' : pct >= 80 ? '#16a34a' : pct >= 60 ? '#d97706' : '#dc2626';
   return `<span style="font-size:12px;color:${color};font-weight:600">${scoreStr}</span><span style="font-size:11px;color:#9ca3af;margin-left:6px">${count}回実施</span>`;
 }
