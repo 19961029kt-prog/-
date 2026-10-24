@@ -1677,6 +1677,7 @@ html[lang="ja"] .lang-btn [data-lang="ja"], html[lang="en"] .lang-btn [data-lang
 /* 振っているあいだだけ、盤面の真ん中にダイスのトレイ */
 .dice-stage { position: absolute; left: 50%; top: 42%; z-index: 6; display: flex; align-items: center; gap: 14px; padding: 12px 18px; transform: translate(-50%, -50%) scale(.92); opacity: 0; pointer-events: none;
   background: var(--fiber), var(--antique); box-shadow: var(--frame-gold), var(--sh-3); transition: opacity .5s var(--ease), transform .6s var(--ease); }
+/* 出るときは app.js のばね（行き過ぎて戻る）で拡大する。この transition は下げるときの静かなフェード用 */
 .dice-stage.is-on { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 .dice-stage .dice-result { font-size: 52px; }
 /* いまいる駅と案内（左下。右の親指のダイスと重ならない幅） */
@@ -1697,6 +1698,13 @@ html[lang="ja"] .lang-btn [data-lang="ja"], html[lang="en"] .lang-btn [data-lang
 .hud .guide { margin-top: 4px; font-size: 12px; line-height: 1.65; max-height: 5em; overflow: hidden; }
 .hud .ticket-bar { margin-top: 4px; }
 .hud .ticket-hint { display: none; }
+/* スマホ幅では、案内の札を右端まで伸ばし、親指のダイスをその右下に収める。
+   文字はダイスの幅（76px）＋ゆとりの 90px 手前で折り返し、ボタンの裏に潜り込まない */
+@media (max-width: 639px) {
+  .hud { right: 10px; max-width: none; }
+  .hud-card { padding-right: 90px; }
+  .dice-fab { right: 16px; }
+}
 
 /* ---- 下のタブ（60px） ---- */
 .tabbar { position: relative; z-index: 100; display: grid; grid-template-columns: repeat(3, 1fr); padding-right: 96px; background: var(--fiber), var(--paper); box-shadow: inset 0 1px 0 var(--rule), inset 0 3px 0 var(--ivory), inset 0 4px 0 rgba(200, 185, 166, .6); padding-bottom: env(safe-area-inset-bottom); }
