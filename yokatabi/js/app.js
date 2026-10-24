@@ -543,6 +543,17 @@
     const btn = $('#map-overlay .dir-btn');
     if (btn) btn.focus({ preventScroll: true });
   }
+  // 方面ボタンに添える路線名：乗り継ぐ区間では、その方面の駅に入っていく路線を1本だけ短く出す。
+  // 「鹿児島本線・久大本線（観光特急も走る高原ルート）」は、博多から日田へは「久大本線」、日田から博多へは「鹿児島本線」
+  function lineToward(from, to) {
+    const e = D.edgeOf(from, to);
+    if (!e || !e.name) return '';
+    // 「佐世保線＋西九州新幹線」のように＋でつないだ乗り継ぎも分ける（「バス＋鉄道連絡」はひとまとまりのまま）
+    const parts = e.name.replace(/[（(].*$/, '').split('・').flatMap((x) => (/^[^＋]+線＋[^＋]+線$/.test(x) ? x.split('＋') : [x])).map((x) => x.trim()).filter(Boolean);
+    if (!parts.length) return '';
+    const forward = !e.between || e.between[0] === from;
+    return forward ? parts[parts.length - 1] : parts[0];
+  }
   // 地図の上の方面ボタン（カメラが動いたら置き直す）。距離は画面の px で決め、盤面の単位に直して線路の上に置く
   function placeDirButtons() {
     if (!move || !move.waiting) return;
@@ -553,9 +564,7 @@
         const dist = (70 + 20 * (i % 2)) * upp; // 隣り合う方面がぶつからないよう、70px と 90px を交互に
         const [x, y] = Map.along(move.at, id, dist);
         const { left, top } = Map.toBoard(x, y);
-        const e = D.edgeOf(move.at, id);
-        // 路線名は最初の1本だけを短く（「鹿児島本線・西鉄…（二日市で乗り換え）」→「鹿児島本線」）
-        const line = e && e.name ? e.name.split(/[・（(]/)[0] : '';
+        const line = lineToward(move.at, id);
         const rec = move.recommend === id;
         return `<button class="dir-btn${rec ? ' is-rec' : ''}" data-dir="${esc(id)}" style="left:${left.toFixed(0)}px;top:${top.toFixed(0)}px">
             <span class="dir-arrow" aria-hidden="true">${arrowOf(move.at, id)}</span><span class="dir-text">${esc(t('toward', D.byId[id].name + (lang === 'en' ? '' : '駅')))}${line && lang !== 'en' ? `<small>（${esc(line)}）</small>` : ''}</span>
