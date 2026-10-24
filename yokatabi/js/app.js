@@ -919,6 +919,24 @@
     showResult(values.reduce((a, b) => a + b, 0), values, plan.label);
   }
 
+  // 親指のダイスは、マップの画面で振れるときだけ出す（disabled と画面の切り替えを見張る）。
+  // 出るときは 0.4 倍からばねで弾んで、少し大きく行き過ぎてから落ち着く
+  function syncDiceFab() {
+    const fab = $('#btn-dice');
+    const away = fab.disabled || document.body.dataset.screen !== 'map';
+    if (away === fab.classList.contains('is-away')) return;
+    fab.classList.toggle('is-away', away);
+    cancelAnimationFrame(fab._spr || 0);
+    fab.style.transition = fab.style.transform = fab.style.opacity = '';
+    if (away) return;
+    fab.style.transition = 'none';
+    springRun(fab, (x) => {
+      if (x === 1) return (fab.style.transition = fab.style.transform = fab.style.opacity = '');
+      fab.style.transform = `scale(${(0.4 + 0.6 * x).toFixed(4)})`;
+      fab.style.opacity = Math.min(1, x * 2).toFixed(3);
+    }, { k: 260, c: 13 });
+  }
+
   // ダイスのトレイ：出るときは 0.6 倍からばねで膨らみ、1.06 倍ほど行き過ぎてから落ち着く。
   // 下げるときはインラインの指定を外して、CSS の静かなフェード（scale .92・opacity 0）に任せる
   function showDiceStage() {
@@ -1783,6 +1801,9 @@
     $('#btn-compass').addEventListener('click', openCompass);
 
     $('#btn-dice').addEventListener('click', rollDice);
+    new MutationObserver(syncDiceFab).observe($('#btn-dice'), { attributes: true, attributeFilter: ['disabled'] });
+    new MutationObserver(syncDiceFab).observe(document.body, { attributes: true, attributeFilter: ['data-screen'] });
+    syncDiceFab();
     $('#ticket-bar').addEventListener('click', (e) => {
       const b = e.target.closest('[data-ticket]');
       if (b && !b.disabled) useTicket(Number(b.dataset.ticket));
