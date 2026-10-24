@@ -4724,7 +4724,9 @@ function buildTopicLabel() {
     return year && exam ? `${year}年度 ${EXAM_LABEL[exam]||exam}` : '年度別';
   }
   if(curMode==='genre') {
-    return selGenreVal ? selGenreVal : 'ジャンル別';
+    if(!selGenreVal) return 'ジャンル別';
+    const [gExam, gName] = selGenreVal.split(':');
+    return `${EXAM_LABEL[gExam]||gExam} ${gName}`;
   }
   if(curMode==='bookmark') return '苦手問題';
   return 'ランダム出題';
@@ -4914,10 +4916,17 @@ function allQuestions() {
 
 const EXAM_LABEL = {common:"共通", senmon1:"専門Ⅰ"};
 
-const ALL_GENRES = [...new Set(allQuestions().map(q=>q.genre))];
+function allQuestionsByExam(examType) {
+  let all = [];
+  YEARS.forEach(y => { all = all.concat(DB[y][examType].questions); });
+  return all;
+}
 
-function countGenre(g) {
-  return allQuestions().filter(q=>q.genre===g).length;
+const GENRES_COMMON  = [...new Set(allQuestionsByExam('common').map(q=>q.genre))];
+const GENRES_SENMON1 = [...new Set(allQuestionsByExam('senmon1').map(q=>q.genre))];
+
+function countGenreByExam(g, examType) {
+  return allQuestionsByExam(examType).filter(q=>q.genre===g).length;
 }
 
 function historyStatusBadge(records) {
@@ -4967,12 +4976,20 @@ async function goConfig() {
     });
   } else if(curMode==="genre"){
     document.getElementById('cfg-title').textContent="ジャンルを選択";
-    document.getElementById('cfg-sub').textContent="学習したい分野を選んでください";
-    html = ALL_GENRES.map(g=>{
-      const badge = historyStatusBadge(histByTopic[g]);
-      const pause = pauseBadge(null, g);
-      return `<div class="card" data-genre="${g}" onclick="selGenre(this)"><div class="card-title">${g}</div><div class="card-desc" style="display:flex;justify-content:space-between;align-items:center"><span>${countGenre(g)}問収録</span><span>${badge}${pause}</span></div></div>`;
-    }).join('');
+    document.getElementById('cfg-sub').textContent="試験種別とジャンルを選んでください";
+    const renderGenreSection = (sectionLabel, examType, genres) => {
+      const rows = genres.map(g => {
+        const key = `${examType}:${g}`;
+        const topicKey = `${EXAM_LABEL[examType]} ${g}`;
+        const badge = historyStatusBadge(histByTopic[topicKey]);
+        const pause = pauseBadge(null, key);
+        const cnt = countGenreByExam(g, examType);
+        return `<div class="card" data-genre="${key}" onclick="selGenre(this)"><div class="card-title">${g}</div><div class="card-desc" style="display:flex;justify-content:space-between;align-items:center"><span>${cnt}問収録</span><span>${badge}${pause}</span></div></div>`;
+      }).join('');
+      return `<div class="section-label">${sectionLabel}</div>${rows}`;
+    };
+    html = renderGenreSection('📄 共通試験', 'common', GENRES_COMMON)
+         + renderGenreSection('⚡ 専門試験Ⅰ', 'senmon1', GENRES_SENMON1);
   } else if(curMode==="bookmark") {
     document.getElementById('cfg-title').textContent="苦手問題";
     document.getElementById('cfg-sub').textContent="付箋をつけた問題を練習します";
@@ -5003,7 +5020,8 @@ function startQuiz() {
     if(DB[year] && DB[year][exam]) pool=[...DB[year][exam].questions];
   } else if(curMode==="genre") {
     if(!selGenreVal){alert("ジャンルを選択してください");return;}
-    pool=allQuestions().filter(q=>q.genre===selGenreVal);
+    const [gExam, gName] = selGenreVal.split(':');
+    pool = allQuestionsByExam(gExam).filter(q=>q.genre===gName);
   } else if(curMode==="bookmark") {
     if(!bookmarks.size){alert("付箋がついている問題がありません。クイズ中の「📌 付箋する」ボタンで付箋をつけてください");return;}
     const byId = {}; allQuestions().forEach(q=>{ byId[q.id]=q; });
