@@ -1682,7 +1682,9 @@ html[lang="ja"] .lang-btn [data-lang="ja"], html[lang="en"] .lang-btn [data-lang
 .dice-stage .dice-result { font-size: 52px; }
 /* いまいる駅と案内（左下。右の親指のダイスと重ならない幅） */
 .hud { position: absolute; left: 10px; bottom: 12px; right: 106px; z-index: 5; display: grid; gap: 6px; max-width: 460px; pointer-events: none; }
-.hud > * { pointer-events: auto; }
+.hud > * { pointer-events: auto; min-width: 0; }
+/* 列は札の幅に固定する（特別切符が何枚あっても札が広がらず、手札は中で横にスクロールする） */
+.hud { grid-template-columns: minmax(0, 1fr); }
 .hud .ticket-deck { margin: 0; }
 .hud .td-head { display: none; }
 .hud .td-cards { padding: 0 0 2px; }
@@ -1725,6 +1727,9 @@ html[lang="ja"] .lang-btn [data-lang="ja"], html[lang="en"] .lang-btn [data-lang
   transition: transform .35s var(--ease), filter .35s var(--ease); }
 .dice-fab:active { transform: scale(.94); }
 .dice-fab:disabled { filter: grayscale(.6) brightness(.85); }
+/* 振れないとき（ダイスを振っている・走っている・分かれ道・±1 の選択中）とマップ以外の画面では、ダイスを下げておく。
+   出るときは app.js の syncDiceFab がばねで弾ませる */
+.dice-fab.is-away { opacity: 0; transform: scale(.4); visibility: hidden; pointer-events: none; transition: opacity .22s var(--ease), transform .28s var(--ease), visibility 0s .28s; }
 .dice-fab:focus-visible { outline: 2px solid var(--gold-2); outline-offset: 3px; }
 .fab-face { position: absolute; inset: 0; width: 100%; height: 100%; }
 .fab-ring { fill: none; stroke: var(--gold); stroke-width: 1.6; }
