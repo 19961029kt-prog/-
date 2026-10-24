@@ -543,6 +543,17 @@
     const btn = $('#map-overlay .dir-btn');
     if (btn) btn.focus({ preventScroll: true });
   }
+  // 方面ボタンに添える路線名：乗り継ぐ区間では、その方面の駅に入っていく路線を1本だけ短く出す。
+  // 「鹿児島本線・久大本線（観光特急も走る高原ルート）」は、博多から日田へは「久大本線」、日田から博多へは「鹿児島本線」
+  function lineToward(from, to) {
+    const e = D.edgeOf(from, to);
+    if (!e || !e.name) return '';
+    // 「佐世保線＋西九州新幹線」のように＋でつないだ乗り継ぎも分ける（「バス＋鉄道連絡」はひとまとまりのまま）
+    const parts = e.name.replace(/[（(].*$/, '').split('・').flatMap((x) => (/^[^＋]+線＋[^＋]+線$/.test(x) ? x.split('＋') : [x])).map((x) => x.trim()).filter(Boolean);
+    if (!parts.length) return '';
+    const forward = !e.between || e.between[0] === from;
+    return forward ? parts[parts.length - 1] : parts[0];
+  }
   // 地図の上の方面ボタン（カメラが動いたら置き直す）。距離は画面の px で決め、盤面の単位に直して線路の上に置く
   function placeDirButtons() {
     if (!move || !move.waiting) return;
@@ -553,9 +564,7 @@
         const dist = (70 + 20 * (i % 2)) * upp; // 隣り合う方面がぶつからないよう、70px と 90px を交互に
         const [x, y] = Map.along(move.at, id, dist);
         const { left, top } = Map.toBoard(x, y);
-        const e = D.edgeOf(move.at, id);
-        // 路線名は最初の1本だけを短く（「鹿児島本線・西鉄…（二日市で乗り換え）」→「鹿児島本線」）
-        const line = e && e.name ? e.name.split(/[・（(]/)[0] : '';
+        const line = lineToward(move.at, id);
         const rec = move.recommend === id;
         return `<button class="dir-btn${rec ? ' is-rec' : ''}" data-dir="${esc(id)}" style="left:${left.toFixed(0)}px;top:${top.toFixed(0)}px">
             <span class="dir-arrow" aria-hidden="true">${arrowOf(move.at, id)}</span><span class="dir-text">${esc(t('toward', D.byId[id].name + (lang === 'en' ? '' : '駅')))}${line && lang !== 'en' ? `<small>（${esc(line)}）</small>` : ''}</span>
@@ -605,6 +614,21 @@
       });
       if (!moved) break;
     }
+    // 押しのけ合いで解けきらなかったとき（狭い画面で列車・札・ダイスに挟まれたとき）は、
+    // 重なっているボタンだけを、元の高さに一番近い空いた段へ1つずつ置き直す
+    const hit = (a, b) => Math.abs(a.x - b.x) < (a.w + b.w) / 2 && Math.abs(a.y - b.y) < (a.h + b.h) / 2;
+    const placed = items.filter((f) => f.fixed);
+    btns.forEach((b) => {
+      if (placed.some((q) => hit(b, q))) {
+        const y0 = b.y, x0 = b.x;
+        const free = [];
+        for (let s = 1; s <= 60; s++) for (const sg of [-1, 1]) free.push([x0, y0 + sg * s * 6]);
+        for (let s = 1; s <= 30; s++) for (const sg of [-1, 1]) free.push([x0 + sg * s * 10, y0]);
+        const ok = free.find(([x, y]) => y >= b.h / 2 + 50 && y <= H - b.h / 2 - 4 && x >= b.w / 2 + 4 && x <= W - b.w / 2 - 4 && !placed.some((q) => hit({ ...b, x, y }, q)));
+        if (ok) [b.x, b.y] = ok;
+      }
+      placed.push(b);
+    });
     btns.forEach((b) => {
       b.el.style.left = `${b.x.toFixed(0)}px`;
       b.el.style.top = `${b.y.toFixed(0)}px`;
@@ -704,6 +728,23 @@
     };
     signRaf = requestAnimationFrame(step);
   }
+  // 0 → 1 へ進む減衰ばね（汎用版）。1 を少し行き過ぎて戻る値をそのまま paint に渡し、
+  // 拡大・位置に「弾んで止まる」手ざわりを出す。動きを減らす設定のときは、すぐ最後の姿にする
+  function springRun(el, paint, { k = 260, c = 15 } = {}) {
+    cancelAnimationFrame(el._spr || 0);
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return paint(1);
+    let x = 0, v = 0, last = null;
+    const step = (now) => {
+      const dt = last === null ? 1 / 60 : Math.min(0.034, (now - last) / 1000);
+      last = now;
+      v += (-k * (x - 1) - c * v) * dt;
+      x += v * dt;
+      if (Math.abs(x - 1) < 0.002 && Math.abs(v) < 0.02) return paint(1);
+      paint(x);
+      el._spr = requestAnimationFrame(step);
+    };
+    el._spr = requestAnimationFrame(step);
+  }
   function stationSign(id, prev) {
     hideSign(true);
     const s = D.byId[id];
@@ -735,7 +776,8 @@
       Sound.clack();
     } else {
       el.style.transform = `translate(-50%, ${-h - 20}px)`;
-      springTo(el, -h - 20, 0, { onSettle: () => Sound.clack() });
+      // 減衰を少し弱めて（c 12）、下りきったところで一度行き過ぎ、鎖で吊られた板らしく戻る
+      springTo(el, -h - 20, 0, { c: 12, onSettle: () => Sound.clack() });
     }
     signTimer = setTimeout(() => hideSign(), 4000);
   }
@@ -862,7 +904,7 @@
     $('#dice-result').textContent = '…';
     // 盤面の真ん中に胡桃のダイスのトレイを出して振り、出目を見せてから下げる
     clearTimeout(rollDice.hideTimer);
-    $('#dice-stage').classList.add('is-on');
+    showDiceStage();
     Sound.diceShake();
     if (values.length > 1) {
       Sound.diceShake();
@@ -872,9 +914,25 @@
     Store.countRoll();
     busy = false;
     confetti($('#dice-confetti'), 24 + values.length * 10);
-    rollDice.hideTimer = setTimeout(() => $('#dice-stage').classList.remove('is-on'), 1300);
+    rollDice.hideTimer = setTimeout(hideDiceStage, 1300);
     Game.render();
     showResult(values.reduce((a, b) => a + b, 0), values, plan.label);
+  }
+
+  // ダイスのトレイ：出るときは 0.6 倍からばねで膨らみ、1.06 倍ほど行き過ぎてから落ち着く。
+  // 下げるときはインラインの指定を外して、CSS の静かなフェード（scale .92・opacity 0）に任せる
+  function showDiceStage() {
+    const st = $('#dice-stage');
+    st.style.transition = 'opacity .22s linear';
+    st.classList.add('is-on');
+    springRun(st, (x) => { st.style.transform = `translate(-50%, -50%) scale(${(0.6 + 0.4 * x).toFixed(4)})`; }, { k: 230, c: 15 });
+  }
+  function hideDiceStage() {
+    const st = $('#dice-stage');
+    cancelAnimationFrame(st._spr || 0);
+    st.style.transition = '';
+    st.style.transform = '';
+    st.classList.remove('is-on');
   }
 
   // 出目 n を見せる。よりみち切符が残っていれば、すぐには出発せず ±1 を選べるようにする
@@ -886,9 +944,11 @@
       ? `${label ? `<small>${esc(label)}</small>` : ''}<span class="db-sum">${values.join('＋')}＝</span><b>${n}</b>！！<span class="db-go">${n}マスすすむ！</span>`
       : `${label ? `<small>${esc(label)}</small>` : ''}<b>${n}</b>マスすすむ！`;
     badge.hidden = false;
-    badge.classList.remove('is-pop');
-    void badge.offsetWidth;
-    badge.classList.add('is-pop');
+    // 硬券の帯は上から落ちてきて、ばねで少し大きく弾んでから止まる
+    springRun(badge, (x) => {
+      badge.style.opacity = Math.min(1, x * 2.5).toFixed(3);
+      badge.style.transform = `translateX(-50%) translateY(${((1 - x) * -16).toFixed(2)}px) scale(${(0.72 + 0.28 * x).toFixed(4)})`;
+    }, { k: 300, c: 14 });
     if (Craft.ticketsLeft() <= 0) {
       setGuide(`<b>${n}</b>の目！ 線路に沿って進みます。分かれ道では止まるので、地図の矢印から方面を選んでください。`);
       setTimeout(() => startMove(n), 800);

@@ -424,7 +424,7 @@
 .tk-coupler { stroke: #2A2A2A; stroke-width: 5px; stroke-linecap: round; vector-effect: non-scaling-stroke; pointer-events: none; }
 /* 粒子（位置・大きさ・透明度は rAF で毎フレーム書く） */
 .fx-steam { fill: #fbf8f2; stroke: rgba(44, 37, 35, .22); stroke-width: .6px; vector-effect: non-scaling-stroke; pointer-events: none; }
-.fx-spark { fill: #E5C158; pointer-events: none; }
+.fx-spark { fill: #E5C158; stroke: rgba(255, 244, 214, .7); stroke-width: .5px; vector-effect: non-scaling-stroke; pointer-events: none; }
 /* 通りすぎた直後の区間に残る金の光（1.2秒で消える） */
 .seg-glow { fill: none; stroke: #D4AF37; stroke-width: 4.5px; stroke-linecap: round; vector-effect: non-scaling-stroke; pointer-events: none; }
 /* 頭上のカウンター「あと N 駅」：真鍮の枠のピル */

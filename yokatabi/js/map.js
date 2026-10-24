@@ -71,12 +71,65 @@
 
   // a→b 方向の区間パス。geo.js の線形は「キーの前の駅 → 後ろの駅」の向きなので、逆向きのときは点列を反転する。
   const reversed = {};
+  // 線路は実際の線形の折れ線（数単位おきの点）なので、そのままだと列車が角でカクッと向きを変える。
+  // 一度だけ「等間隔に打ち直す → 両端を動かさずに軽く均す → Catmull-Rom の曲線（3次ベジェ）でつなぐ」をして、
+  // 描く線路と列車が走る道のりを同じなめらかな曲線にする（駅の位置＝両端の点は動かさない）
+  const smoothCache = {};
+  function smoothD(raw) {
+    if (smoothCache[raw]) return smoothCache[raw];
+    const pts = raw.replace(/^M/, '').split('L').map((t) => t.trim().split(/[ ,]+/).map(Number)).filter((q) => q.length === 2 && q.every(Number.isFinite));
+    if (pts.length < 3) return (smoothCache[raw] = raw);
+    // 1) 等間隔（約4単位）に打ち直す
+    const STEP = 4;
+    const even = [pts[0]];
+    let carry = 0;
+    for (let i = 1; i < pts.length; i++) {
+      const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+      const len = Math.hypot(x1 - x0, y1 - y0);
+      let t = STEP - carry;
+      while (t < len) {
+        even.push([x0 + ((x1 - x0) * t) / len, y0 + ((y1 - y0) * t) / len]);
+        t += STEP;
+      }
+      carry = len - (t - STEP);
+    }
+    even.push(pts[pts.length - 1]);
+    if (even.length < 4) return (smoothCache[raw] = raw);
+    // 2) [1,2,3,2,1] の重みで2回均す。両端に近いほど均しを弱めて、駅の位置と出入りの向きを保つ
+    let cur = even;
+    for (let pass = 0; pass < 2; pass++) {
+      const w = [1, 2, 3, 2, 1];
+      cur = cur.map((q, i) => {
+        const edge = Math.min(i, cur.length - 1 - i);
+        if (edge === 0) return q;
+        const r = Math.min(2, edge);
+        let sx = 0, sy = 0, sw = 0;
+        for (let j = -r; j <= r; j++) {
+          const k = w[j + 2];
+          sx += cur[i + j][0] * k;
+          sy += cur[i + j][1] * k;
+          sw += k;
+        }
+        return [sx / sw, sy / sw];
+      });
+    }
+    // 3) 1点おきに間引いて、Catmull-Rom（張り 0.5）を3次ベジェに直してつなぐ
+    const P = cur.filter((_, i) => i % 2 === 0 || i === cur.length - 1);
+    let d = `M${P[0][0].toFixed(1)},${P[0][1].toFixed(1)}`;
+    for (let i = 0; i < P.length - 1; i++) {
+      const p0 = P[i - 1] || P[i], p1 = P[i], p2 = P[i + 1], p3 = P[i + 2] || P[i + 1];
+      const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+      const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+      d += `C${c1[0].toFixed(1)},${c1[1].toFixed(1)} ${c2[0].toFixed(1)},${c2[1].toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+    }
+    return (smoothCache[raw] = d);
+  }
   function segmentD(a, b) {
     const key = YT.Data.edgeKey(a, b);
     const d = GEO && GEO.routes[key];
     if (d) {
-      if (key.startsWith(`${a}|`)) return d;
-      return (reversed[key] = reversed[key] || 'M' + d.slice(1).split('L').reverse().join('L'));
+      if (key.startsWith(`${a}|`)) return smoothD(d);
+      return smoothD((reversed[key] = reversed[key] || 'M' + d.slice(1).split('L').reverse().join('L')));
     }
     const A = D.byId[a], B = D.byId[b];
     return `M${A.x},${A.y} L${B.x},${B.y}`;
@@ -680,15 +733,36 @@
     const x = lx * k, y = ly * k * (dir < 0 ? -1 : 1);
     return [p.x + x * c - y * sn, p.y + x * sn + y * c];
   }
+  // 車体の向き：前の台車と後ろの台車（車体の長さの8割の間隔）を結んだ向き。
+  // 1点の接線で向けるより、曲線の上で車体が自然に首を振る（実物の台車と同じ考え方）
+  function carAt(d, half) {
+    const c = pointAt(pose.segs, d);
+    const f = pointAt(pose.segs, d + half * 0.8), r = pointAt(pose.segs, d - half * 0.8);
+    return { x: c.x, y: c.y, ang: Math.atan2(f.y - r.y, f.x - r.x) };
+  }
+  // 向きの変化を時間でならす（最短の回り方で、約60msの時定数で追いつく）。止まっているときはそのまま。
+  // 走り出しの1コマ（dt 0）は止まっていた向きを保ち、分かれ道で向きが変わっても一瞬で裏返らないようにする
+  function easeAng(prev, next, dt) {
+    if (prev === undefined) return next;
+    if (dt <= 0) return prev;
+    let diff = next - prev;
+    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+    return prev + diff * (1 - Math.exp(-dt / 60));
+  }
   function setPose(d, now = 0, running = false, tilt = 0) {
+    const dt = running && pose.lastT ? Math.min(64, now - pose.lastT) : 0;
+    pose.lastT = running ? now : 0;
     pose.d = d;
     const k = upp();
-    const p1 = pointAt(pose.segs, d);
-    const p2 = pointAt(pose.segs, Math.max(0, d - PX.gap * k)); // 2両目は max(0, s − 38px)
-    // 走っているあいだの小刻みなジョイント振動：translateY(sin(now × 0.035) × 1.6px)
-    const bob = running ? Math.sin(now * 0.035) * 1.6 : 0;
+    const p1 = carAt(d, (PX.car1 / 2) * k);
+    const p2 = carAt(Math.max(0, d - PX.gap * k), (PX.car2 / 2) * k); // 2両目は max(0, s − 38px)
+    p1.ang = pose.a1 = running ? easeAng(pose.a1, p1.ang, dt) : p1.ang;
+    p2.ang = pose.a2 = running ? easeAng(pose.a2, p2.ang, dt) : p2.ang;
+    // サスペンション：小刻みな揺れ sin(now × 0.035) × 1.6px に、レールの継ぎ目を踏んだときの「ガタン」（減衰する跳ね）を足す
+    const kick = (t0) => (t0 ? -2.2 * Math.exp(-(now - t0) / 80) * Math.cos((now - t0) / 14) : 0);
+    const bob = running ? Math.sin(now * 0.035) * 1.6 + kick(pose.kick1) : 0;
     const dir = placeCar(carG1, p1, k, bob, tilt);
-    placeCar(carG2, p2, k, running ? Math.sin(now * 0.035 + 1.1) * 1.6 : 0, tilt * 0.6);
+    placeCar(carG2, p2, k, running ? Math.sin(now * 0.035 + 1.1) * 1.6 + kick(pose.kick2) : 0, tilt * 0.6);
     carG2.style.display = d - PX.gap * k < -PX.car2 * k ? 'none' : '';
     // 連結幌：1両目の後ろの端と2両目の前の端を、伸び縮みする線で結ぶ（カーブでくの字に折れる）
     const r1 = pointAt(pose.segs, d - (PX.car1 / 2) * k), f2 = pointAt(pose.segs, Math.max(0, d - PX.gap * k) + (PX.car2 / 2) * k);
@@ -709,8 +783,8 @@
   }
 
   // ---------- 走行の粒子（requestAnimationFrame でまとめて動かす）----------
-  // steam：煙突からの白い蒸気（半径 3px → 15px にふくらみながら後ろへ流れ、600ms で消える）
-  // spark：車輪のあたりからの真鍮の光の粒（#E5C158。重力で少し落ちながらきらきら消える）
+  // steam：煙突からの白い蒸気（半径 3px → 15px にふくらみながら後ろへ流れ、900ms かけて薄れて消える）
+  // spark：車輪のあたりからの真鍮の光の粒（#E5C158。重力で少し落ちながらきらきら消える。後ろに長めに残す）
   // glow：通りすぎた直後の区間に 1.2 秒だけ残る金の光（stroke #D4AF37・4.5px）
   const parts = [];
   let partRaf = 0;
@@ -734,7 +808,7 @@
         q.el.setAttribute('cx', f1(q.x + q.vx * t * k));
         q.el.setAttribute('cy', f1(q.y + q.vy * t * k));
         q.el.setAttribute('r', f1(r * k));
-        q.el.setAttribute('opacity', (0.62 * (1 - t) * (1 - t)).toFixed(3));
+        q.el.setAttribute('opacity', (0.78 * Math.min(1, t * 6) * (1 - t) * (1 - t)).toFixed(3));
       } else if (q.kind === 'spark') {
         const sec = (now - q.t0) / 1000;
         q.el.setAttribute('cx', f1(q.x + q.vx * sec * k));
@@ -748,15 +822,14 @@
   }
   const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function emit(p1, dir, k, now) {
-    if (reduceMotion()) return;
     // 煙突（先頭車の前寄りの屋根の上）。進む向きは接線の向き（dir は絵の裏返しだけを表す）
     const [sx, sy] = carPoint(p1, k, dir, 12, -12);
     const back = p1.ang + Math.PI;
     const sc = el('circle', { cx: f1(sx), cy: f1(sy), r: f1(3 * k), class: 'fx-steam' }, fx);
-    addPart({ kind: 'steam', el: sc, x: sx, y: sy, vx: Math.cos(back) * 34 + (Math.random() - 0.5) * 8, vy: Math.sin(back) * 34 - 16, t0: now, life: 600 });
+    addPart({ kind: 'steam', el: sc, x: sx, y: sy, vx: Math.cos(back) * 34 + (Math.random() - 0.5) * 8, vy: Math.sin(back) * 34 - 16, t0: now, life: 900 });
     const [wx, wy] = carPoint(p1, k, dir, -10 + Math.random() * 20, 8);
-    const sp = el('circle', { cx: f1(wx), cy: f1(wy), r: f1((0.8 + Math.random() * 0.9) * k), class: 'fx-spark' }, fx);
-    addPart({ kind: 'spark', el: sp, x: wx, y: wy, vx: Math.cos(back) * (20 + Math.random() * 30) + (Math.random() - 0.5) * 30, vy: -20 - Math.random() * 40, t0: now, life: 520, ph: Math.random() * 6 });
+    const sp = el('circle', { cx: f1(wx), cy: f1(wy), r: f1((1 + Math.random() * 1.1) * k), class: 'fx-spark' }, fx);
+    addPart({ kind: 'spark', el: sp, x: wx, y: wy, vx: Math.cos(back) * (20 + Math.random() * 30) + (Math.random() - 0.5) * 30, vy: -20 - Math.random() * 40, t0: now, life: 760, ph: Math.random() * 6 });
   }
   function glowSeg(seg, now) {
     const g = el('path', { d: seg.p.getAttribute('d'), class: 'seg-glow' }, layers.trail);
@@ -816,6 +889,22 @@
     requestAnimationFrame(step);
   }
   const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+  // CSS の cubic-bezier と同じ曲線（x から y を求める。ニュートン法で t を解く）
+  function cubicBezier(x1, y1, x2, y2) {
+    const bz = (t, a, b) => 3 * a * t * (1 - t) ** 2 + 3 * b * t * t * (1 - t) + t ** 3;
+    const dbz = (t, a, b) => 3 * a * (1 - t) ** 2 + 6 * (b - a) * t * (1 - t) + 3 * (1 - b) * t * t;
+    return (x) => {
+      if (x <= 0) return 0;
+      if (x >= 1) return 1;
+      let t = x;
+      for (let i = 0; i < 8; i++) {
+        const dx = bz(t, x1, x2) - x, dd = dbz(t, x1, x2);
+        if (Math.abs(dx) < 1e-5 || !dd) break;
+        t = Math.max(0, Math.min(1, t - dx / dd));
+      }
+      return bz(t, y1, y2);
+    };
+  }
 
   // 停車中も、ときどきふわっと蒸気を浮かべる
   let idleTimer = null;
@@ -1110,23 +1199,19 @@
     moveTrain(path, opts = {}) {
       return new Promise((resolve) => {
         if (!path || path.length < 2) return resolve();
-        const reduce = reduceMotion();
+        // 走りは遊びの中心なので、OS の「視差効果を減らす」でも縮めない（前は 1駅 0.16 秒になり、等速のロボットのように見えていた）
+        const reduce = false;
         const segs = makeSegs(path);
         pose.segs = segs;
         pose.running = true;
         pose.dive = null;
         const hops = path.length - 1;
-        const T = (reduce ? 160 : 620) * hops; // 1駅あたり約620ms
-        const A = 0.2, B = 0.75; // 加速の終わり・減速の始まり
-        const area = A / 2 + (B - A) + (1 - B) / 2; // 速度の面積（最高速を1としたとき）
-        // 進み具合 p までに進んだ割合（0〜1）
-        const frac = (p) => {
-          if (p <= A) return (p * p) / (2 * A) / area;
-          if (p <= B) return (A / 2 + (p - A)) / area;
-          const q = 1 - p;
-          return (area - (q * q) / (2 * (1 - B))) / area;
-        };
-        const vel = (p) => (p < A ? p / A : p < B ? 1 : (1 - p) / (1 - B)); // 0〜1
+        // 1駅あたり約700ms（長い道のりほど1駅ぶんは少し速く。最短でも約1.1秒）
+        const T = Math.max(1100, 700 * hops * Math.pow(hops, -0.12));
+        // 慣性：道のりの進み具合を cubic-bezier(.45, .05, .2, 1) で決める。発車はぐっと踏み込んで加速し、
+        // 中ほどで最高速、最後の駅の手前では長い尾を引いてスーッと減速して止まる
+        const frac = cubicBezier(0.45, 0.05, 0.2, 1);
+        const vel = (p) => Math.min(1, Math.max(0, (frac(Math.min(1, p + 0.01)) - frac(Math.max(0, p - 0.01))) / 0.02 / 1.9)); // 0〜1（最高速で約1）
         const stops = segs.map((sg) => sg.start + sg.len); // 各区間の終わり（駅）の位置
         const counter = makeCounter(opts.remain || hops, opts.label || ((n) => `あと ${n} 駅`));
         let t0 = null, passed = 0, nextJoint = 26, lastEmit = 0, lastNow = 0;
@@ -1147,6 +1232,11 @@
           if (d >= nextJoint) {
             nextJoint += 26;
             if (opts.onJoint) opts.onJoint(v);
+            // 継ぎ目を踏んだ「ガタン」：先頭車が踏み、少し遅れて2両目も踏む（速いときほど強く）
+            if (v > 0.15) {
+              pose.kick1 = now;
+              setTimeout(() => (pose.kick2 = performance.now()), 90);
+            }
           }
           // 通過した駅：区間に金の光を残し、駅をはじけさせ、カウンターを1つ減らす
           while (passed < stops.length - 1 && d >= stops[passed]) {
