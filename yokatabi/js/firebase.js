@@ -17,7 +17,7 @@
   let booting = null;
 
   function base() {
-    // index.html と local.html のどちらから呼んでも、サイトの中の写しを指す
+    // index.html と review.html のどちらから呼んでも、サイトの中の写しを指す
     return new URL(`js/vendor/firebase-${VERSION}/`, document.baseURI).href;
   }
 

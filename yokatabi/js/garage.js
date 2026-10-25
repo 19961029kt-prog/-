@@ -289,9 +289,9 @@
     root.querySelector('[data-g-funds]').innerHTML = `${api.yenBig(Craft.balance())}`;
     root.querySelector('[data-g-tickets]').innerHTML = perDay ? `1日 <b>${perDay}</b> 枚<small>（今日はあと ${Craft.ticketsLeft()} 枚）</small>` : '<small>高級車両・連結車両をアンロックすると使えます</small>';
     const eq = Craft.equipped();
-    // 札の文言：列車の欄では編成とトレイル、紋章の欄では鞄の革・札・根付の取り合わせ
+    // 札の文言：列車の欄では編成とトレイル、紋章の欄では鞄の形・革・札・根付の取り合わせ
     root.querySelector('[data-g-caption]').textContent = mode === 'avatar'
-      ? `旅の紋章：${Craft.item('outfit', eq.outfit).name}・${Craft.item('hat', eq.hat).name}${eq.buddy !== 'none' ? `・${Craft.item('buddy', eq.buddy).name}` : ''}`
+      ? `旅の紋章：${Craft.item('bag', eq.bag) ? `${Craft.item('bag', eq.bag).name}・` : ''}${Craft.item('outfit', eq.outfit).name}・${Craft.item('hat', eq.hat).name}${eq.buddy !== 'none' ? `・${Craft.item('buddy', eq.buddy).name}` : ''}`
       : `${Craft.item('livery', eq.livery).name}${eq.carriage !== 'none' ? ` ＋ ${Craft.item('carriage', eq.carriage).name}` : ''} ／ ${Craft.item('trail', eq.trail).name}`;
     root.querySelectorAll('[data-mode]').forEach((b) => {
       b.classList.toggle('is-active', b.dataset.mode === mode);

@@ -1,14 +1,21 @@
 rules_version = '2';
 
-// Q-TRIP「地元の人の声」（承認制）の Security Rules。
-// 方針：書いていないことはすべて禁止。審査待ち（voicesPending）と承認済み（voices）を別のコレクションに分け、
-// 審査待ちが一般の旅人に漏れる道を作らない。承認済みは「投稿された文面そのまま」しか載せられない（運営も書き換えられない）。
-// App Check はここでは見えないので、Firebase コンソールで Firestore への強制（Enforce）を必ず有効にする。
+// Q-TRIP の Security Rules。
+// 方針：書いていないことはすべて禁止。
+// - profiles：遊ぶ人の登録（手帖に載せる名前・年代・性別・出身地・現在の所在地）。本人と運営だけが読める。画面には名前しか出さない。
+// - saves：遊んだ記録（端末の localStorage と同じ JSON）。本人だけが読み書きできる。
+// - voicesPending → voices：ログインした人が「地元の人」として紹介するおすすめスポット。審査待ちと承認済みを別のコレクションに分け、
+//   承認済みは「投稿された文面そのまま」しか載せられない（運営も書き換えられない）。
+// App Check はここでは見えないので、Firebase コンソールで Firestore と Authentication の「適用（Enforce）」を必ず有効にする。
 service cloud.firestore {
   match /databases/{database}/documents {
 
     function signedIn() {
       return request.auth != null;
+    }
+    // ゲームで遊ぶ人：メールアドレスが確かめられた人（Google・メールリンク。匿名は不可）
+    function isPlayer() {
+      return signedIn() && request.auth.token.email_verified == true;
     }
     function docPath(col, id) {
       return /databases/$(database)/documents/$(col)/$(id);
@@ -16,18 +23,6 @@ service cloud.firestore {
     // 運営（審査する人）：admins/{uid} があるかどうか。admins はコンソールからしか作れない
     function isAdmin() {
       return signedIn() && exists(docPath('admins', request.auth.uid));
-    }
-    // 地元の人：運営が会って同意をもらい、contributors/{uid} に登録した人だけ。止めるときは active を false に
-    function contributor() {
-      return get(docPath('contributors', request.auth.uid)).data;
-    }
-    function isContributor() {
-      return signedIn()
-        && exists(docPath('contributors', request.auth.uid))
-        && contributor().active == true;
-    }
-    function isStationId(v) {
-      return v is string && v.matches('^[a-z0-9-]{1,40}$');
     }
     function isText(v, min, max) {
       return v is string && v.size() >= min && v.size() <= max;
@@ -38,12 +33,10 @@ service cloud.firestore {
         'shimabara', 'kumamoto', 'aso', 'kurokawa-onsen', 'hitoyoshi', 'misumi', 'beppu', 'yufuin', 'hita', 'miyazaki',
         'takachiho', 'aoshima', 'kagoshima-chuo', 'kirishima-onsen', 'sakurajima', 'ibusuki', 'yakushima'];
     }
-    // ゲームで遊ぶ人（ログイン済み）。投稿できるのは、メールアドレスが確かめられた人だけ（Google・メールリンク。匿名は不可）
-    function isVerifiedUser() {
-      return signedIn() && request.auth.token.email_verified == true;
-    }
-    function profilePath() {
-      return docPath('profiles', request.auth.uid);
+    // 国は ISO 3166-1 の2文字。日本（JP）のときだけ都道府県（01〜47 の JIS コード）が要る。日本以外は空
+    function isPlace(country, pref) {
+      return country is string && country.matches('^[A-Z]{2}$') && pref is string
+        && (country == 'JP' ? pref.matches('^(0[1-9]|[1-3][0-9]|4[0-7])$') : pref == '');
     }
 
     // ---------- 運営（クライアントからは誰も書けない） ----------
@@ -53,83 +46,74 @@ service cloud.firestore {
       allow list, write: if false;
     }
 
-    // ---------- 地元の人の名簿 ----------
-    match /contributors/{uid} {
-      function validContributor(d) {
-        return d.keys().hasOnly(['name', 'title', 'stationIds', 'active', 'consentAt', 'lastPostAt'])
-          && d.keys().hasAll(['name', 'title', 'stationIds', 'active', 'consentAt'])
-          && isText(d.name, 1, 40)
-          && isText(d.title, 0, 60)
-          && d.stationIds is list && d.stationIds.size() >= 1 && d.stationIds.size() <= 26
-          && d.active is bool
-          && d.consentAt is timestamp
-          && (!('lastPostAt' in d) || d.lastPostAt is timestamp);
-      }
-      allow get: if (signedIn() && request.auth.uid == uid) || isAdmin();
-      allow list: if isAdmin();
-      allow create: if isAdmin() && validContributor(request.resource.data);
-      // 本人ができるのは「投稿した時刻」を今にすることだけ（連投の歯止め）。それ以外は運営だけ
-      allow update: if (isAdmin() && validContributor(request.resource.data))
-        || (signedIn() && request.auth.uid == uid
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastPostAt'])
-            && request.resource.data.lastPostAt == request.time);
-      allow delete: if isAdmin();
-    }
-
-    // ---------- 遊ぶ人の投稿用のプロフィール（手帖に載せる名前と、最後に投稿した時刻） ----------
+    // ---------- 遊ぶ人の登録 ----------
     match /profiles/{uid} {
       function validProfile(d) {
-        return d.keys().hasOnly(['displayName', 'lastPostAt'])
+        return d.keys().hasOnly(['displayName', 'ageGroup', 'gender', 'homeCountry', 'homePref', 'liveCountry', 'livePref', 'createdAt', 'lastPostAt'])
+          && d.keys().hasAll(['displayName', 'ageGroup', 'gender', 'homeCountry', 'homePref', 'liveCountry', 'livePref', 'createdAt'])
           && isText(d.displayName, 1, 40)
+          && d.ageGroup in ['10s', '20s', '30s', '40s', '50s', '60s', '70plus']
+          && d.gender in ['female', 'male', 'other', 'noanswer']
+          && isPlace(d.homeCountry, d.homePref)
+          && isPlace(d.liveCountry, d.livePref)
+          && d.createdAt is timestamp
           && (!('lastPostAt' in d) || d.lastPostAt is timestamp);
       }
       allow get: if (signedIn() && request.auth.uid == uid) || isAdmin();
       allow list: if isAdmin();
-      // 本人だけが書ける。lastPostAt は「今」以外にできない（過去にして連投の歯止めをすり抜けないように）
-      allow create: if signedIn() && request.auth.uid == uid && validProfile(request.resource.data)
-        && (!('lastPostAt' in request.resource.data) || request.resource.data.lastPostAt == request.time);
-      allow update: if signedIn() && request.auth.uid == uid && validProfile(request.resource.data)
+      // 本人だけが書ける。登録した時刻は「今」で、あとから変えられない。
+      // lastPostAt は「今」以外にできない（過去にして連投の歯止めをすり抜けないように）
+      allow create: if isPlayer() && request.auth.uid == uid && validProfile(request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && !('lastPostAt' in request.resource.data);
+      allow update: if isPlayer() && request.auth.uid == uid && validProfile(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
         && (request.resource.data.get('lastPostAt', null) == resource.data.get('lastPostAt', null)
             || request.resource.data.lastPostAt == request.time);
       // 消して作り直すと連投の歯止めが外れるので、本人は消せない（運営だけ）
       allow delete: if isAdmin();
     }
 
-    // ---------- 審査待ち（投稿した本人と運営だけが見られる） ----------
+    // ---------- 遊んだ記録（本人だけ） ----------
+    match /saves/{uid} {
+      function validSave(d) {
+        return d.keys().hasOnly(['data', 'version', 'progress', 'savedAt', 'updatedAt'])
+          && d.keys().hasAll(['data', 'version', 'progress', 'savedAt', 'updatedAt'])
+          && d.data is string && d.data.size() <= 400000   // 記録の JSON（写真は入れない。1MB の上限よりずっと小さく）
+          && d.version is int && d.version >= 1 && d.version <= 99
+          && d.progress is int && d.progress >= 0
+          && d.savedAt is int                              // 端末で最後に保存した時刻（ミリ秒）。どちらが新しいかを比べる
+          && d.updatedAt == request.time;
+      }
+      allow get: if isPlayer() && request.auth.uid == uid;
+      allow list: if false;
+      allow create, update: if isPlayer() && request.auth.uid == uid && validSave(request.resource.data);
+      allow delete: if isPlayer() && request.auth.uid == uid;
+    }
+
+    // ---------- おすすめスポット：審査待ち（投稿した本人と運営だけが見られる） ----------
     match /voicesPending/{voiceId} {
-      function voiceShape(d) {
-        return d.keys().hasOnly(['uid', 'stationId', 'body', 'name', 'title', 'verified', 'consent', 'createdAt'])
-          && d.keys().hasAll(['uid', 'stationId', 'body', 'name', 'title', 'verified', 'consent', 'createdAt'])
+      function profilePath() {
+        return docPath('profiles', request.auth.uid);
+      }
+      function validNewVoice(d) {
+        let p = get(profilePath()).data;
+        let last = p.get('lastPostAt', timestamp.value(0));
+        return d.keys().hasOnly(['uid', 'stationId', 'spot', 'body', 'name', 'title', 'consent', 'createdAt'])
+          && d.keys().hasAll(['uid', 'stationId', 'spot', 'body', 'name', 'title', 'consent', 'createdAt'])
           && d.uid == request.auth.uid
-          && isStationId(d.stationId) && isGameStation(d.stationId)
-          && isText(d.body, 1, 400)
-          && isText(d.title, 0, 60)
-          && d.consent == true                                          // 寄り道手帖への掲載に同意した
-          && d.createdAt == request.time;
-      }
-      // ① 運営が会って確かめた地元の人（contributors）：名前・肩書きは名簿のとおり、担当の駅だけ。「確かめた地元の人」の札がつく
-      function verifiedVoice(d) {
-        let c = contributor();
-        let last = c.get('lastPostAt', timestamp.value(0));
-        return isContributor() && voiceShape(d)
-          && d.verified == true
-          && d.stationId in c.stationIds
-          && d.name == c.name && d.title == c.title
-          && request.time > last + duration.value(60, 's')
-          && getAfter(docPath('contributors', request.auth.uid)).data.lastPostAt == request.time;
-      }
-      // ② ゲームで遊ぶ人（メール確認済み）：名前は自分のプロフィールのとおり（同じ一括書き込みで更新してよい）、肩書きは自己申告。札はつかない。
-      //    だれでも書けるので、連投の歯止めは3分（推定の値）。掲載は運営の承認のあと
-      function travelerVoice(d) {
-        let last = exists(profilePath()) ? get(profilePath()).data.get('lastPostAt', timestamp.value(0)) : timestamp.value(0);
-        let after = getAfter(profilePath()).data;
-        return isVerifiedUser() && voiceShape(d)
-          && d.verified == false
-          && d.name == after.displayName
+          && isGameStation(d.stationId)
+          && isText(d.spot, 1, 40)                // スポットの名前
+          && isText(d.body, 1, 400)               // おすすめの理由・楽しみ方
+          && isText(d.title, 0, 60)               // この駅とのつながり（自己申告）
+          && d.name == p.displayName              // 名前は登録のとおり（なりすまし防止）
+          && d.consent == true                    // 寄り道手帖への掲載に同意した
+          && d.createdAt == request.time
+          // 連投の歯止め：前の投稿から3分（推定の値）。同じ一括書き込みで登録の lastPostAt を今に更新していること
           && request.time > last + duration.value(180, 's')
-          && after.lastPostAt == request.time;
+          && getAfter(profilePath()).data.lastPostAt == request.time;
       }
-      allow create: if verifiedVoice(request.resource.data) || travelerVoice(request.resource.data);
+      allow create: if isPlayer() && exists(profilePath()) && validNewVoice(request.resource.data);
       // 本人の分は、uid で絞った問い合わせでも読める
       allow get, list: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
       // 審査中の書き換えは認めない（直したいときは取り下げて出し直す）
@@ -139,15 +123,14 @@ service cloud.firestore {
         || (isAdmin() && existsAfter(docPath('moderationLog', voiceId)));
     }
 
-    // ---------- 承認済み（だれでも読める） ----------
+    // ---------- おすすめスポット：承認済み（だれでも読める） ----------
     match /voices/{voiceId} {
       // 承認は「審査待ちの文面をそのまま写す＋審査待ちを消す＋審査の記録を残す」を1回の一括書き込みで行う
       function approvedCopy(d) {
         let p = get(docPath('voicesPending', voiceId)).data;
-        return d.keys().hasOnly(['uid', 'stationId', 'body', 'name', 'title', 'verified', 'consent', 'createdAt', 'approvedAt', 'approvedBy'])
-          && d.uid == p.uid && d.stationId == p.stationId && d.body == p.body
-          && d.name == p.name && d.title == p.title && d.verified == p.verified && d.consent == p.consent
-          && d.createdAt == p.createdAt
+        return d.keys().hasOnly(['uid', 'stationId', 'spot', 'body', 'name', 'title', 'consent', 'createdAt', 'approvedAt', 'approvedBy'])
+          && d.uid == p.uid && d.stationId == p.stationId && d.spot == p.spot && d.body == p.body
+          && d.name == p.name && d.title == p.title && d.consent == p.consent && d.createdAt == p.createdAt
           && d.approvedAt == request.time
           && d.approvedBy == request.auth.uid;
       }
@@ -174,7 +157,7 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // ---------- それ以外はすべて禁止 ----------
+    // ---------- それ以外はすべて禁止（以前の地元の人の名簿 contributors も） ----------
     match /{document=**} {
       allow read, write: if false;
     }

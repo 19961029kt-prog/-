@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- 地元の人と運営の窓口：地元の人の声の投稿と、運営の審査。検索には出さない -->
-  <title>地元の人の窓口｜Q-TRIP 九州よりみちダイス</title>
+  <!-- 運営の審査：おすすめスポットの承認と却下。運営だけが使う。検索には出さない -->
+  <title>運営の審査｜Q-TRIP 九州よりみちダイス</title>
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
   <!-- 読み込んでよい先を絞る（自分のサイト・フォント・Firebase と reCAPTCHA の窓口だけ）。127.0.0.1 はローカルのエミュレーター -->
@@ -15,30 +15,28 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/local.css">
+  <link rel="stylesheet" href="css/review.css">
 </head>
 <body class="local-page">
   <main class="lp" id="lp">
     <header class="lp-head">
       <a class="lp-back" href="./">Q-TRIP 九州よりみちダイス</a>
-      <p class="eyebrow">Local Voices</p>
-      <h1 class="lp-title">地元の人の窓口</h1>
-      <p class="lp-lead">駅のまわりに暮らす方・お店や宿の方から「この町の、ここに寄ってほしい」をお預かりする窓口です。お送りいただいた声は、運営が確かめてから寄り道手帖に載せます。</p>
+      <p class="eyebrow">Review</p>
+      <h1 class="lp-title">運営の審査</h1>
+      <p class="lp-lead">旅をしている人が「地元の人」として紹介したおすすめスポットを、一件ずつ確かめて寄り道手帖に載せる、運営だけのページです。</p>
     </header>
 
-    <!-- ログインの状態ごとに、js/local.js が中身を入れ替える -->
+    <!-- ログインの状態ごとに、js/review.js が中身を入れ替える -->
     <section class="lp-card" id="lp-auth" aria-live="polite"><p class="lp-muted">準備しています…</p></section>
-    <section class="lp-card" id="lp-contrib" hidden></section>
     <section class="lp-card" id="lp-admin" hidden></section>
 
     <footer class="lp-foot">
-      <p>この窓口では、生成AIなどの自動の文章づくりは使っていません。地元の方の言葉を、そのままお預かりします。</p>
-      <p>ログインに使ったメールアドレスは、ログインのためだけに使い、画面にも寄り道手帖にも出しません。手帖に出るのは、運営と決めたお名前と肩書きだけです。</p>
+      <p>このページでは、生成AIなどの自動の文章づくりは使っていません。承認は、送られた文面をそのまま載せます。</p>
     </footer>
   </main>
   <script src="js/icons.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase.js"></script>
-  <script src="js/local.js"></script>
+  <script src="js/review.js"></script>
 </body>
 </html>

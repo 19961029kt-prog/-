@@ -70,17 +70,19 @@
         );
         if (!reduce) {
           // 大きく弾んで、コロン、コロンと小さくなっていく（高さは1個ずつ少し変えて、そろわないように）
-          const hop = 64 + Math.random() * 26;
+          // 弾む高さはサイコロの大きさに合わせる（トレイの縁から飛び出さないように。2〜4個のときは小さく弾む）
+          const size = parseFloat(getComputedStyle(root).getPropertyValue('--size')) || 64;
+          const hop = size * (0.62 + Math.random() * 0.16);
           bounce.animate(
             [
               { transform: 'translateY(0) scale(1)' },
               { transform: `translateY(-${hop.toFixed(0)}px) scale(1.06)`, offset: 0.15, easing: 'cubic-bezier(.4,0,1,1)' },
               { transform: 'translateY(0) scale(1.08, .9)', offset: 0.3, easing: 'cubic-bezier(0,0,.6,1)' },
-              { transform: 'translateY(-34px) scale(1)', offset: 0.44, easing: 'cubic-bezier(.4,0,1,1)' },
+              { transform: `translateY(-${(hop * 0.42).toFixed(0)}px) scale(1)`, offset: 0.44, easing: 'cubic-bezier(.4,0,1,1)' },
               { transform: 'translateY(0) scale(1.05, .94)', offset: 0.58, easing: 'cubic-bezier(0,0,.6,1)' },
-              { transform: 'translateY(-13px) scale(1)', offset: 0.69, easing: 'cubic-bezier(.4,0,1,1)' },
+              { transform: `translateY(-${(hop * 0.16).toFixed(0)}px) scale(1)`, offset: 0.69, easing: 'cubic-bezier(.4,0,1,1)' },
               { transform: 'translateY(0) scale(1.03, .97)', offset: 0.8 },
-              { transform: 'translateY(-4px)', offset: 0.87 },
+              { transform: `translateY(-${(hop * 0.05).toFixed(0)}px)`, offset: 0.87 },
               { transform: 'translateY(0) scale(1)', offset: 0.93 },
               { transform: 'translateY(0) scale(1)' },
             ],

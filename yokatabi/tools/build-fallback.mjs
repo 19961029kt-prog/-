@@ -83,7 +83,7 @@ for (const s of data.stations) {
 // クラフト工房：装備欄ごとに、0円の初期装備がちょうど1つ・IDが重複しない・価格は0以上
 // （初期装備のIDは js/store.js の equipped の初期値と同じであること）
 const craft = data.meta.craft ?? {};
-const DEFAULT_EQUIP = { livery: 'hidamari', carriage: 'none', trail: 'puff', hat: 'straw', outfit: 'canvas', buddy: 'none' };
+const DEFAULT_EQUIP = { livery: 'hidamari', carriage: 'none', trail: 'puff', bag: 'trunk', hat: 'straw', outfit: 'canvas', buddy: 'none' };
 if (!(craft.discoveryBonus > 0)) errors.push('meta.craft.discoveryBonus（発見ボーナス）がありません');
 for (const sec of [...(craft.train ?? []), ...(craft.avatar ?? [])]) {
   const items = sec.items ?? [];
@@ -102,7 +102,7 @@ if (!Array.isArray(owner.dividendRates) || owner.dividendRates.length < (owner.s
 // ライバル旅人のアバター：工房にあるパーツのID
 const itemIds = (slot) => new Set([...(craft.train ?? []), ...(craft.avatar ?? [])].find((s) => s.slot === slot)?.items.map((i) => i.id) ?? []);
 for (const r of data.meta.rivals ?? []) {
-  for (const slot of ['hat', 'outfit', 'buddy', 'livery']) if (r.avatar && !itemIds(slot).has(r.avatar[slot])) errors.push(`meta.rivals ${r.id}: avatar.${slot} の ${r.avatar[slot]} が工房にありません`);
+  for (const slot of ['bag', 'hat', 'outfit', 'buddy', 'livery']) if (r.avatar && !itemIds(slot).has(r.avatar[slot])) errors.push(`meta.rivals ${r.id}: avatar.${slot} の ${r.avatar[slot]} が工房にありません`);
 }
 // 駅の階層（3段階のセマンティック・ズームで、駅名を出し始める倍率が変わる）
 for (const s of data.stations) if (!['hub', 'tourist', 'local'].includes(s.stationTier)) errors.push(`${s.id}: stationTier が hub/tourist/local のどれでもありません`);

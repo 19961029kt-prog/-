@@ -1,4 +1,4 @@
-/* 地元の人と運営の窓口（local.html）。トークン・ボタン・チップは style.css のものを使い、ここではページの骨格だけ。
+/* 運営の審査（review.html）。トークン・ボタン・チップは style.css のものを使い、ここではページの骨格だけ。
    本体の画面はスクロールしない 100dvh の骨格なので、このページだけ普通に縦へスクロールさせる */
 html, body.local-page { height: auto; min-height: 100%; overflow: auto; touch-action: auto; user-select: text; -webkit-user-select: text; width: auto; }
 body.local-page { background: var(--fiber), var(--ivory); color: var(--ink); }
@@ -37,3 +37,5 @@ body.local-page { background: var(--fiber), var(--ivory); color: var(--ink); }
 .lp-check { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; }
 .lp-foot { margin-top: 28px; font-size: 11.5px; line-height: 1.8; color: var(--ink-3); }
 .lp-foot p { margin: 4px 0; }
+.lp-item-spot { margin: 0 0 4px; display: flex; align-items: center; gap: 6px; font-family: var(--font-mincho); font-weight: 700; font-size: 15px; }
+.lp-item-spot .ico { color: var(--akane); }
