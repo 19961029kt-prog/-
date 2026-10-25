@@ -23,6 +23,17 @@
 
 寄り道手帖の上部の「ジャーニー」表示は、この4段階の達成状況をそのまま映す。駅のオーナー権は、クラフト資金で出資した額（`purchases`。項目名は旧名のまま）のランキングで決まる（3章）。新機能を足すときは、どの段階を前に進める機能なのかを説明できること。
 
+## 0. 最優先の方針（2026年10月に決定）
+
+- **AIは一切組み込まない。** 生成AI・大規模言語モデルの API（会話・旅程の生成・翻訳・要約・画像の解析など）を、画面にも裏側にもビルドにも使わない。Q-TRIP の価値は「人が確かめた、人が語った九州」と、人と人とのつながり。駅の文・翻訳・地元の声は、人が書き、人が確かめて載せる。
+- **Firebase の SDK だけは、外部ライブラリの例外として認める。** 「人とのつながり」の機能（地元の人の声・旅人どうしの便りなど）のサーバーには Firebase（Authentication・Cloud Firestore・App Check）を使う。読み込む版は固定し、ほかのライブラリは増やさない。
+- **Security Rules と App Check による防御を、すべての開発の最優先とする。**
+  - 機能を足すときは、データの形・Security Rules・ルールのテスト（`firebase/test/`、ローカルのエミュレーター）を、画面より先に書く。テストには「できるべきこと」と「できてはいけないこと」の両方を入れ、`cd firebase && npm test` が通らない変更は出さない。
+  - ルールは「書いていないことはすべて禁止」。人の投稿は承認制にして、審査待ちと公開済みはコレクションを分ける。
+  - App Check はルールからは見えないので、Firebase コンソールで Firestore と Authentication に「適用（Enforce）」を入れる。サービスアカウントの鍵や管理者の鍵は、ページにもリポジトリにも置かない（ウェブの `firebaseConfig` は秘密ではない）。
+  - Firebase から読んだ文字は、必ず `esc()` を通して文字として表示する。
+  - 設計・流れ・テストの手順は `firebase/README.md`。
+
 ## 2. 絶対ルール（法務・権利）
 
 - **既存ゲーム（『桃太郎電鉄』等）の固有名称・画像・キャラクター・セリフ回し・ゲーム用語は一切使わない。** 世界観・UI・用語はすべてオリジナル。
@@ -103,10 +114,11 @@ yokatabi/
     ├── publish-site.sh      公開用リポジトリ（<組織>.github.io）に公開するファイルだけを並べる
     ├── build-redirect.mjs   旧URLに置く転送ページ（記録の引き継ぎつき）を作る
     └── test-trip.mjs        モデルコース生成の検証（全2駅組み合わせ・時間割・速度）
+└── firebase/                公開しない。Firestore の Security Rules・Storage の Rules・エミュレーターの設定・ルールのテスト（0章・`firebase/README.md`）
 ```
 
 - **技術スタック**：HTML5 / 自前の CSS / Vanilla JS / インラインSVG / CSS 3D / Web Audio API / IndexedDB。npm もビルドも不要（以前の Tailwind CDN はやめた）。
-- **外部への依存は Google Fonts だけ**（2026年10月にスクショの文字読み取り（Tesseract.js）をやめた）。
+- **外部への依存は Google Fonts だけ**（2026年10月にスクショの文字読み取り（Tesseract.js）をやめた）。例外として Firebase の SDK を認める（0章。まだ画面には読み込んでいない）。
 - **スクリプトは classic script（`<script src>`）で読み込む。** ES Modules は `file://` で開くと CORS で止まるため使わない。モジュール間は `window.YT` 名前空間で受け渡す。読み込み順は `index.html` の末尾にある順のまま（icons は最初。craft → camera → map → dice → trip → ownership → photos → owner → garage → scenery → postcards → sharecard → game → app）。旅の便りのいいねもクラフト資金に入るので、`app.js` の起動では `Postcards.init` を最初の資金の計算より前に呼ぶ。
 - **データ読み込み**：`fetch('stations.json')` を試し、`file://` や通信エラーのときは `window.YOKATABI_FALLBACK_DATA` を使う（`YT.Data.load()`）。フッターに「stations.json 読込済み／内蔵データで起動中」が出る。
 - **効果音（`sound.js`）**：外部の音声ファイルは使わない。電子音のビープではなく、ノイズ＋フィルター＋倍音で、木のダイスが革のトレイで転がる「コロン」、レールの継ぎ目の「ガタン、ゴトン」（走った距離に合わせて鳴る）、駅メロ風のメジャーセブンスのアルペジオ（オルゴール／エレピ風・薄いディレイ）、刻印の「バン！」と弦のストロークのファンファーレ、工具の「カン」と和音の改造ファンファーレをつくる。AudioContext は最初のユーザー操作で作り、無音を一瞬鳴らして起こす。iPhone 対策として、`navigator.audioSession.type = 'playback'` と、別タブから戻ったときの 'interrupted' からの復帰を入れている。ミュートはヘッダーのボタンで、状態は保存する。
@@ -420,7 +432,7 @@ python3 -m http.server 8000     # → http://localhost:8000/
 
 ## 13. コーディング規約
 
-- 依存ライブラリを増やさない（Google Fonts のみ）。地図の元データはビルド時にだけ使い、ページは `js/geo.js` だけを読む。
+- 依存ライブラリを増やさない（Google Fonts のみ。例外は Firebase の SDK だけ。0章）。AI は使わない。地図の元データはビルド時にだけ使い、ページは `js/geo.js` だけを読む。
 - 文字列を HTML に差し込むときは必ず `esc()` を通す（データは自前でも、将来の外部データ化に備える）。
 - 画面の文言は日本語（欧文は2章の決まりの範囲だけ）。絵文字は使わず、`YT.Icon` の線画を使う。コメントも日本語で、ねらい（なぜそうするか）を書く。
 - 開閉・移り変わりは `var(--ease)`。新しい箱は `var(--frame)` かパンチ穴で、角丸＋影にしない。

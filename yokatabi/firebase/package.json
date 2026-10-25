@@ -1,0 +1,14 @@
+{
+  "name": "qtrip-firebase-rules",
+  "private": true,
+  "description": "Q-TRIP の Firestore Security Rules と、ローカルエミュレーターでのテスト（公開サイトには載せない）",
+  "type": "module",
+  "scripts": {
+    "test": "firebase emulators:exec --only firestore --project demo-qtrip \"node --test test/*.test.mjs\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "6.0.0",
+    "firebase": "13.0.0",
+    "firebase-tools": "15.33.0"
+  }
+}

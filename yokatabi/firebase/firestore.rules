@@ -1,0 +1,131 @@
+rules_version = '2';
+
+// Q-TRIP「地元の人の声」（承認制）の Security Rules。
+// 方針：書いていないことはすべて禁止。審査待ち（voicesPending）と承認済み（voices）を別のコレクションに分け、
+// 審査待ちが一般の旅人に漏れる道を作らない。承認済みは「投稿された文面そのまま」しか載せられない（運営も書き換えられない）。
+// App Check はここでは見えないので、Firebase コンソールで Firestore への強制（Enforce）を必ず有効にする。
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+    function docPath(col, id) {
+      return /databases/$(database)/documents/$(col)/$(id);
+    }
+    // 運営（審査する人）：admins/{uid} があるかどうか。admins はコンソールからしか作れない
+    function isAdmin() {
+      return signedIn() && exists(docPath('admins', request.auth.uid));
+    }
+    // 地元の人：運営が会って同意をもらい、contributors/{uid} に登録した人だけ。止めるときは active を false に
+    function contributor() {
+      return get(docPath('contributors', request.auth.uid)).data;
+    }
+    function isContributor() {
+      return signedIn()
+        && exists(docPath('contributors', request.auth.uid))
+        && contributor().active == true;
+    }
+    function isStationId(v) {
+      return v is string && v.matches('^[a-z0-9-]{1,40}$');
+    }
+    function isText(v, min, max) {
+      return v is string && v.size() >= min && v.size() <= max;
+    }
+
+    // ---------- 運営（クライアントからは誰も書けない） ----------
+    match /admins/{uid} {
+      // 自分が運営かどうかを画面が知るためだけに、本人の1件だけ読める
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+
+    // ---------- 地元の人の名簿 ----------
+    match /contributors/{uid} {
+      function validContributor(d) {
+        return d.keys().hasOnly(['name', 'title', 'stationIds', 'active', 'consentAt', 'lastPostAt'])
+          && d.keys().hasAll(['name', 'title', 'stationIds', 'active', 'consentAt'])
+          && isText(d.name, 1, 40)
+          && isText(d.title, 0, 60)
+          && d.stationIds is list && d.stationIds.size() >= 1 && d.stationIds.size() <= 26
+          && d.active is bool
+          && d.consentAt is timestamp
+          && (!('lastPostAt' in d) || d.lastPostAt is timestamp);
+      }
+      allow get: if (signedIn() && request.auth.uid == uid) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin() && validContributor(request.resource.data);
+      // 本人ができるのは「投稿した時刻」を今にすることだけ（連投の歯止め）。それ以外は運営だけ
+      allow update: if (isAdmin() && validContributor(request.resource.data))
+        || (signedIn() && request.auth.uid == uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastPostAt'])
+            && request.resource.data.lastPostAt == request.time);
+      allow delete: if isAdmin();
+    }
+
+    // ---------- 審査待ち（投稿した本人と運営だけが見られる） ----------
+    match /voicesPending/{voiceId} {
+      function validNewVoice(d) {
+        let c = contributor();
+        let last = c.get('lastPostAt', timestamp.value(0));
+        return d.keys().hasOnly(['uid', 'stationId', 'body', 'name', 'title', 'createdAt'])
+          && d.keys().hasAll(['uid', 'stationId', 'body', 'name', 'title', 'createdAt'])
+          && d.uid == request.auth.uid
+          && isStationId(d.stationId) && d.stationId in c.stationIds   // 担当の駅だけ
+          && isText(d.body, 1, 400)
+          && d.name == c.name && d.title == c.title                    // 名前・肩書きは名簿のとおり（なりすまし防止）
+          && d.createdAt == request.time
+          // 連投の歯止め：前の投稿から60秒あける。同じ一括書き込みで lastPostAt を今に更新していること
+          && request.time > last + duration.value(60, 's')
+          && getAfter(docPath('contributors', request.auth.uid)).data.lastPostAt == request.time;
+      }
+      allow create: if isContributor() && validNewVoice(request.resource.data);
+      // 本人の分は、uid で絞った問い合わせでも読める
+      allow get, list: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      // 審査中の書き換えは認めない（直したいときは取り下げて出し直す）
+      allow update: if false;
+      // 本人はいつでも取り下げられる。運営が消すとき（承認・却下）は、同じ一括書き込みで審査の記録を残すこと
+      allow delete: if (signedIn() && resource.data.uid == request.auth.uid)
+        || (isAdmin() && existsAfter(docPath('moderationLog', voiceId)));
+    }
+
+    // ---------- 承認済み（だれでも読める） ----------
+    match /voices/{voiceId} {
+      // 承認は「審査待ちの文面をそのまま写す＋審査待ちを消す＋審査の記録を残す」を1回の一括書き込みで行う
+      function approvedCopy(d) {
+        let p = get(docPath('voicesPending', voiceId)).data;
+        return d.keys().hasOnly(['uid', 'stationId', 'body', 'name', 'title', 'createdAt', 'approvedAt', 'approvedBy'])
+          && d.uid == p.uid && d.stationId == p.stationId && d.body == p.body
+          && d.name == p.name && d.title == p.title && d.createdAt == p.createdAt
+          && d.approvedAt == request.time
+          && d.approvedBy == request.auth.uid;
+      }
+      allow get, list: if true;
+      allow create: if isAdmin()
+        && exists(docPath('voicesPending', voiceId))
+        && !existsAfter(docPath('voicesPending', voiceId))
+        && getAfter(docPath('moderationLog', voiceId)).data.action == 'approve'
+        && approvedCopy(request.resource.data);
+      allow update: if false;
+      // 本人の取り下げ（同意の撤回）と、運営による削除
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    // ---------- 審査の記録（あとから消せない・書き換えられない） ----------
+    match /moderationLog/{voiceId} {
+      allow get, list: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['action', 'by', 'at', 'reason'])
+        && request.resource.data.action in ['approve', 'reject']
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.at == request.time
+        && isText(request.resource.data.get('reason', ''), 0, 200);
+      allow update, delete: if false;
+    }
+
+    // ---------- それ以外はすべて禁止 ----------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
