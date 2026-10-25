@@ -54,8 +54,21 @@ npm test             # エミュレーターを立てて test/*.test.mjs を走�
 - ルールを変えたら必ず `npm test` を通す。新しいコレクションを足すときは、ルールとテストを同時に書く。
 - 手で触って確かめたいとき：`npx firebase emulators:start --only firestore --project demo-qtrip`。
 
-## firebaseConfig が届いたら
+## 本番のプロジェクト（q-trip-a127e）
 
-1. Firebase コンソール：Authentication（地元の人と運営はメールリンクかGoogleでログイン）、Firestore（東京）、App Check（reCAPTCHA Enterprise・適用）を設定する。
-2. `firebase.json` と `.firebaserc` に本物のプロジェクトを入れ、`npx firebase deploy --only firestore:rules` でルールだけを先に出す（テストを通してから）。
-3. 画面（投稿フォーム・運営の審査画面・駅の「地元の人の声」）を作る。Firebase の SDK は、版を固定して読み込む。
+- `.firebaserc` の既定のプロジェクトは `q-trip-a127e`。ウェブの設定値は `js/firebase-config.js`（`YT.firebaseConfig`。まだ画面では読み込んでいない。`measurementId` は使わない）。
+- **ルールを本番に出す**（テストが通ったときだけ出る）：
+  ```bash
+  cd yokatabi/firebase
+  npx firebase login          # 運営の Google アカウントで（2段階認証つき）
+  npm run deploy:rules        # npm test → firestore.rules と storage.rules を q-trip-a127e へ
+  ```
+  コマンドを使わない場合は、Firebase コンソールの Firestore → ルール、Storage → ルールに、それぞれのファイルの中身を貼って公開する。
+- サービスアカウントの鍵（JSON）は作らない・渡さない・リポジトリに置かない。
+
+### 画面を作る前に、コンソールで設定すること
+1. Firestore：東京（`asia-northeast1`）で作成済みか確かめる。
+2. Authentication：ログイン方法に「メールリンク」を有効にする。承認済みドメインに `q-trip.github.io` を足す。
+3. App Check：ウェブアプリに reCAPTCHA Enterprise を登録し、Firestore と Authentication を「適用（Enforce）」にする（サイトキーは秘密ではないので、画面に書く）。
+4. 予算のアラート、運営のアカウントの2段階認証。
+5. 運営の印：Firestore のコンソールで `admins/{運営の uid}` を1件作る。

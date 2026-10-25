@@ -4,7 +4,8 @@
   "description": "Q-TRIP の Firestore Security Rules と、ローカルエミュレーターでのテスト（公開サイトには載せない）",
   "type": "module",
   "scripts": {
-    "test": "firebase emulators:exec --only firestore --project demo-qtrip \"node --test test/*.test.mjs\""
+    "test": "firebase emulators:exec --only firestore --project demo-qtrip \"node --test test/*.test.mjs\"",
+    "deploy:rules": "npm test && firebase deploy --only firestore:rules,storage --project q-trip-a127e"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "6.0.0",
