@@ -1,5 +1,5 @@
 // Firebase のウェブ用の設定値（q-trip-a127e）。秘密の情報ではない（守りは Security Rules と App Check が受け持つ）。
-// まだ index.html では読み込んでいない。地元の人の声の画面を作るときに、版を固定した Firebase の SDK と一緒に読み込む。
+// index.html と local.html で読み込み、js/firebase.js が使う。SDK はサイトの中の写し（js/vendor/）を、必要になったときだけ読む。
 // measurementId（Google アナリティクス）は使わない：旅人の行動を外へ送る計測は入れない方針。
 (function () {
   'use strict';

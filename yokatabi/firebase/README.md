@@ -50,6 +50,7 @@ npm install          # firebase-tools と @firebase/rules-unit-testing（版は 
 npm test             # エミュレーターを立てて test/*.test.mjs を走らせ、終わったら止める
 ```
 
+- 画面の通しのテスト：`npm run e2e`（Auth・Firestore のエミュレーターにつなぎ、`local.html?emulator` と `index.html?emulator` を Playwright で動かす。13件）。
 - テストは `test/voices.rules.test.mjs`。「できるべきこと」と「できてはいけないこと」を両方確かめる（23件）。
 - ルールを変えたら必ず `npm test` を通す。新しいコレクションを足すときは、ルールとテストを同時に書く。
 - 手で触って確かめたいとき：`npx firebase emulators:start --only firestore --project demo-qtrip`。

@@ -1761,3 +1761,16 @@ html[lang="ja"] .lang-btn [data-lang="ja"], html[lang="en"] .lang-btn [data-lang
 @media (prefers-reduced-motion: reduce) {
   .dice-stage, .dice-fab { transition-duration: .01s; }
 }
+
+/* ---- 地元の人の声（寄り道手帖。承認済みだけ・js/voices.js） ---- */
+/* 便箋に書かれた一筆のように：左に細い真鍮の罫、明朝の本文、名前と肩書きは小さく右に */
+.voices-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.voice { padding: 12px 16px 10px 18px; background: var(--fiber), var(--paper); box-shadow: var(--frame); border-left: 2px solid var(--brass); }
+.voice-body { margin: 0; font-family: var(--font-mincho); font-size: 14.5px; line-height: 1.95; color: var(--ink); white-space: pre-line; overflow-wrap: anywhere; }
+.voice-by { margin: 6px 0 0; text-align: right; font-family: var(--font-mincho); font-weight: 700; font-size: 12.5px; color: var(--ink-2); letter-spacing: .06em; }
+.voice-by::before { content: "\2015\2002"; color: var(--brass); }
+.voice-by small { margin-left: 8px; font-family: var(--font-ui); font-weight: 500; font-size: 11px; color: var(--ink-3); letter-spacing: .04em; }
+.voices-empty { margin: 0; padding: 10px 0; font-size: 12.5px; line-height: 1.8; color: var(--ink-3); border-top: 1px dashed var(--perf); border-bottom: 1px dashed var(--perf); }
+.voices-note { margin: 8px 0 0; font-size: 11px; line-height: 1.7; color: var(--ink-3); }
+/* 寄り道手帖（モーダル）をひらいているあいだは、手帖の文字にかぶらないよう親指のダイスを下げる */
+body.modal-open .dice-fab { opacity: 0; transform: scale(.4); visibility: hidden; pointer-events: none; transition: opacity .22s var(--ease), transform .28s var(--ease), visibility 0s .28s; }

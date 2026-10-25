@@ -33,6 +33,13 @@
   - App Check はルールからは見えないので、Firebase コンソールで Firestore と Authentication に「適用（Enforce）」を入れる。サービスアカウントの鍵や管理者の鍵は、ページにもリポジトリにも置かない（ウェブの `firebaseConfig` は秘密ではない）。
   - Firebase から読んだ文字は、必ず `esc()` を通して文字として表示する。
   - 設計・流れ・テストの手順は `firebase/README.md`。
+- **地元の人の声（承認制。2026年10月に実装）**：
+  - 旅人の画面：寄り道手帖の「車窓とまちの寄り道ノート」の下に「地元の人の声」（`js/voices.js`）。承認済み（`voices`）だけを、手帖をひらいたときに読む（1駅5件・同じ駅は10分読み直さない）。名前と肩書きを添え、「運営が地元の方にお会いして掲載の同意をいただき、内容を確かめてから載せています」と書く。
+  - 窓口：`local.html`（検索に出さない）。地元の人はログイン（Google かメールリンク）して担当の駅に投稿し、審査待ち・掲載中の声をいつでも取り下げられる。運営は審査（承認は文面そのまま、却下は理由つき）・地元の人の名簿の登録と停止・掲載の取りやめ（`js/local.js`・`css/local.css`）。はじめての人は、ログインのあとに出る「あなたの番号」（uid）を運営に伝える。
+  - SDK：`js/vendor/firebase-13.0.0/`（`node tools/vendor-firebase.mjs` が npm の firebase から写す。手で編集しない。Google の CDN からは読まない）。`js/firebase.js` の `YT.Firebase.boot()` が必要になったときだけ `import()` し、App Check（reCAPTCHA Enterprise）を Firestore・Authentication より先に起動する。設定値は `js/firebase-config.js`（アナリティクスは使わない）。
+  - 手元（localhost）では、何も付けなければどこにもつながない。`?emulator` でローカルのエミュレーター（demo-qtrip）、`?live` で本番（App Check のデバッグ用トークンをコンソールに登録したときだけ通る）。
+  - `local.html` には CSP（読み込み先を自分・フォント・Firebase と reCAPTCHA の窓口に絞る）を `<meta>` で入れている。本番で読み込みが CSP に止められたら、DevTools のコンソールで止められた先を確かめて足す（推定で書いた一覧なので）。
+  - テスト：`cd firebase && npm test`（ルール23件）と `npm run e2e`（エミュレーターにつないだ画面の通し13件：登録→投稿→連投の歯止め→承認前は出ない→承認→手帖に文字のまま出る→取り下げ）。
 
 ## 2. 絶対ルール（法務・権利）
 
@@ -78,6 +85,7 @@
 ```
 yokatabi/
 ├── index.html               画面の骨格（Google Fonts のみ）。<head> に検索・共有用の情報
+├── local.html               地元の人と運営の窓口（地元の人の声の投稿と審査。0章）
 ├── favicon.svg / icon-192.png / apple-touch-icon.png   アイコン（木のサイコロ）
 ├── og.jpg                   共有・検索用の画像（1200×630）
 ├── robots.txt / sitemap.xml 検索エンジン向け（公開URLのサイトの一番上に置かれる）
@@ -105,6 +113,11 @@ yokatabi/
 │   ├── postcards.js         YT.Postcards … 旅の便り（投函・ポラロイド）・わたしの九州フォトマップ・旅人たちのポストカード・いいね
 │   ├── sharecard.js         YT.ShareCard … 手帖シェアカード（Canvas 1200×630）の描画・保存・共有・発信ボーナス
 │   ├── game.js              YT.Game   … スポットライト駅・特別切符・ライン制覇・週末の大精算まつり・サプライズ・王座奪還
+│   ├── firebase-config.js   YT.firebaseConfig … Firebase のウェブ用の設定値（秘密ではない）
+│   ├── firebase.js          YT.Firebase … SDK の写しを必要なときだけ読み、App Check を先に起動する
+│   ├── voices.js            YT.Voices … 寄り道手帖の「地元の人の声」（承認済みだけを読む）
+│   ├── local.js             窓口（local.html）の画面：ログイン・投稿・取り下げ・審査・名簿
+│   ├── vendor/firebase-13.0.0/  Firebase の SDK の写し（tools/vendor-firebase.mjs が作る。手で編集しない）
 │   └── app.js               UI全体（上の帯と JP/EN・親指のダイス・分かれ道の方面ボタン・到着の駅名標・巻頭言（表紙・羅針盤・栞）・望遠鏡・寄り道手帖・ランキング・王座交代の演出・手帖・しおり・Xシェア）
 └── tools/
     ├── build-fallback.mjs   stations.json の検証とフォールバックの生成
@@ -113,13 +126,14 @@ yokatabi/
     ├── build-geo.mjs        元データ → js/geo.js と各駅の x / y（投影・間引き・山地の等高線・駅と線路の検証）
     ├── publish-site.sh      公開用リポジトリ（<組織>.github.io）に公開するファイルだけを並べる
     ├── build-redirect.mjs   旧URLに置く転送ページ（記録の引き継ぎつき）を作る
+    ├── vendor-firebase.mjs  Firebase の SDK を js/vendor/ に写す（版は firebase/package.json に固定）
     └── test-trip.mjs        モデルコース生成の検証（全2駅組み合わせ・時間割・速度）
 └── firebase/                公開しない。Firestore の Security Rules・Storage の Rules・エミュレーターの設定・ルールのテスト（0章・`firebase/README.md`）
 ```
 
 - **技術スタック**：HTML5 / 自前の CSS / Vanilla JS / インラインSVG / CSS 3D / Web Audio API / IndexedDB。npm もビルドも不要（以前の Tailwind CDN はやめた）。
-- **外部への依存は Google Fonts だけ**（2026年10月にスクショの文字読み取り（Tesseract.js）をやめた）。例外として Firebase の SDK を認める（0章。まだ画面には読み込んでいない）。
-- **スクリプトは classic script（`<script src>`）で読み込む。** ES Modules は `file://` で開くと CORS で止まるため使わない。モジュール間は `window.YT` 名前空間で受け渡す。読み込み順は `index.html` の末尾にある順のまま（icons は最初。craft → camera → map → dice → trip → ownership → photos → owner → garage → scenery → postcards → sharecard → game → app）。旅の便りのいいねもクラフト資金に入るので、`app.js` の起動では `Postcards.init` を最初の資金の計算より前に呼ぶ。
+- **外部への依存は Google Fonts だけ**（2026年10月にスクショの文字読み取り（Tesseract.js）をやめた）。例外として Firebase の SDK を認める（0章。サイトの中の写しを、寄り道手帖をひらいたときと窓口のページでだけ読む）。
+- **スクリプトは classic script（`<script src>`）で読み込む。** ES Modules は `file://` で開くと CORS で止まるため使わない（例外は `js/firebase.js` が中で `import()` する Firebase の SDK だけ。file:// では読まない）。モジュール間は `window.YT` 名前空間で受け渡す。読み込み順は `index.html` の末尾にある順のまま（icons は最初。craft → camera → map → dice → trip → ownership → photos → owner → garage → scenery → postcards → sharecard → game → app）。旅の便りのいいねもクラフト資金に入るので、`app.js` の起動では `Postcards.init` を最初の資金の計算より前に呼ぶ。
 - **データ読み込み**：`fetch('stations.json')` を試し、`file://` や通信エラーのときは `window.YOKATABI_FALLBACK_DATA` を使う（`YT.Data.load()`）。フッターに「stations.json 読込済み／内蔵データで起動中」が出る。
 - **効果音（`sound.js`）**：外部の音声ファイルは使わない。電子音のビープではなく、ノイズ＋フィルター＋倍音で、木のダイスが革のトレイで転がる「コロン」、レールの継ぎ目の「ガタン、ゴトン」（走った距離に合わせて鳴る）、駅メロ風のメジャーセブンスのアルペジオ（オルゴール／エレピ風・薄いディレイ）、刻印の「バン！」と弦のストロークのファンファーレ、工具の「カン」と和音の改造ファンファーレをつくる。AudioContext は最初のユーザー操作で作り、無音を一瞬鳴らして起こす。iPhone 対策として、`navigator.audioSession.type = 'playback'` と、別タブから戻ったときの 'interrupted' からの復帰を入れている。ミュートはヘッダーのボタンで、状態は保存する。
 - **localStorage** のキーは `yokatabi.kyushu.v1`。読み書きはすべて try/catch で囲み、使えない環境ではメモリ上の状態で動かす。項目を足すときは `blank()` に初期値を書けば古いデータにも補われる。構造を壊す変更をするときは `version` を上げて、`store.js` の `normalize()` に移行処理を書く（いまは version 3。旧URLからの引き継ぎも同じ `normalize()` を通る）。旅の便りの画像は IndexedDB の `qtrip-receipts`（名前は旧名のまま）（使えない環境では開いているあいだだけメモリに持つ）。
@@ -402,7 +416,8 @@ python3 -m http.server 8000     # → http://localhost:8000/
 
 - `index.html` をダブルクリック（`file://`）で開いても、内蔵データで動く。
 - 進捗のリセット：オーナー刻印手帖の「旅の記録をリセット」、または DevTools で `localStorage.removeItem('yokatabi.kyushu.v1')`。
-- コミット前に：`node tools/build-fallback.mjs --check`・`node tools/test-trip.mjs`・`node tools/check-emoji.mjs`。
+- コミット前に：`node tools/build-fallback.mjs --check`・`node tools/test-trip.mjs`・`node tools/check-emoji.mjs`。Firebase にかかわる変更は `cd firebase && npm test && npm run e2e` も。
+- 地元の人の声をエミュレーターで手で試すとき：`cd firebase && npx firebase emulators:start --only auth,firestore --project demo-qtrip` を立てて、`http://localhost:8000/local.html?emulator` と `index.html?emulator` をひらく（メールリンクは http://127.0.0.1:9099/emulator/v1/projects/demo-qtrip/oobCodes に出る）。
 - 急行切符ボーナスを手で試すとき：ダイスで駅に止まり、手帖の「逸品を覗いて…」を押して、15秒たってからこのタブに戻る。
 - 初回の表紙（巻頭言）をもう一度見るとき：保存データの `prefaceSeen` を消す（またはリセット）。
 - 旅の便りの写真を消すとき：DevTools の Application → IndexedDB → `qtrip-receipts`（「旅の記録をリセット」でも消える）。
