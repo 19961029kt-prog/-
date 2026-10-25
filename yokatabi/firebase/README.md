@@ -14,7 +14,7 @@
 | `admins/{uid}` | 運営（審査する人）の印 | 本人の1件だけ | だれも（Firebase コンソールで作る） |
 | `contributors/{uid}` | 地元の人の名簿：`name`（1〜40字）・`title`（肩書き 0〜60字）・`stationIds`（担当の駅）・`active`・`consentAt`（掲載の同意をもらった日時）・`lastPostAt` | 本人と運営 | 運営。本人は `lastPostAt` を今にすることだけ |
 | `profiles/{uid}` | 遊ぶ人の投稿用：`displayName`（手帖に載せる名前 1〜40字）・`lastPostAt` | 本人と運営 | 本人（投稿時刻は「今」だけ。本人は消せない） |
-| `voicesPending/{voiceId}` | 審査待ち：`uid`・`stationId`（26駅だけ）・`body`（1〜400字）・`name`・`title`（0〜60字）・`verified`（名簿の人は true）・`consent`（true）・`createdAt` | 本人と運営 | 作成は登録された地元の人。書き換えはだれも不可。削除は本人（取り下げ）と運営（審査の記録つき） |
+| `voicesPending/{voiceId}` | 審査待ち：`uid`・`stationId`（26駅だけ）・`body`（1〜400字）・`name`・`title`（0〜60字）・`verified`（名簿の人は true）・`consent`（true）・`createdAt` | 本人と運営 | 作成は名簿の地元の人と、ログインしたメール確認済みの人。書き換えはだれも不可。削除は本人（取り下げ）と運営（審査の記録つき） |
 | `voices/{voiceId}` | 承認済み：審査待ちの項目＋`approvedAt`・`approvedBy` | だれでも | 作成は運営の承認だけ。書き換え不可。削除は本人（同意の撤回）と運営 |
 | `moderationLog/{voiceId}` | 審査の記録：`action`（approve／reject）・`by`・`at`・`reason`（0〜200字） | 運営 | 作成は運営。書き換え・削除はだれも不可 |
 | それ以外 | — | だれも | だれも |
