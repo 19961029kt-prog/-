@@ -1122,7 +1122,7 @@
         <p class="memo">${esc(s.memo)}</p>
       </section>
 
-      ${YT.Voices.sectionHtml(id)}
+      ${YT.Voices.sectionHtml(id, s.name)}
 
       ${Postcards.stationSnapsHtml(id)}
 

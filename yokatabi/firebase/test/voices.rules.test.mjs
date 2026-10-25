@@ -28,13 +28,17 @@ beforeEach(async () => {
     await setDoc(doc(db, 'contributors', LOCAL), { ...LOCAL_PROFILE, active: true, consentAt });
     await setDoc(doc(db, 'contributors', LOCAL2), { name: '高原の宿', title: '由布院の宿', stationIds: ['yufuin'], active: true, consentAt });
     await setDoc(doc(db, 'contributors', STOPPED), { name: '休止中の人', title: '', stationIds: ['beppu'], active: false, consentAt });
-    await setDoc(doc(db, 'voices', 'v-approved'), { uid: LOCAL2, stationId: 'yufuin', body: '朝霧の金鱗湖は、少し早起きして。', name: '高原の宿', title: '由布院の宿', createdAt: consentAt, approvedAt: consentAt, approvedBy: ADMIN });
+    await setDoc(doc(db, 'voices', 'v-approved'), { uid: LOCAL2, stationId: 'yufuin', body: '朝霧の金鱗湖は、少し早起きして。', name: '高原の宿', title: '由布院の宿', verified: true, consent: true, createdAt: consentAt, approvedAt: consentAt, approvedBy: ADMIN });
   });
 });
 
 const as = (uid) => env.authenticatedContext(uid).firestore();
+// ゲームで遊ぶ人（Google・メールリンクでログイン＝メール確認済み）と、確認されていない人
+const player = (uid) => env.authenticatedContext(uid, { email_verified: true }).firestore();
+const unverified = (uid) => env.authenticatedContext(uid, { email_verified: false }).firestore();
+const PLAYER = 'player-1', PLAYER2 = 'player-2';
 const anon = () => env.unauthenticatedContext().firestore();
-const newVoice = (uid, over = {}) => ({ uid, stationId: 'beppu', body: '路地の湯けむりの向こうに、昔ながらの共同湯があります。', name: LOCAL_PROFILE.name, title: LOCAL_PROFILE.title, createdAt: serverTimestamp(), ...over });
+const newVoice = (uid, over = {}) => ({ uid, stationId: 'beppu', body: '路地の湯けむりの向こうに、昔ながらの共同湯があります。', name: LOCAL_PROFILE.name, title: LOCAL_PROFILE.title, verified: true, consent: true, createdAt: serverTimestamp(), ...over });
 // 投稿は「審査待ちの作成」と「名簿の lastPostAt を今に」を1回の一括書き込みで行う（アプリも同じ形にする）
 function post(db, uid, id, over = {}, { bump = true } = {}) {
   const b = writeBatch(db);
@@ -86,11 +90,11 @@ describe('だれでも読めるのは承認済みだけ', () => {
   });
 });
 
-describe('投稿できるのは、登録された地元の人だけ', () => {
+describe('運営が確かめた地元の人（名簿）の投稿', () => {
   test('登録された地元の人は、担当の駅に投稿できる', async () => {
     await assertSucceeds(post(as(LOCAL), LOCAL, 'v-new'));
   });
-  test('登録されていない旅人・ログインしていない人は投稿できない', async () => {
+  test('名簿にいない・メール未確認・ログインしていない人は、名簿の形では投稿できない', async () => {
     await assertFails(post(as(TRAVELER), TRAVELER, 'v-x', {}, { bump: false }));
     await assertFails(setDoc(doc(anon(), 'voicesPending', 'v-y'), newVoice('nobody')));
   });
@@ -205,5 +209,61 @@ describe('承認と却下（運営）', () => {
     await assertSucceeds(updateDoc(doc(as(ADMIN), 'contributors', 'local-new'), { active: false }));
     await assertFails(setDoc(doc(as(ADMIN), 'contributors', 'local-bad'), { name: '', title: '', stationIds: [], active: true, consentAt }));
     await assertFails(setDoc(doc(as(ADMIN), 'contributors', 'local-bad2'), { name: 'x', title: '', stationIds: ['a'], active: 'yes', consentAt }));
+  });
+});
+
+describe('ゲームで遊ぶ人も、遊びながら声を送れる（承認制）', () => {
+  const tv = (uid, over = {}) => ({ uid, stationId: 'kumamoto', body: '城下の路面電車は、夕方の窓がいちばん。', name: 'くまの旅人', title: '熊本に住んで十年', verified: false, consent: true, createdAt: serverTimestamp(), ...over });
+  // 投稿は「審査待ちの作成」と「自分のプロフィール（名前・最後に投稿した時刻）を今に」を1回の一括書き込みで
+  function playerPost(db, uid, id, over = {}, { name = 'くまの旅人', bump = true } = {}) {
+    const b = writeBatch(db);
+    b.set(doc(db, 'voicesPending', id), tv(uid, over));
+    b.set(doc(db, 'profiles', uid), bump ? { displayName: name, lastPostAt: serverTimestamp() } : { displayName: name });
+    return b.commit();
+  }
+  test('メール確認済みの人は、プロフィールの名前で投稿できる', async () => {
+    await assertSucceeds(playerPost(player(PLAYER), PLAYER, 'p-1'));
+    await assertSucceeds(getDoc(doc(player(PLAYER), 'voicesPending', 'p-1')));
+  });
+  test('メール未確認・ログインしていない人は投稿できない', async () => {
+    await assertFails(playerPost(unverified(PLAYER), PLAYER, 'p-u'));
+    await assertFails(setDoc(doc(anon(), 'voicesPending', 'p-a'), tv('x')));
+  });
+  test('「確かめた地元の人」の札を自分でつけることはできない', async () => {
+    await assertFails(playerPost(player(PLAYER), PLAYER, 'p-v', { verified: true }));
+  });
+  test('掲載の同意がない・名前がプロフィールと違う・他人になりすます投稿は通らない', async () => {
+    await assertFails(playerPost(player(PLAYER), PLAYER, 'p-c', { consent: false }));
+    await assertFails(playerPost(player(PLAYER), PLAYER, 'p-n', { name: '湯けむり商店' }));
+    await assertFails(playerPost(player(PLAYER), PLAYER, 'p-o', { uid: PLAYER2 }));
+  });
+  test('ゲームにない駅・長すぎる肩書き・401字は通らない', async () => {
+    await assertFails(playerPost(player(PLAYER), PLAYER, 'p-s', { stationId: 'tokyo' }));
+    await assertFails(playerPost(player(PLAYER), PLAYER, 'p-t', { title: 'あ'.repeat(61) }));
+    await assertFails(playerPost(player(PLAYER), PLAYER, 'p-b', { body: 'あ'.repeat(401) }));
+  });
+  test('連投の歯止め：3分以内の2件目、時刻を更新しない投稿は通らない', async () => {
+    await assertSucceeds(playerPost(player(PLAYER), PLAYER, 'p-1'));
+    await assertFails(playerPost(player(PLAYER), PLAYER, 'p-2'));
+    await env.withSecurityRulesDisabled(async (ctx) => setDoc(doc(ctx.firestore(), 'profiles', PLAYER), { displayName: 'くまの旅人', lastPostAt: Timestamp.fromDate(new Date('2026-01-01')) }));
+    await assertFails(playerPost(player(PLAYER), PLAYER, 'p-3', {}, { bump: false }));
+    await assertSucceeds(playerPost(player(PLAYER), PLAYER, 'p-4'));
+  });
+  test('プロフィール：本人だけが読み書きでき、投稿の時刻を過去にしたり、消して作り直したりはできない', async () => {
+    await assertSucceeds(setDoc(doc(player(PLAYER), 'profiles', PLAYER), { displayName: 'くまの旅人' }));
+    await assertFails(getDoc(doc(player(PLAYER2), 'profiles', PLAYER)));
+    await assertFails(setDoc(doc(player(PLAYER2), 'profiles', PLAYER), { displayName: 'のっとり' }));
+    await assertFails(setDoc(doc(player(PLAYER), 'profiles', PLAYER), { displayName: 'くまの旅人', lastPostAt: Timestamp.fromDate(new Date('2020-01-01')) }));
+    await assertFails(setDoc(doc(player(PLAYER), 'profiles', PLAYER), { displayName: '', }));
+    await assertFails(setDoc(doc(player(PLAYER), 'profiles', PLAYER), { displayName: 'x', email: 'a@b.c' }));
+    await assertFails(deleteDoc(doc(player(PLAYER), 'profiles', PLAYER)));
+  });
+  test('遊ぶ人の声も、運営が文面そのままで承認すると載る（札なし）', async () => {
+    await assertSucceeds(playerPost(player(PLAYER), PLAYER, 'p-1'));
+    const data = await pendingData('p-1');
+    await assertFails(approve(as(ADMIN), 'p-1', data, { edit: { verified: true } }));
+    await assertSucceeds(approve(as(ADMIN), 'p-1', data));
+    const v = await getDoc(doc(anon(), 'voices', 'p-1'));
+    if (v.data().verified !== false) throw new Error('札がついてしまった');
   });
 });

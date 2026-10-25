@@ -13,14 +13,16 @@
 |---|---|---|---|
 | `admins/{uid}` | 運営（審査する人）の印 | 本人の1件だけ | だれも（Firebase コンソールで作る） |
 | `contributors/{uid}` | 地元の人の名簿：`name`（1〜40字）・`title`（肩書き 0〜60字）・`stationIds`（担当の駅）・`active`・`consentAt`（掲載の同意をもらった日時）・`lastPostAt` | 本人と運営 | 運営。本人は `lastPostAt` を今にすることだけ |
-| `voicesPending/{voiceId}` | 審査待ち：`uid`・`stationId`・`body`（1〜400字）・`name`・`title`・`createdAt` | 本人と運営 | 作成は登録された地元の人。書き換えはだれも不可。削除は本人（取り下げ）と運営（審査の記録つき） |
+| `profiles/{uid}` | 遊ぶ人の投稿用：`displayName`（手帖に載せる名前 1〜40字）・`lastPostAt` | 本人と運営 | 本人（投稿時刻は「今」だけ。本人は消せない） |
+| `voicesPending/{voiceId}` | 審査待ち：`uid`・`stationId`（26駅だけ）・`body`（1〜400字）・`name`・`title`（0〜60字）・`verified`（名簿の人は true）・`consent`（true）・`createdAt` | 本人と運営 | 作成は登録された地元の人。書き換えはだれも不可。削除は本人（取り下げ）と運営（審査の記録つき） |
 | `voices/{voiceId}` | 承認済み：審査待ちの項目＋`approvedAt`・`approvedBy` | だれでも | 作成は運営の承認だけ。書き換え不可。削除は本人（同意の撤回）と運営 |
 | `moderationLog/{voiceId}` | 審査の記録：`action`（approve／reject）・`by`・`at`・`reason`（0〜200字） | 運営 | 作成は運営。書き換え・削除はだれも不可 |
 | それ以外 | — | だれも | だれも |
 
 ### 流れ
 1. **登録**：運営が地元の人に会い、掲載の同意をもらってから、`contributors/{uid}` を作る（担当の駅を決める）。
-2. **投稿**：地元の人は、`voicesPending/{新しいid}` の作成と、自分の `contributors` の `lastPostAt` を今にする更新を、**1回の一括書き込み（writeBatch）**で送る。前の投稿から60秒たっていないと通らない。名前・肩書きは名簿と同じでないと通らない（なりすまし防止）。
+2. **投稿（遊ぶ人）**：ゲームにログインした人（メール確認済み）は、寄り道手帖から `voicesPending` の作成と、自分の `profiles/{uid}`（名前・`lastPostAt` を今に）の更新を1回の一括書き込みで送る。前の投稿から3分（推定の値）あける。`verified` は false だけ（札は自分でつけられない）。
+2. **投稿（名簿の地元の人）**：地元の人は、`voicesPending/{新しいid}` の作成と、自分の `contributors` の `lastPostAt` を今にする更新を、**1回の一括書き込み（writeBatch）**で送る。前の投稿から60秒たっていないと通らない。名前・肩書きは名簿と同じでないと通らない（なりすまし防止）。
 3. **承認**：運営は、`voices/{同じid}` の作成（審査待ちの文面をそのまま写す）・`voicesPending/{id}` の削除・`moderationLog/{id}`（approve）の作成を、1回の一括書き込みで行う。**文面・名前・駅を書き換えた承認は通らない**（「人が確かめた、その人の言葉」を運営も改変しない）。直したいときは却下して出し直してもらう。
 4. **却下**：`moderationLog/{id}`（reject と理由）を作って、`voicesPending/{id}` を消す（1回の一括書き込み）。
 5. **取り下げ**：本人はいつでも、審査待ちも承認済みも消せる。

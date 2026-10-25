@@ -53,5 +53,5 @@
     });
   }
 
-  YT.Firebase = { boot, emulator };
+  YT.Firebase = { boot, emulator, offline: offline || location.protocol === 'file:' };
 })();

@@ -1774,3 +1774,45 @@ html[lang="ja"] .lang-btn [data-lang="ja"], html[lang="en"] .lang-btn [data-lang
 .voices-note { margin: 8px 0 0; font-size: 11px; line-height: 1.7; color: var(--ink-3); }
 /* 寄り道手帖（モーダル）をひらいているあいだは、手帖の文字にかぶらないよう親指のダイスを下げる */
 body.modal-open .dice-fab { opacity: 0; transform: scale(.4); visibility: hidden; pointer-events: none; transition: opacity .22s var(--ease), transform .28s var(--ease), visibility 0s .28s; }
+
+/* ---- ログインの関所（js/gate.js）：深緑の革張りの表紙に、生成りの扉の紙 ---- */
+.login-gate { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; padding: 16px; overflow-y: auto; touch-action: pan-y;
+  background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, .06), transparent 60%), repeating-linear-gradient(45deg, rgba(0, 0, 0, .05) 0 2px, transparent 2px 5px), var(--forest);
+  transition: opacity .45s var(--ease); }
+.login-gate[hidden] { display: none; }
+.login-gate.is-closing { opacity: 0; pointer-events: none; }
+.gate-book { width: min(440px, 100%); padding: 30px 26px 24px; text-align: center; background: var(--fiber), var(--ivory); box-shadow: var(--frame-gold), var(--sh-3); }
+.gate-brand { margin: 0; display: inline-block; padding: 2px 14px 3px; font-family: var(--font-serif); font-weight: 600; font-size: 18px; letter-spacing: .32em; color: var(--brass); box-shadow: 0 0 0 1px var(--brass), inset 0 0 0 3px var(--ivory), inset 0 0 0 3.6px var(--brass); }
+.gate-eyebrow { margin: 12px 0 0; }
+.gate-title { margin: 4px 0 12px; font-family: var(--font-mincho); font-weight: 800; font-size: 26px; letter-spacing: .14em; color: var(--ink); }
+.gate-lead { margin: 0 0 18px; font-family: var(--font-mincho); font-size: 14px; line-height: 2; color: var(--ink-2); }
+.gate-actions { display: grid; gap: 14px; text-align: left; }
+.gate-actions[hidden] { display: none; }
+.gate-btn { width: 100%; justify-content: center; }
+.gate-email { display: grid; gap: 6px; padding-top: 14px; border-top: 1px dashed var(--perf); }
+.gate-email label { font-size: 12px; color: var(--ink-2); }
+.gate-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.gate-row input { flex: 1 1 180px; min-width: 0; font: inherit; font-size: 15px; padding: 9px 10px; color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: 0; user-select: text; -webkit-user-select: text; }
+.gate-msg { margin: 14px 0 0; padding: 8px 12px; font-size: 12.5px; line-height: 1.7; text-align: left; color: var(--akane); background: var(--antique); box-shadow: inset 2px 0 0 var(--akane); }
+.gate-msg.is-ok { color: var(--forest); box-shadow: inset 2px 0 0 var(--forest); }
+.gate-msg.is-wait { color: var(--ink-3); box-shadow: none; background: none; text-align: center; }
+.gate-note { margin: 18px 0 0; font-size: 11px; line-height: 1.8; color: var(--ink-3); text-align: left; }
+.techo-login { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin: 8px 0 0; font-size: 12px; color: var(--gold-3); }
+.techo-login[hidden] { display: none; }
+.techo-login .link-btn { color: var(--gold-2); font-size: 12px; }
+
+/* ---- 寄り道手帖から声を届ける（js/voices.js） ---- */
+.voice-badge { display: inline-block; margin-left: 8px; padding: 0 6px; font-family: var(--font-ui); font-weight: 500; font-size: 10.5px; letter-spacing: .04em; color: var(--forest); box-shadow: 0 0 0 1px var(--forest); vertical-align: 1px; }
+.voices-send { margin-top: 12px; }
+.voice-form { display: grid; gap: 6px; margin-top: 10px; padding: 14px 16px; background: var(--fiber), var(--antique); box-shadow: var(--frame); }
+.voice-form label { font-family: var(--font-mincho); font-weight: 700; font-size: 12.5px; color: var(--ink); margin-top: 4px; }
+.voice-form input[type="text"], .voice-form textarea { font: inherit; font-size: 15px; color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: 0; padding: 8px 10px; min-width: 0; user-select: text; -webkit-user-select: text; }
+.voice-form textarea { font-family: var(--font-mincho); line-height: 1.9; resize: vertical; }
+.voice-form .vf-consent { display: flex; gap: 8px; align-items: flex-start; font-family: var(--font-ui); font-weight: 500; font-size: 12px; line-height: 1.7; }
+.voice-form .vf-consent input { margin-top: 4px; }
+.voice-form .vf-help { margin: 0; font-size: 11px; line-height: 1.7; color: var(--ink-3); }
+.voice-form .vf-fixed { margin: 0; font-size: 13px; color: var(--ink-2); }
+.vf-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 6px; }
+.vf-count { margin-left: auto; font-family: var(--font-serif); font-size: 13px; color: var(--ink-3); }
+.vf-msg { margin: 6px 0 0; padding: 8px 12px; font-size: 12.5px; line-height: 1.7; color: var(--akane); background: var(--paper); box-shadow: inset 2px 0 0 var(--akane); }
+.vf-msg.is-ok { color: var(--forest); box-shadow: inset 2px 0 0 var(--forest); }

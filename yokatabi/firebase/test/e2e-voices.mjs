@@ -88,11 +88,24 @@ try {
   await local.waitForSelector('[data-form="post"] .lp-msg:not(.is-ok)');
   check(/1分ほどあけて/.test(await local.textContent('[data-form="post"] .lp-msg')), '60秒以内の2件目は断られる');
 
-  // 4. 審査待ちは、ほかの人の手帖には出ない（承認前）
+  // 4. ゲームで遊ぶ人：ログインしないと遊べない（関所）。ログインすると盤面に入れる
   const traveler = await ctx();
-  await traveler.addInitScript(() => localStorage.setItem('yokatabi.kyushu.v1', JSON.stringify({ version: 3, prefaceSeen: true, currentStationId: 'beppu', visited: { beppu: new Date().toISOString() }, muted: true })));
-  const openTecho = async () => {
-    await traveler.goto(`${ORIGIN}/index.html?emulator`);
+  await traveler.addInitScript(() => { if (!localStorage.getItem('yokatabi.kyushu.v1')) localStorage.setItem('yokatabi.kyushu.v1', JSON.stringify({ version: 3, prefaceSeen: true, currentStationId: 'beppu', visited: { beppu: new Date().toISOString() }, muted: true })); });
+  await traveler.goto(`${ORIGIN}/index.html?emulator`);
+  await traveler.waitForSelector('#gate-actions:not([hidden])');
+  check(await traveler.isVisible('#login-gate') && (await traveler.evaluate(() => document.getElementById('app').inert)), 'ログインしないと関所が出て、盤面はさわれない');
+  if (OUT) await traveler.screenshot({ path: `${OUT}/gate.png` });
+  await traveler.fill('#gate-email', 'player@example.com');
+  await traveler.click('#gate-email-form button[type="submit"]');
+  await traveler.waitForSelector('#gate-msg .gate-msg.is-ok');
+  const codes = await (await fetch(`${AUTH}/emulator/v1/projects/demo-qtrip/oobCodes`)).json();
+  const code = codes.oobCodes.filter((c) => c.email === 'player@example.com').pop();
+  await traveler.goto(`${ORIGIN}/index.html?emulator&apiKey=demo-key&oobCode=${code.oobCode}&mode=signIn&lang=ja`);
+  await traveler.waitForSelector('#login-gate', { state: 'hidden', timeout: 15000 });
+  check(!(await traveler.evaluate(() => document.getElementById('app').inert)) && !/oobCode/.test(traveler.url()), 'メールリンクでログインすると盤面に入れる（URL からリンクの印も消える）');
+  const openTecho = async (reload = true) => {
+    if (reload) await traveler.goto(`${ORIGIN}/index.html?emulator`);
+    await traveler.waitForSelector('#login-gate', { state: 'hidden', timeout: 15000 });
     await traveler.waitForSelector('#btn-open-current');
     await traveler.click('#btn-open-current');
     await traveler.waitForSelector('[data-voices="beppu"] .voices-body :is(ul, .voices-empty:not(:has-text("読み込んでいます")))', { timeout: 15000 });
@@ -100,26 +113,54 @@ try {
   await openTecho();
   check(!/共同湯/.test(await traveler.textContent('[data-voices="beppu"]')), '承認前の声は寄り道手帖に出ない');
 
-  // 5. 運営：承認する
+  // 5. 遊ぶ人が、寄り道手帖から声を届ける（名前は自分で決める・駅とのつながりは自己申告・掲載の同意つき）
+  await traveler.click('[data-voice-open="beppu"]');
+  await traveler.waitForSelector('[data-voice-form="beppu"]');
+  await traveler.fill('#vf-name', '湯の町の常連');
+  await traveler.fill('#vf-title', '別府に通って二十年');
+  await traveler.fill('#vf-body', '鉄輪の湯けむりは、夕方に坂の上から見ると町じゅうが白く霞んできれいです。');
+  // 同意のチェックがないと、ブラウザの入力チェックで送信そのものが止まる
+  await traveler.click('[data-voice-form="beppu"] button[type="submit"]');
+  await traveler.waitForTimeout(400);
+  check(!(await traveler.$('[data-voices="beppu"] .vf-msg.is-ok')) && !(await traveler.$eval('#vf-consent', (e) => e.validity.valid)), '掲載の同意がないと送れない');
+  await traveler.check('#vf-consent');
+  if (OUT) { await traveler.evaluate(() => document.querySelector('[data-voice-form]').scrollIntoView()); await traveler.screenshot({ path: `${OUT}/techo-send.png` }); }
+  await traveler.click('[data-voice-form="beppu"] button[type="submit"]');
+  await traveler.waitForSelector('[data-voices="beppu"] .vf-msg.is-ok');
+  check(true, '遊ぶ人が寄り道手帖から声を送れる（審査待ちへ）');
+
+  // 6. 運営：審査待ちの2件（確かめた地元の人・自己申告）を、どちらも文面のまま承認する
   await admin.reload();
   await admin.waitForSelector('[data-act="approve"]');
+  check(/審査待ち（2件）/.test(await admin.textContent('#lp-admin')) && /自己申告/.test(await admin.textContent('#lp-admin')), '運営の審査に、遊ぶ人の声も「自己申告」として並ぶ');
   if (OUT) await admin.screenshot({ path: `${OUT}/local-admin.png`, fullPage: true });
-  await admin.click('[data-act="approve"]');
-  await admin.waitForSelector('#lp-admin .lp-msg.is-ok');
-  check(/掲載中の声（1件）/.test(await admin.textContent('#lp-admin')), '承認すると掲載中になる');
+  for (const n of [1, 2]) {
+    await admin.click('[data-act="approve"]');
+    await admin.waitForFunction((k) => document.querySelector('#lp-admin').textContent.includes(`掲載中の声（${k}件）`), n);
+  }
+  check(/掲載中の声（2件）/.test(await admin.textContent('#lp-admin')) && /審査待ち（0件）/.test(await admin.textContent('#lp-admin')), '承認すると掲載中になる');
 
-  // 6. 旅人の寄り道手帖に、文字のまま出る（タグとして動かない）
+  // 7. 旅人の寄り道手帖に、文字のまま出る（タグとして動かない）。札は確かめた地元の人だけ
   await openTecho();
-  const shown = await traveler.textContent('[data-voices="beppu"] .voice-body');
-  check(shown === BODY, '承認した文面がそのまま出る');
-  check(/湯けむり商店/.test(await traveler.textContent('[data-voices="beppu"] .voice-by')), '名前と肩書きが添えられる');
+  const items = await traveler.$$eval('[data-voices="beppu"] .voice', (els) => els.map((e) => ({ body: e.querySelector('.voice-body').textContent, by: e.querySelector('.voice-by').textContent, badge: !!e.querySelector('.voice-badge') })));
+  const shop = items.find((x) => /湯けむり商店/.test(x.by)), fan = items.find((x) => /湯の町の常連/.test(x.by));
+  check(shop && shop.body === BODY, '承認した文面がそのまま出る');
+  check(shop && shop.badge && /別府の土産物店/.test(shop.by), '確かめた地元の人には札と肩書きがつく');
+  check(fan && !fan.badge && /別府に通って二十年/.test(fan.by), '遊ぶ人の声は自己申告のつながりを添え、札はつかない');
   check((await traveler.$$('[data-voices="beppu"] img')).length === 0 && !(await traveler.evaluate(() => window.__xss)), '投稿の中のタグは画面で動かない');
   if (OUT) {
     await traveler.evaluate(() => document.querySelector('[data-voices="beppu"]').scrollIntoView());
     await traveler.screenshot({ path: `${OUT}/techo-voices.png` });
   }
 
-  // 7. 地元の人は掲載中の声を取り下げられる
+  // 8. 手帖の「ログアウト」で関所に戻る
+  await traveler.keyboard.press('Escape');
+  await traveler.click('[data-tab="collection"]');
+  await traveler.click('[data-gate-signout]');
+  await traveler.waitForSelector('#login-gate:not([hidden]) #gate-actions:not([hidden])');
+  check(await traveler.evaluate(() => document.getElementById('app').inert), 'ログアウトすると関所に戻る');
+
+  // 9. 地元の人は掲載中の声を取り下げられる
   await local.reload();
   await local.waitForSelector('[data-act="withdraw-voice"]');
   local.once('dialog', (d) => d.accept());

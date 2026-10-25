@@ -152,7 +152,7 @@
     try {
       // 審査待ちの作成と、名簿の「投稿した時刻」を今にする更新を、1回の一括書き込みで（ルールの連投の歯止め）
       const b = fs.writeBatch(db);
-      b.set(fs.doc(fs.collection(db, 'voicesPending')), { uid: user.uid, stationId, body, name: me.name, title: me.title, createdAt: fs.serverTimestamp() });
+      b.set(fs.doc(fs.collection(db, 'voicesPending')), { uid: user.uid, stationId, body, name: me.name, title: me.title, verified: true, consent: true, createdAt: fs.serverTimestamp() });
       b.update(fs.doc(db, 'contributors', user.uid), { lastPostAt: fs.serverTimestamp() });
       await b.commit();
       await renderContrib();
@@ -178,7 +178,7 @@
     const pendRows = pend.docs.sort(byTime).map((d) => {
       const v = d.data();
       return `<li class="lp-item" data-pending="${esc(d.id)}">
-          <p class="lp-item-meta"><span class="chip">${esc(stName(v.stationId))}</span><b>${esc(v.name)}</b>${v.title ? `<small>${esc(v.title)}</small>` : ''}<small>${esc(fmt(v.createdAt))}</small></p>
+          <p class="lp-item-meta"><span class="chip">${esc(stName(v.stationId))}</span><b>${esc(v.name)}</b>${v.title ? `<small>${esc(v.title)}</small>` : ''}${v.verified ? '<span class="chip chip-gold">確かめた地元の人</span>' : '<span class="chip chip-dim">自己申告</span>'}<small>${esc(fmt(v.createdAt))}</small></p>
           <p class="lp-item-body">${esc(v.body)}</p>
           <div class="lp-row">
             <button class="primary-btn btn-sm" data-act="approve" data-id="${esc(d.id)}">${I('check')}このまま承認する</button>
@@ -205,7 +205,7 @@
     const today = new Date().toISOString().slice(0, 10);
     box.innerHTML = `
       <h2 class="lp-h2">${I('stamp')}運営の審査</h2>
-      <p class="lp-muted">承認すると、送られた文面がそのまま寄り道手帖に載ります（運営も書き換えられません）。直してほしいところがあるときは却下して、地元の方に出し直していただきます。</p>
+      <p class="lp-muted">承認すると、送られた文面がそのまま寄り道手帖に載ります（運営も書き換えられません）。直してほしいところがあるときは却下して、出し直していただきます。「自己申告」は、ゲームで遊ぶ人が寄り道手帖から送った声です（名前と駅とのつながりは本人の申告）。</p>
       <div data-msg></div>
       <h3 class="lp-h3">審査待ち（${pend.size}件）</h3>
       ${pendRows.length ? `<ul class="lp-list">${pendRows.join('')}</ul>` : '<p class="lp-muted">いまはありません。</p>'}
@@ -235,7 +235,7 @@
         if (!snap.exists()) return renderAdmin();
         const v = snap.data();
         const b = fs.writeBatch(db);
-        b.set(fs.doc(db, 'voices', id), { uid: v.uid, stationId: v.stationId, body: v.body, name: v.name, title: v.title, createdAt: v.createdAt, approvedAt: fs.serverTimestamp(), approvedBy: user.uid });
+        b.set(fs.doc(db, 'voices', id), { uid: v.uid, stationId: v.stationId, body: v.body, name: v.name, title: v.title, verified: v.verified, consent: v.consent, createdAt: v.createdAt, approvedAt: fs.serverTimestamp(), approvedBy: user.uid });
         b.delete(fs.doc(db, 'voicesPending', id));
         b.set(fs.doc(db, 'moderationLog', id), { action: 'approve', by: user.uid, at: fs.serverTimestamp() });
         await b.commit();
