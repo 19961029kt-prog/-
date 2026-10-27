@@ -156,6 +156,8 @@
       $('#gate-register').hidden = true;
       renderLine();
       close();
+      // 登録が済んだ（名前が変わった）ことを、旅の便りなどの画面にも知らせる
+      listeners.forEach((fn) => { try { fn(Gate.user); } catch (e2) { /* 画面の一部の失敗で登録を止めない */ } });
     } catch (e) {
       btn.disabled = false;
       msg('保存できませんでした。通信のよいところで、もう一度お試しください。');

@@ -15,12 +15,22 @@ const PORT = 8766, ORIGIN = `http://localhost:${PORT}`;
 const AUTH = 'http://127.0.0.1:9099', FS = 'http://127.0.0.1:8080/v1/projects/demo-qtrip/databases/(default)/documents';
 const OUT = process.env.E2E_OUT || '';
 const fails = [];
+// まっさらな記録では、はじめに表紙の巻頭言がひらくので閉じる
+async function closeCover(p) {
+  const go = await p.$('.cover.is-open [data-cover-go]');
+  if (go) { await go.click(); await p.waitForSelector('.cover.is-open', { state: 'detached', timeout: 5000 }).catch(() => {}); }
+}
 const check = (ok, label) => { console.log(`${ok ? 'ok    ' : 'FAIL  '} ${label}`); if (!ok) fails.push(label); };
 
 // ルールを通さない読み書き（エミュレーターだけの「owner」）。運営が Firebase コンソールでする作業の代わり
 async function ownerSet(path, fields) {
   const res = await fetch(`${FS}/${path}`, { method: 'PATCH', headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' }, body: JSON.stringify({ fields }) });
   if (!res.ok) throw new Error(`owner write ${path}: ${res.status}`);
+}
+async function ownerPatch(path, fields) {
+  const mask = Object.keys(fields).map((k) => `updateMask.fieldPaths=${k}`).join('&');
+  const res = await fetch(`${FS}/${path}?${mask}`, { method: 'PATCH', headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' }, body: JSON.stringify({ fields }) });
+  if (!res.ok) throw new Error(`owner patch ${path}: ${res.status}`);
 }
 async function ownerGet(path) {
   const res = await fetch(`${FS}/${path}`, { headers: { Authorization: 'Bearer owner' } });
@@ -115,6 +125,9 @@ try {
   await b.waitForSelector('#gate-reg', { timeout: 20000 });
   const stOther = await b.evaluate(() => YT.Store.get());
   check(!stOther.visited.yufuin && stOther.cloudUid !== uidA, 'ログインを切り替えると、前の人の記録は混ざらない');
+  await register(b, { name: '湯の町の常連', home: ['KR'] });
+  await b.click('#gate-reg button[type="submit"]');
+  await gateGone(b);
 
   // 6. 遊びながら「地元の人」としておすすめスポットを紹介する
   const openTecho = async (p) => {
@@ -178,6 +191,81 @@ try {
   await gateGone(a);
   const prof2 = await ownerGet(`profiles/${uidA}`);
   check(prof2.fields.displayName.stringValue === '熊本の案内人', '登録内容を直すとデータベースも変わる');
+
+  // 10. 旅の便り：投函すると、審査なしでほかの旅人にも見える
+  const PHOTO = join(dirname(fileURLToPath(import.meta.url)), 'fixture-photo.jpg');
+  await a.click('[data-tab="letters"]');
+  await a.waitForSelector('[data-pc-station]');
+  await a.selectOption('[data-pc-station]', 'hakata');
+  await a.setInputFiles('[data-pc-file]', PHOTO);
+  await a.waitForSelector('[data-pc-submit]:not([disabled])');
+  check(/審査なしで/.test(await a.textContent('.lt-post')), '投函の欄に、ほかの旅人に見えることと通報のことを書く');
+  check(await a.isChecked('[data-pc-share]'), '投函の欄に「ほかの旅人にも見せる」（はじめから選んである）');
+  await a.fill('[data-pc-memo]', '駅前の屋台の灯り');
+  if (OUT) { await a.evaluate(() => document.querySelector('.lt-post').scrollIntoView()); await a.screenshot({ path: `${OUT}/letters-post.png` }); }
+  await a.click('[data-pc-submit]');
+  const pid = `${uidA}_hakata`;
+  let shared = null;
+  for (let i = 0; i < 40 && !shared; i++) { await a.waitForTimeout(250); shared = await ownerGet(`postcards/${pid}`); }
+  check(shared && /^data:image\/jpeg;base64,/.test(shared.fields.image.stringValue) && shared.fields.memo.stringValue === '駅前の屋台の灯り' && shared.fields.name.stringValue === '熊本の案内人', '投函した写真がデータベースに入る（JPEG・一言・登録の名前）');
+  check(shared && shared.fields.image.stringValue.length <= 500000, '写真は送る前に縮める（50万字以内）');
+
+  // 11. ほかの旅人（b）：旅人たちのポストカードに本物の写真が出る → 素敵ね → 通報
+  await b.goto(`${ORIGIN}/index.html?emulator`);
+  await gateGone(b);
+  await b.click('[data-tab="letters"]');
+  await b.waitForSelector(`[data-pc="${pid}"]`, { timeout: 15000 });
+  check(await b.$eval(`[data-pc="${pid}"] img`, (img) => img.src.startsWith('data:image/jpeg')), 'ほかの旅人の「旅人たちのポストカード」に、写真が出る');
+  // 博多に停車したことにして、ひらき直す（b の記録は入れ替わってまっさらなので、表紙の巻頭言も閉じる）
+  await closeCover(b);
+  await b.evaluate(() => YT.Store.setCurrent('hakata'));
+  await b.click('[data-tab="map"]');
+  await b.click('[data-tab="letters"]');
+  await b.waitForSelector(`[data-real-like="${pid}"]:not([disabled])`, { timeout: 15000 });
+  if (OUT) { await b.evaluate((x) => document.querySelector(`[data-pc="${x}"]`).scrollIntoView({ block: 'center' }), pid); await b.screenshot({ path: `${OUT}/letters-real.png` }); }
+  await b.click(`[data-real-like="${pid}"]`);
+  await b.waitForFunction((x) => /素敵ね済み/.test(document.querySelector(`[data-real-like="${x}"]`).textContent), pid);
+  check((await ownerGet(`postcards/${pid}`)).fields.likeCount.integerValue === '1', '素敵ねで、いいねの数が1つ増える');
+  await b.click(`[data-report="${pid}"]`);
+  await b.waitForSelector(`[data-report-form="${pid}"]`);
+  if (OUT) await b.screenshot({ path: `${OUT}/report.png` });
+  await b.click(`[data-report-form="${pid}"] button[type="submit"]`);
+  await b.waitForSelector(`[data-pc="${pid}"] .prf-done`);
+  check((await ownerGet(`postcards/${pid}`)).fields.reportCount.integerValue === '1', '通報で、通報の数が1つ増える');
+
+  // 12. 通報が3件そろうと見えなくなる → 運営が確かめて戻す
+  await ownerPatch(`postcards/${pid}`, { reportCount: { integerValue: '3' }, hidden: { booleanValue: true } });
+  await b.reload();
+  await gateGone(b);
+  await b.click('[data-tab="letters"]');
+  await b.waitForTimeout(2500);
+  check(!(await b.$(`[data-pc="${pid}"]`)), '通報が3件そろった写真は、ほかの旅人に見えなくなる');
+  await adm.reload();
+  await adm.waitForSelector(`[data-act="restore-card"][data-id="${pid}"]`);
+  check(/通報された旅の便り（1枚）/.test(await adm.textContent('#lp-admin')) && !!(await adm.$('.lp-photo')), '運営の審査に、通報された写真と理由が並ぶ');
+  await adm.click(`[data-act="restore-card"][data-id="${pid}"]`);
+  await adm.waitForFunction(() => /見えるように戻しました/.test(document.querySelector('#lp-admin').textContent));
+  const back = await ownerGet(`postcards/${pid}`);
+  check(back.fields.reportCount.integerValue === '0' && back.fields.hidden.booleanValue === false, '運営が「問題なし」で戻すと、また見えるようになる');
+
+  // 13. 寄り道手帖の現地スナップにも出る。本物が3枚そろった駅は、架空の旅人の便りを外す
+  const fake = (n) => ({ uid: { stringValue: `fake${n}` }, stationId: { stringValue: 'hakata' }, memo: { stringValue: `博多の便り${n}` }, image: shared.fields.image, name: { stringValue: `旅人${n}` }, createdAt: { timestampValue: '2026-10-20T00:00:00Z' }, updatedAt: { timestampValue: '2026-10-20T00:00:00Z' }, likeCount: { integerValue: '0' }, reportCount: { integerValue: '0' }, hidden: { booleanValue: false } });
+  const openSnaps = async () => {
+    await b.goto(`${ORIGIN}/index.html?emulator`);
+    await gateGone(b);
+    await closeCover(b);
+    await b.evaluate(() => YT.Store.setCurrent('hakata'));
+    await b.click('[data-tab="map"]');
+    await b.click('#btn-open-current');
+    await b.waitForSelector(`[data-real-snaps="hakata"] [data-pc="${pid}"]`, { timeout: 15000 });
+  };
+  await openSnaps();
+  check((await b.$$('[data-real-snaps="hakata"] [data-pc^="seed-"]')).length > 0, '本物の便りが少ないうちは、架空の旅人の便りも並ぶ');
+  await ownerSet('postcards/fake1_hakata', fake(1));
+  await ownerSet('postcards/fake2_hakata', fake(2));
+  await openSnaps();
+  check((await b.$$('[data-real-snaps="hakata"] [data-pc^="seed-"]')).length === 0 && (await b.$$('[data-real-snaps="hakata"] [data-real-like]')).length === 3, '本物の便りが3枚そろった駅は、架空の旅人の便りを外す');
+  if (OUT) { await b.evaluate(() => document.querySelector('[data-real-snaps]').scrollIntoView({ block: 'center' })); await b.screenshot({ path: `${OUT}/snaps-real.png` }); }
 
   check(errors.length === 0, `画面のエラーなし${errors.length ? '：' + errors.join(' / ') : ''}`);
 } finally {

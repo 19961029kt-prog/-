@@ -84,7 +84,21 @@
     const box = $('#lp-admin');
     box.hidden = false;
     const { fs, db } = fb;
-    const [pend, voices] = await Promise.all([fs.getDocs(fs.collection(db, 'voicesPending')), fs.getDocs(fs.collection(db, 'voices'))]);
+    const [pend, voices, reports] = await Promise.all([fs.getDocs(fs.collection(db, 'voicesPending')), fs.getDocs(fs.collection(db, 'voices')), fs.getDocs(fs.collection(db, 'reports'))]);
+    // 通報された旅の便り：ポストカードごとにまとめ、写真も読む（運営は隠れたものも読める）
+    const REASON = { face: '人の顔・だれかがわかる', private: '個人の情報', copyright: 'ほかの人の写真・著作物', inappropriate: '不快・不適切', other: 'その他' };
+    const groups = {};
+    reports.docs.forEach((d) => (groups[d.data().postcardId] ||= []).push({ id: d.id, ...d.data() }));
+    const cards = await Promise.all(Object.keys(groups).map((pid) => fs.getDoc(fs.doc(db, 'postcards', pid)).then((x) => [pid, x.exists() ? x.data() : null], () => [pid, null])));
+    const reportRows = cards.map(([pid, c]) => {
+      const list = groups[pid];
+      return `<li class="lp-item" data-report-pid="${esc(pid)}">
+          <p class="lp-item-meta">${c ? `<span class="chip">${esc(stName(c.stationId))}</span><b>${esc(c.name)}</b>` : '<b>（もう消えています）</b>'}<span class="chip ${c && c.hidden ? 'chip-dim' : ''}">${c && c.hidden ? '見えなくなっています' : '見えています'}・通報 ${list.length}件</span></p>
+          ${c ? `<img class="lp-photo" alt="通報された写真" src="${esc(c.image)}"><p class="lp-item-body">${esc(c.memo || '')}</p>` : ''}
+          <ul class="lp-reasons">${list.map((r) => `<li>${esc(REASON[r.reason] || r.reason)}${r.note ? `：${esc(r.note)}` : ''}<small>${esc(fmt(r.createdAt))}</small></li>`).join('')}</ul>
+          <div class="lp-row">${c ? `<button class="ghost-btn btn-sm" data-act="restore-card" data-id="${esc(pid)}">問題なし・見えるように戻す</button><button class="primary-btn btn-sm" data-act="delete-card" data-id="${esc(pid)}">写真を消す</button>` : `<button class="ghost-btn btn-sm" data-act="clear-reports" data-id="${esc(pid)}">通報を片づける</button>`}</div>
+        </li>`;
+    });
     const byTime = (a, b) => (a.data().createdAt ? a.data().createdAt.toMillis() : 0) - (b.data().createdAt ? b.data().createdAt.toMillis() : 0);
     const pendRows = pend.docs.sort(byTime).map((d) => {
       const v = d.data();
@@ -112,6 +126,9 @@
       <div data-msg></div>
       <h3 class="lp-h3">審査待ち（${pend.size}件）</h3>
       ${pendRows.length ? `<ul class="lp-list">${pendRows.join('')}</ul>` : '<p class="lp-muted">いまはありません。</p>'}
+      <h3 class="lp-h3">通報された旅の便り（${reportRows.length}枚）</h3>
+      <p class="lp-muted lp-small">写真は審査なしで見えます。通報が3件そろった写真は、自動で見えなくなります。確かめて、戻すか消してください。</p>
+      ${reportRows.length ? `<ul class="lp-list">${reportRows.join('')}</ul>` : '<p class="lp-muted">いまはありません。</p>'}
       <h3 class="lp-h3">掲載中のおすすめ（${voices.size}件）</h3>
       ${voiceRows.length ? `<ul class="lp-list">${voiceRows.join('')}</ul>` : '<p class="lp-muted">まだありません。</p>'}`;
   }
@@ -139,6 +156,17 @@
         await b.commit();
         await renderAdmin();
         say($('#lp-admin [data-msg]'), '却下しました。', 'is-ok');
+      } else if (act === 'restore-card' || act === 'delete-card' || act === 'clear-reports') {
+        // 通報を片づける：その写真への通報をすべて消し、戻すなら通報の数を0に、消すならポストカードを消す（1回の一括書き込み）
+        if (act === 'delete-card' && !window.confirm('この写真を消しますか？（元には戻せません）')) return;
+        const reps = await fs.getDocs(fs.query(fs.collection(db, 'reports'), fs.where('postcardId', '==', id)));
+        const b = fs.writeBatch(db);
+        reps.docs.forEach((d) => b.delete(d.ref));
+        if (act === 'restore-card') b.update(fs.doc(db, 'postcards', id), { reportCount: 0, hidden: false });
+        if (act === 'delete-card') b.delete(fs.doc(db, 'postcards', id));
+        await b.commit();
+        await renderAdmin();
+        say($('#lp-admin [data-msg]'), act === 'delete-card' ? '写真を消しました。' : act === 'restore-card' ? '見えるように戻しました。' : '片づけました。', 'is-ok');
       } else if (act === 'remove-voice') {
         if (!window.confirm('このおすすめの掲載をやめますか？（元には戻せません）')) return;
         await fs.deleteDoc(fs.doc(db, 'voices', id));

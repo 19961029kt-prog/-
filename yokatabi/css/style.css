@@ -1858,3 +1858,18 @@ body.modal-open .dice-fab { opacity: 0; transform: scale(.4); visibility: hidden
 .gate-reg .gate-row { margin-top: 8px; }
 .voice-spot { display: flex; align-items: center; gap: 6px; margin: 0 0 4px; font-family: var(--font-mincho); font-weight: 700; font-size: 15.5px; letter-spacing: .06em; color: var(--ink); }
 .voice-spot .ico { color: var(--akane); }
+/* ---- 本物の旅人の便り（js/shared-cards.js）：通報のリンクと、その場の小さな欄 ---- */
+/* 素敵ねと通報を1行に（狭いカードでは通報が下の行へ回る。重ねない） */
+.pol-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; justify-self: stretch; }
+.pol-report { margin-top: 8px; font-size: 11px; color: var(--ink-3); text-decoration-color: var(--rule); display: inline-flex; align-items: center; gap: 3px; }
+.pol-report .ico { width: 12px; height: 12px; }
+.pol-report-form { position: relative; z-index: 3; display: grid; gap: 4px; margin: 8px 0 0; padding: 10px 12px; text-align: left; background: var(--paper); box-shadow: var(--frame); font-size: 12px; transform: rotate(calc(var(--tilt, 0deg) * -1)); }
+.pol-report-form label { display: flex; gap: 6px; align-items: flex-start; line-height: 1.5; }
+.pol-report-form input[type="text"] { font: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid var(--rule); background: var(--ivory); border-radius: 0; user-select: text; -webkit-user-select: text; }
+.prf-title { margin: 0; font-family: var(--font-mincho); font-weight: 700; display: flex; align-items: center; gap: 4px; color: var(--akane); }
+.prf-help { margin: 0; font-size: 10.5px; color: var(--ink-3); line-height: 1.6; }
+.prf-row { display: flex; gap: 10px; align-items: center; }
+.prf-done { margin: 0; font-size: 12px; color: var(--forest); }
+.lt-share { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; line-height: 1.6; margin: 4px 0 2px; }
+.lt-share input { margin-top: 4px; }
+.lt-real-slot { display: contents; }

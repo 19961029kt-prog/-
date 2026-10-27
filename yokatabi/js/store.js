@@ -218,6 +218,12 @@
       return { card: state.postcards[id], first: !prev, oldImageId: prev && prev.imageId };
     },
     getPostcards: () => state.postcards,
+    // ほかの旅人にも見せているか（データベースの postcards に送ったか）
+    markShared(id, on) {
+      if (!state.postcards[id]) return;
+      state.postcards[id].shared = on ? new Date().toISOString() : null;
+      save();
+    },
     // ひらいたときに「新しく届いたいいね」をお知らせするため、見せ終えた数を覚えておく
     markPostcardSeen(id, n) {
       if (!state.postcards[id]) return;

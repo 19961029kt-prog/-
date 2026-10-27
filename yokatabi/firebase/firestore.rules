@@ -157,6 +157,89 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ---------- 旅の便り（写真のポストカード）：審査なしで、ログインした人どうしで見せ合う。通報が3件で自動で隠す ----------
+    // 文書の id は「投函した人の uid _ 駅の id」（1人1駅1枚。投函し直すと差し替え）。写真は JPEG の data URL（50万字まで）
+    match /postcards/{pid} {
+      function isOwnerOf(d) {
+        return signedIn() && d.uid == request.auth.uid;
+      }
+      function validCard(d) {
+        return d.keys().hasOnly(['uid', 'stationId', 'memo', 'image', 'name', 'createdAt', 'updatedAt', 'likeCount', 'reportCount', 'hidden'])
+          && d.keys().hasAll(['uid', 'stationId', 'memo', 'image', 'name', 'createdAt', 'updatedAt', 'likeCount', 'reportCount', 'hidden'])
+          && pid == d.uid + '_' + d.stationId
+          && isGameStation(d.stationId)
+          && isText(d.memo, 0, 60)
+          && d.image is string && d.image.size() <= 500000 && d.image.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$')
+          && d.likeCount is int && d.likeCount >= 0
+          && d.reportCount is int && d.reportCount >= 0
+          && d.hidden == (d.reportCount >= 3)
+          && d.createdAt is timestamp && d.updatedAt is timestamp;
+      }
+      function nameOk(d) {
+        return exists(docPath('profiles', request.auth.uid)) && d.name == get(docPath('profiles', request.auth.uid)).data.displayName;
+      }
+      // 見られるのは、ログインした人（隠れていないものだけ）・投函した本人・運営
+      allow get: if isPlayer() && (resource.data.hidden == false || isOwnerOf(resource.data) || isAdmin());
+      allow list: if (isPlayer() && resource.data.hidden == false) || isAdmin();
+      // 投函：本人だけ。いいね・通報は0から。名前は登録のとおり
+      allow create: if isPlayer() && isOwnerOf(request.resource.data) && validCard(request.resource.data) && nameOk(request.resource.data)
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time
+        && request.resource.data.likeCount == 0 && request.resource.data.reportCount == 0;
+      allow update: if isPlayer() && validCard(request.resource.data) && (
+        // ① 本人の差し替え（写真・一言・名前）。いいね・通報・隠れ・投函日は変えられない。差し替えは30秒あける
+        (isOwnerOf(resource.data) && nameOk(request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memo', 'image', 'name', 'updatedAt'])
+          && request.resource.data.updatedAt == request.time
+          && request.time > resource.data.updatedAt + duration.value(30, 's'))
+        // ② ほかの人の「素敵ね」：いいねの数を1つだけ増やす。同じ一括書き込みで、その人のいいねの印を新しく作ること
+        || (!isOwnerOf(resource.data) && resource.data.hidden == false
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount'])
+          && request.resource.data.likeCount == resource.data.likeCount + 1
+          && !exists(/databases/$(database)/documents/postcards/$(pid)/likes/$(request.auth.uid))
+          && existsAfter(/databases/$(database)/documents/postcards/$(pid)/likes/$(request.auth.uid)))
+        // ③ ほかの人の通報：通報の数を1つだけ増やす（3件で隠れる）。同じ一括書き込みで、その人の通報を新しく作ること
+        || (!isOwnerOf(resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reportCount', 'hidden'])
+          && request.resource.data.reportCount == resource.data.reportCount + 1
+          && !exists(docPath('reports', request.auth.uid + '_' + pid))
+          && existsAfter(docPath('reports', request.auth.uid + '_' + pid)))
+        // ④ 運営が「問題なし」で戻す（通報を0にして見えるようにする）
+        || (isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reportCount', 'hidden'])
+          && request.resource.data.reportCount == 0)
+      );
+      allow delete: if isOwnerOf(resource.data) || isAdmin();
+
+      // いいねの印（1人1回）。だれがいいねしたかは本人と運営だけが見られる
+      match /likes/{likerUid} {
+        allow get: if (signedIn() && request.auth.uid == likerUid) || isAdmin();
+        allow list: if isAdmin();
+        allow create: if isPlayer() && request.auth.uid == likerUid
+          && request.resource.data.keys().hasOnly(['at']) && request.resource.data.at == request.time
+          && get(docPath('postcards', pid)).data.uid != request.auth.uid
+          && getAfter(docPath('postcards', pid)).data.likeCount == get(docPath('postcards', pid)).data.likeCount + 1;
+        allow update, delete: if false;
+      }
+    }
+
+    // ---------- 旅の便りの通報（運営だけが読める。文書の id は「通報した人の uid _ ポストカードの id」で1人1回） ----------
+    match /reports/{rid} {
+      allow get, list: if isAdmin();
+      allow create: if isPlayer()
+        && rid == request.auth.uid + '_' + request.resource.data.postcardId
+        && request.resource.data.keys().hasOnly(['postcardId', 'reporter', 'reason', 'note', 'createdAt'])
+        && request.resource.data.reporter == request.auth.uid
+        && request.resource.data.reason in ['face', 'private', 'copyright', 'inappropriate', 'other']
+        && isText(request.resource.data.note, 0, 200)
+        && request.resource.data.createdAt == request.time
+        && exists(docPath('postcards', request.resource.data.postcardId))
+        && get(docPath('postcards', request.resource.data.postcardId)).data.uid != request.auth.uid
+        && getAfter(docPath('postcards', request.resource.data.postcardId)).data.reportCount
+           == get(docPath('postcards', request.resource.data.postcardId)).data.reportCount + 1;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
     // ---------- それ以外はすべて禁止（以前の地元の人の名簿 contributors も） ----------
     match /{document=**} {
       allow read, write: if false;

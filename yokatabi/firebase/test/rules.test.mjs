@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { after, before, beforeEach, describe, test } from 'node:test';
 import { assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing';
-import { Timestamp, collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { Timestamp, collection, deleteDoc, doc, getDoc, getDocs, increment, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
 
 let env;
 const ADMIN = 'admin-1', P1 = 'player-1', P2 = 'player-2', NEWBIE = 'player-new';
@@ -239,5 +239,110 @@ describe('承認と却下（運営）', () => {
     await assertFails(deleteDoc(doc(player(P1), 'voices', 'v-approved')));
     await assertFails(deleteDoc(doc(anon(), 'voices', 'v-approved')));
     await assertSucceeds(deleteDoc(doc(player(P2), 'voices', 'v-approved')));
+  });
+});
+
+describe('旅の便り（写真）：ログインした人どうしで見せ合う・素敵ね・通報（3件で隠れる）', () => {
+  const IMG = 'data:image/jpeg;base64,' + 'A'.repeat(2000);
+  const card = (uid, st = 'beppu', over = {}) => ({ uid, stationId: st, memo: '湯けむりの朝', image: IMG, name: uid === P1 ? 'くまの旅人' : '湯の町の常連', createdAt: serverTimestamp(), updatedAt: serverTimestamp(), likeCount: 0, reportCount: 0, hidden: false, ...over });
+  const id = (uid, st = 'beppu') => `${uid}_${st}`;
+  async function seedCard(uid = P2, over = {}) {
+    await env.withSecurityRulesDisabled(async (ctx) => setDoc(doc(ctx.firestore(), 'postcards', id(uid)), { ...card(uid), createdAt: T0, updatedAt: T0, ...over }));
+  }
+  function likeIt(db, pid, uid, { bump = true, mark = true } = {}) {
+    const b = writeBatch(db);
+    if (mark) b.set(doc(db, 'postcards', pid, 'likes', uid), { at: serverTimestamp() });
+    if (bump) b.update(doc(db, 'postcards', pid), { likeCount: increment(1) });
+    return b.commit();
+  }
+  function report(db, pid, uid, now, { reason = 'face', mark = true } = {}) {
+    const b = writeBatch(db);
+    if (mark) b.set(doc(db, 'reports', `${uid}_${pid}`), { postcardId: pid, reporter: uid, reason, note: '', createdAt: serverTimestamp() });
+    b.update(doc(db, 'postcards', pid), { reportCount: now + 1, hidden: now + 1 >= 3 });
+    return b.commit();
+  }
+  async function cardData(pid) {
+    let d;
+    await env.withSecurityRulesDisabled(async (ctx) => { d = (await getDoc(doc(ctx.firestore(), 'postcards', pid))).data(); });
+    return d;
+  }
+
+  test('登録済みの人は、自分の1駅1枚を投函できる。ログインした人は見られる', async () => {
+    await assertSucceeds(setDoc(doc(player(P1), 'postcards', id(P1)), card(P1)));
+    await assertSucceeds(getDoc(doc(player(P2), 'postcards', id(P1))));
+    await assertSucceeds(getDocs(query(collection(player(P2), 'postcards'), where('stationId', '==', 'beppu'), where('hidden', '==', false))));
+    await assertFails(getDoc(doc(anon(), 'postcards', id(P1))));
+  });
+  test('他人の名前・他人の番号の文書・名前違い・ゲームにない駅・写真でない・大きすぎ・いいねの水増しは通らない', async () => {
+    const db = player(P1);
+    await assertFails(setDoc(doc(db, 'postcards', id(P2)), card(P2)));
+    await assertFails(setDoc(doc(db, 'postcards', id(P1)), card(P1, 'beppu', { name: '湯の町の常連' })));
+    await assertFails(setDoc(doc(db, 'postcards', id(P1, 'tokyo')), card(P1, 'tokyo')));
+    await assertFails(setDoc(doc(db, 'postcards', id(P1)), card(P1, 'beppu', { image: 'data:text/html;base64,PHNjcmlwdD4=' })));
+    await assertFails(setDoc(doc(db, 'postcards', id(P1)), card(P1, 'beppu', { image: 'javascript:alert(1)' })));
+    await assertFails(setDoc(doc(db, 'postcards', id(P1)), card(P1, 'beppu', { image: 'data:image/jpeg;base64,' + 'A'.repeat(500000) })));
+    await assertFails(setDoc(doc(db, 'postcards', id(P1)), card(P1, 'beppu', { likeCount: 99 })));
+    await assertFails(setDoc(doc(db, 'postcards', id(P1)), card(P1, 'beppu', { memo: 'あ'.repeat(61) })));
+    await assertFails(setDoc(doc(player(NEWBIE), 'postcards', id(NEWBIE)), card(NEWBIE)));
+    await assertFails(setDoc(doc(unverified(P1), 'postcards', id(P1)), card(P1)));
+  });
+  test('本人は差し替え・削除できる（30秒あける）。いいね・通報・隠れは本人も変えられない。他人は差し替え・削除できない', async () => {
+    await seedCard(P1);
+    const ref = doc(player(P1), 'postcards', id(P1));
+    await assertSucceeds(updateDoc(ref, { memo: '差し替えた一言', image: IMG, updatedAt: serverTimestamp() }));
+    await assertFails(updateDoc(ref, { memo: 'すぐもう一度', updatedAt: serverTimestamp() }));
+    await env.withSecurityRulesDisabled(async (ctx) => updateDoc(doc(ctx.firestore(), 'postcards', id(P1)), { updatedAt: T0 }));
+    await assertFails(updateDoc(ref, { likeCount: 50, updatedAt: serverTimestamp() }));
+    await assertFails(updateDoc(ref, { reportCount: 3, hidden: true, updatedAt: serverTimestamp() }));
+    await assertFails(updateDoc(doc(player(P2), 'postcards', id(P1)), { memo: 'のっとり', updatedAt: serverTimestamp() }));
+    await assertFails(deleteDoc(doc(player(P2), 'postcards', id(P1))));
+    await assertSucceeds(deleteDoc(ref));
+  });
+  test('素敵ね：ほかの人は1回だけ1つ増やせる。自分の便り・印なし・2回目・2つ増やすは通らない', async () => {
+    await seedCard(P2);
+    const pid = id(P2);
+    await assertFails(likeIt(player(P2), pid, P2));
+    await assertFails(likeIt(player(P1), pid, P1, { mark: false }));
+    await assertFails(likeIt(player(P1), pid, P1, { bump: false }));
+    await assertSucceeds(likeIt(player(P1), pid, P1));
+    await assertFails(likeIt(player(P1), pid, P1));
+    const nb = player(NEWBIE);
+    const b = writeBatch(nb);
+    b.set(doc(nb, 'postcards', pid, 'likes', NEWBIE), { at: serverTimestamp() });
+    b.update(doc(nb, 'postcards', pid), { likeCount: increment(2) });
+    await assertFails(b.commit());
+    if ((await cardData(pid)).likeCount !== 1) throw new Error('いいねの数がずれた');
+    await assertFails(getDoc(doc(player(P2), 'postcards', pid, 'likes', P1)));
+  });
+  test('通報：1人1回。3件そろうと自動で隠れて、ほかの人には見えなくなる（本人と運営には見える）', async () => {
+    await seedCard(P2);
+    const pid = id(P2);
+    await assertFails(report(player(P2), pid, P2, 0));
+    await assertFails(report(player(P1), pid, P1, 0, { mark: false }));
+    await assertFails(report(player(P1), pid, P1, 0, { reason: 'dislike' }));
+    await assertSucceeds(report(player(P1), pid, P1, 0));
+    await assertFails(report(player(P1), pid, P1, 1));
+    await assertSucceeds(report(player(NEWBIE), pid, NEWBIE, 1));
+    // 3件目なのに隠さない（hidden: false のまま）書き込みは通らない
+    const px = player('p-x');
+    const bx = writeBatch(px);
+    bx.set(doc(px, 'reports', `p-x_${pid}`), { postcardId: pid, reporter: 'p-x', reason: 'private', note: '', createdAt: serverTimestamp() });
+    bx.update(doc(px, 'postcards', pid), { reportCount: 3, hidden: false });
+    await assertFails(bx.commit());
+    await assertSucceeds(report(player('p-y'), pid, 'p-y', 2));
+    await assertFails(getDoc(doc(player(P1), 'postcards', pid)));
+    await assertFails(getDocs(query(collection(player(P1), 'postcards'), where('stationId', '==', 'beppu'))));
+    await assertSucceeds(getDoc(doc(player(P2), 'postcards', pid)));
+    await assertSucceeds(getDoc(doc(admin(), 'postcards', pid)));
+    await assertFails(getDocs(collection(player(P1), 'reports')));
+    await assertSucceeds(getDocs(collection(admin(), 'reports')));
+  });
+  test('運営は「問題なし」で戻すか、消せる。遊ぶ人は通報を0に戻せない', async () => {
+    await seedCard(P2, { reportCount: 3, hidden: true });
+    const pid = id(P2);
+    await assertFails(updateDoc(doc(player(P2), 'postcards', pid), { reportCount: 0, hidden: false }));
+    await assertSucceeds(updateDoc(doc(admin(), 'postcards', pid), { reportCount: 0, hidden: false }));
+    await assertSucceeds(getDoc(doc(player(P1), 'postcards', pid)));
+    await assertSucceeds(deleteDoc(doc(admin(), 'postcards', pid)));
   });
 });

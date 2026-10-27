@@ -1,5 +1,5 @@
 // 端末の中の画像置き場（旅の便りの写真）と、朱肉のかすれのSVGフィルタ。
-//   ・保存：IndexedDB（縮小した JPEG だけ）。写真はどこにも送信しない
+//   ・保存：IndexedDB（縮小した JPEG だけ）。写真はここからは送らない（ほかの旅人に見せる写真は shared-cards.js が Firestore に送る）
 //   ・IndexedDB の名前 'qtrip-receipts' は、遊んでいる人の保存データを守るため旧名のまま（以前はレシートのスクショも置いていた）
 (function () {
   'use strict';
