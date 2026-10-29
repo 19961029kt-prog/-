@@ -48,7 +48,7 @@ async function emailLogin(page, path, email, { form = '#gate-email-form', input 
   const code = codes.oobCodes.filter((c) => c.email === email).pop();
   await page.goto(`${ORIGIN}/${path}?emulator&apiKey=demo-key&oobCode=${code.oobCode}&mode=signIn&lang=ja`);
 }
-async function register(page, { name, home = ['JP', '43'], live = null }) {
+async function register(page, { name, home = ['JP', '43'], live = null, agree = true }) {
   await page.waitForSelector('#gate-reg', { timeout: 15000 });
   await page.fill('#reg-name', name);
   await page.selectOption('#reg-age', '30s');
@@ -60,6 +60,7 @@ async function register(page, { name, home = ['JP', '43'], live = null }) {
     await page.selectOption('#reg-live-country', live[0]);
     if (live[0] === 'JP') await page.selectOption('#reg-live-pref', live[1]);
   } else await page.check('#reg-same');
+  if (agree) await page.check('#reg-agree');
 }
 const gateGone = (page) => page.waitForSelector('#login-gate', { state: 'hidden', timeout: 20000 });
 const uidOf = (page) => page.evaluate(() => YT.Gate.user && YT.Gate.user.uid);
@@ -101,16 +102,30 @@ try {
   await emailLogin(a, 'index.html', 'kuma@example.com');
   await a.waitForSelector('#gate-reg');
   check(await a.evaluate(() => document.getElementById('app').inert), 'はじめてのログインでは、登録するまで遊べない');
-  await register(a, { name: 'くまの旅人', home: ['JP', '43'], live: ['KR'] });
+  check(/他の旅人には見えないように俺がしっかり守るニャ/.test(await a.textContent('#gate-reg')), '登録フォームで、ツシ丸が年代や性別を守ると案内する');
+  await register(a, { name: 'くまの旅人', home: ['JP', '43'], live: ['KR'], agree: false });
   check(await a.isHidden('#reg-live-pref'), '現在の所在地が海外なら、都道府県は出さない');
   await a.selectOption('#reg-live-country', 'JP');
   await a.selectOption('#reg-live-pref', '43');
+  await a.click('#gate-reg button[type="submit"]');
+  await a.waitForSelector('#reg-msg .gate-msg');
+  check(/プライバシーポリシー/.test(await a.textContent('#reg-msg')) && !(await ownerGet(`profiles/${await uidOf(a)}`)), 'プライバシーポリシーに同意しないと登録できない');
+  await a.click('#gate-reg [data-privacy-open]');
+  await a.waitForSelector('.pp-layer.is-open .pp-box');
+  check(/メールアドレスは、ログインのしくみ/.test(await a.textContent('.pp-box')) && /消したいとき/.test(await a.textContent('.pp-box')), '登録フォームから、やさしい言葉のプライバシーポリシーを読める');
+  if (OUT) { await a.waitForTimeout(500); await a.screenshot({ path: `${OUT}/privacy.png` }); }
+  await a.keyboard.press('Escape');
+  await a.waitForSelector('.pp-layer', { state: 'hidden' });
+  await a.check('#reg-agree');
   if (OUT) await a.screenshot({ path: `${OUT}/register.png`, fullPage: true });
   await a.click('#gate-reg button[type="submit"]');
   await gateGone(a);
   const uidA = await uidOf(a);
   const prof = await ownerGet(`profiles/${uidA}`);
-  check(prof && prof.fields.displayName.stringValue === 'くまの旅人' && prof.fields.homePref.stringValue === '43' && prof.fields.livePref.stringValue === '43' && prof.fields.gender.stringValue === 'noanswer', '登録の内容がデータベースに入る（名前・年代・性別・出身地・所在地）');
+  const stat = await ownerGet(`privateStats/${uidA}`);
+  check(prof && prof.fields.displayName.stringValue === 'くまの旅人' && prof.fields.policyVersion.integerValue === '1' && !!prof.fields.agreedAt, '名前と同意（版と時刻）が登録に入る');
+  check(stat && stat.fields.homePref.stringValue === '43' && stat.fields.livePref.stringValue === '43' && stat.fields.gender.stringValue === 'noanswer' && stat.fields.ageGroup.stringValue === '30s', '年代・性別・出身地・所在地は、名前とは別の統計用の文書に入る');
+  check(!Object.keys(prof.fields).some((k) => /mail|age|gender|home|live/i.test(k)) && !JSON.stringify(stat).includes('@'), 'メールアドレスはどこにも保存しない・名前の文書に統計用の項目はない');
   check(/くまの旅人 さんログイン中/.test(await a.textContent('#techo-login')), '手帖に「〇〇さん ログイン中」');
 
   // 3. 遊んだ記録がデータベースに保存される
@@ -152,19 +167,21 @@ try {
   const st = await a.evaluate(() => YT.Store.get().currentStationId);
   await a.click(`[data-voice-open="${st}"]`);
   await a.waitForSelector(`[data-voice-form="${st}"]`);
-  check(/「くまの旅人」として紹介します/.test(await a.textContent(`[data-voice-form="${st}"]`)), '紹介する名前は登録の名前');
+  check(/「くまの旅人」として書きます/.test(await a.textContent(`[data-voice-form="${st}"]`)), '紹介する名前は登録の名前');
+  check(/立派な九州の宝物ばい/.test(await a.textContent(`[data-voice-form="${st}"]`)) && /みんなの手帖に載せてもよかばい/.test(await a.textContent(`[data-voice-form="${st}"]`)), '駅ノートのフォームで、ゴロ太が思い出を引き出し、掲載の同意をたずねる');
+  check(/高校の帰り道/.test(await a.getAttribute('#vf-body', 'placeholder')) && (await a.$$('input[name="vf-bond"]')).length === 4 && !(await a.$('#vf-title')), '例文は懐かしい記憶を引き出す文・つながりは4つの選択肢（自由に書く欄はない）');
   const BODY = '朝いちばんの湯は地元の人と同じ時間に。<img src=x onerror="window.__xss=1"> 湯上がりに坂の上から町を見下ろしてみて。';
   await a.fill('#vf-spot', '坂の上の共同湯');
   await a.fill('#vf-body', BODY);
-  await a.fill('#vf-title', '由布院に住んで十年');
+  await a.check('input[name="vf-bond"][value="homecoming"]');
   await a.click(`[data-voice-form="${st}"] button[type="submit"]`);
   await a.waitForTimeout(400);
-  check(!(await a.$('[data-voices] .vf-msg.is-ok')) && !(await a.$eval('#vf-consent', (e) => e.validity.valid)), '掲載の同意がないと送れない');
+  check(!(await a.$('[data-voices] .guide-gorota:has-text("たしかに預かった")')) && !(await a.$eval('#vf-consent', (e) => e.validity.valid)), '掲載の同意がないと送れない');
   await a.check('#vf-consent');
   if (OUT) { await a.evaluate(() => document.querySelector('[data-voice-form]').scrollIntoView()); await a.screenshot({ path: `${OUT}/techo-send.png` }); }
   await a.click(`[data-voice-form="${st}"] button[type="submit"]`);
-  await a.waitForSelector('[data-voices] .vf-msg.is-ok');
-  check(true, '遊ぶ人が寄り道手帖からおすすめを紹介できる（審査待ちへ）');
+  await a.waitForSelector('[data-voices] .guide-gorota:has-text("たしかに預かった")');
+  check(true, '遊ぶ人が寄り道手帖からおすすめを紹介できる（審査待ちへ・ゴロ太がお礼を言う）');
   await openTecho(a);
   check(!/坂の上の共同湯/.test(await a.textContent('[data-voices]')), '承認前は寄り道手帖に出ない');
 
@@ -177,7 +194,7 @@ try {
   await ownerSet(`admins/${admUid}`, { note: { stringValue: 'コンソールから登録（テスト）' } });
   await adm.reload();
   await adm.waitForSelector('[data-act="approve"]');
-  check(/坂の上の共同湯/.test(await adm.textContent('#lp-admin')) && /由布院に住んで十年/.test(await adm.textContent('#lp-admin')), '審査待ちにスポット名・名前・つながりが並ぶ');
+  check(/坂の上の共同湯/.test(await adm.textContent('#lp-admin')) && /帰省すると立ち寄る場所/.test(await adm.textContent('#lp-admin')), '審査待ちにスポット名・名前・つながりが並ぶ');
   if (OUT) await adm.screenshot({ path: `${OUT}/review.png`, fullPage: true });
   await adm.click('[data-act="approve"]');
   await adm.waitForFunction(() => document.querySelector('#lp-admin').textContent.includes('掲載中のおすすめ（1件）'));
@@ -186,9 +203,10 @@ try {
   // 8. 旅人の寄り道手帖に、文字のまま出る（タグとして動かない）
   await openTecho(a);
   const item = await a.$eval('[data-voices] .voice', (e) => ({ spot: e.querySelector('.voice-spot').textContent.trim(), body: e.querySelector('.voice-body').textContent, by: e.querySelector('.voice-by').textContent }));
-  check(item.spot === '坂の上の共同湯' && item.body === BODY && /くまの旅人/.test(item.by) && /由布院に住んで十年/.test(item.by), '承認したおすすめが、スポット名・文面・名前・つながりのまま出る');
+  check(item.spot === '坂の上の共同湯' && item.body === BODY && /くまの旅人/.test(item.by) && /帰省すると立ち寄る場所/.test(item.by), '承認したおすすめが、スポット名・文面・名前・つながりのまま出る');
   check((await a.$$('[data-voices] img')).length === 0 && !(await a.evaluate(() => window.__xss)), '投稿の中のタグは画面で動かない');
   check(!/30s|noanswer|熊本県/.test(await a.textContent('[data-voices]')), '年代・性別・出身地は画面に出ない');
+  check(/いつでもこの駅に帰ってこられるカチ/.test(await a.textContent('[data-voices]')), '駅ノートの欄で、カチ助が案内する');
   if (OUT) { await a.evaluate(() => document.querySelector('[data-voices]').scrollIntoView()); await a.screenshot({ path: `${OUT}/techo-voices.png` }); }
 
   // 9. 登録内容を直せる
@@ -197,6 +215,7 @@ try {
   await a.click('[data-gate-edit]');
   await a.waitForSelector('#gate-reg');
   check((await a.inputValue('#reg-name')) === 'くまの旅人' && (await a.inputValue('#reg-home-pref')) === '43', '登録内容をひらくと、いまの内容が入っている');
+  check((await a.isChecked('#reg-agree')), '登録内容を直すときは、同意済みのチェックが入っている');
   await a.fill('#reg-name', '熊本の案内人');
   await a.click('#gate-reg button[type="submit"]');
   await gateGone(a);
@@ -302,6 +321,24 @@ try {
   await b.waitForFunction((n) => document.querySelectorAll('[data-real-board] [data-pc]').length > n, first, { timeout: 10000 });
   const second = (await b.$$('[data-real-board] [data-pc]')).length;
   check(first <= 20 && second > first && !(await b.$('[data-real-more]')), `旅の便りは20枚ずつ読み、「もっと見る」で続きを読む（${first}枚 → ${second}枚）`);
+
+  // 15. 退会：登録と記録を消す（a）。データベースの自分のもの・端末の記録・ログインの記録が消える
+  await a.goto(`${ORIGIN}/index.html?emulator`);
+  await gateGone(a);
+  await closeCover(a);
+  await a.click('[data-tab="collection"]');
+  await a.click('#techo-login [data-gate-leave]');
+  await a.waitForSelector('.pp-layer.is-open [data-pp-leave]');
+  if (OUT) { await a.waitForTimeout(500); await a.screenshot({ path: `${OUT}/leave.png` }); }
+  await a.click('[data-pp-leave]');
+  await a.waitForFunction(() => /すべて消しました|残りました|消せなかった/.test((document.querySelector('#gate-msg') || {}).textContent || ''), null, { timeout: 40000 });
+  const leftMsg = await a.textContent('#gate-msg');
+  const gone = await Promise.all([`profiles/${uidA}`, `privateStats/${uidA}`, `saves/${uidA}`, `postcards/${uidA}_hakata`, `postcardImages/${uidA}_hakata`].map(ownerGet));
+  const vq = await (await fetch(`${FS.replace(/\/documents$/, '')}/documents:runQuery`, { method: 'POST', headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' }, body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'voices' }], where: { fieldFilter: { field: { fieldPath: 'uid' }, op: 'EQUAL', value: { stringValue: uidA } } } } }) })).json();
+  const acc = await (await fetch(`${AUTH}/identitytoolkit.googleapis.com/v1/projects/demo-qtrip/accounts:lookup`, { method: 'POST', headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' }, body: JSON.stringify({ localId: [uidA] }) })).json();
+  check(gone.every((x) => !x) && !vq.some((r) => r.document), `退会すると、登録・統計用・記録・旅の便り・駅ノートがデータベースから消える${gone.some(Boolean) ? '（残り：' + gone.map((x, i) => (x ? i : '')).join('') + '）' : ''}`);
+  check(!(acc.users && acc.users.length) && /すべて消しました/.test(leftMsg), 'ログインの記録（メールアドレス）も消え、関所で知らせる');
+  check(await a.evaluate(() => !localStorage.getItem('yokatabi.kyushu.v1') || !JSON.parse(localStorage.getItem('yokatabi.kyushu.v1')).cloudUid), '端末の記録も消える');
 
   check(errors.length === 0, `画面のエラーなし${errors.length ? '：' + errors.join(' / ') : ''}`);
 } finally {

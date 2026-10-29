@@ -9,7 +9,9 @@ import { Timestamp, collection, deleteDoc, doc, getDoc, getDocs, increment, limi
 let env;
 const ADMIN = 'admin-1', P1 = 'player-1', P2 = 'player-2', NEWBIE = 'player-new';
 const T0 = Timestamp.fromDate(new Date('2026-10-01T00:00:00Z'));
-const PROFILE = { displayName: 'くまの旅人', ageGroup: '30s', gender: 'female', homeCountry: 'JP', homePref: '43', liveCountry: 'JP', livePref: '43', createdAt: T0 };
+// 登録は2つに分ける：名前と同意（profiles）／統計用の年代・性別・出身地・所在地（privateStats・本人だけ）
+const PROFILE = { displayName: 'くまの旅人', createdAt: T0, policyVersion: 1, agreedAt: T0 };
+const STATS = { ageGroup: '30s', gender: 'female', homeCountry: 'JP', homePref: '43', liveCountry: 'JP', livePref: '43' };
 
 before(async () => {
   env = await initializeTestEnvironment({
@@ -26,8 +28,10 @@ beforeEach(async () => {
     const db = ctx.firestore();
     await setDoc(doc(db, 'admins', ADMIN), { note: 'コンソールから登録' });
     await setDoc(doc(db, 'profiles', P1), PROFILE);
-    await setDoc(doc(db, 'profiles', P2), { ...PROFILE, displayName: '湯の町の常連', homeCountry: 'KR', homePref: '', liveCountry: 'JP', livePref: '44' });
-    await setDoc(doc(db, 'voices', 'v-approved'), { uid: P2, stationId: 'yufuin', spot: '金鱗湖', body: '朝霧の金鱗湖は、少し早起きして。', name: '湯の町の常連', title: '由布院に通って十年', consent: true, createdAt: T0, approvedAt: T0, approvedBy: ADMIN });
+    await setDoc(doc(db, 'profiles', P2), { ...PROFILE, displayName: '湯の町の常連' });
+    await setDoc(doc(db, 'privateStats', P1), { ...STATS, updatedAt: T0 });
+    await setDoc(doc(db, 'privateStats', P2), { ...STATS, homeCountry: 'KR', homePref: '', livePref: '44', updatedAt: T0 });
+    await setDoc(doc(db, 'voices', 'v-approved'), { uid: P2, stationId: 'yufuin', spot: '金鱗湖', body: '朝霧の金鱗湖は、少し早起きして。', name: '湯の町の常連', bond: 'homecoming', consent: true, createdAt: T0, approvedAt: T0, approvedBy: ADMIN });
   });
 });
 
@@ -37,7 +41,7 @@ const unverified = (uid) => env.authenticatedContext(uid, { email_verified: fals
 const anon = () => env.unauthenticatedContext().firestore();
 const admin = () => env.authenticatedContext(ADMIN, { email_verified: true }).firestore();
 
-const spot = (uid, over = {}) => ({ uid, stationId: 'kumamoto', spot: '城下の路面電車', body: '夕方の窓から見るお城がいちばん。', name: 'くまの旅人', title: '熊本に住んで十年', consent: true, createdAt: serverTimestamp(), ...over });
+const spot = (uid, over = {}) => ({ uid, stationId: 'kumamoto', spot: '城下の路面電車', body: '夕方の窓から見るお城がいちばん。', name: 'くまの旅人', bond: 'commute', consent: true, createdAt: serverTimestamp(), ...over });
 // 投稿は「審査待ちの作成」と「自分の登録の lastPostAt を今に」を1回の一括書き込みで（画面も同じ形）
 function post(db, uid, id, over = {}, { bump = true } = {}) {
   const b = writeBatch(db);
@@ -60,46 +64,86 @@ function approve(db, id, data, { log = true, removePending = true, edit = {} } =
   if (log) b.set(doc(db, 'moderationLog', id), { action: 'approve', by: ADMIN, at: serverTimestamp() });
   return b.commit();
 }
-const newProfile = (over = {}) => ({ ...PROFILE, displayName: 'はじめての旅人', createdAt: serverTimestamp(), ...over });
+const newProfile = (over = {}) => ({ displayName: 'はじめての旅人', createdAt: serverTimestamp(), policyVersion: 1, agreedAt: serverTimestamp(), ...over });
+const newStats = (over = {}) => ({ ...STATS, updatedAt: serverTimestamp(), ...over });
+// 登録は、名前と同意・統計用の2つを1回の一括書き込みで（画面も同じ形）
+function register(db, uid, { profile = {}, stats = {} } = {}) {
+  const b = writeBatch(db);
+  b.set(doc(db, 'profiles', uid), newProfile(profile));
+  b.set(doc(db, 'privateStats', uid), newStats(stats));
+  return b.commit();
+}
 
-describe('登録（名前・年代・性別・出身地・現在の所在地）', () => {
+describe('登録：名前と同意（profiles）・統計用（privateStats）', () => {
   test('メール確認済みの人は、自分の登録を作れる（日本は都道府県つき・海外は空）', async () => {
-    await assertSucceeds(setDoc(doc(player(NEWBIE), 'profiles', NEWBIE), newProfile()));
-    await assertSucceeds(setDoc(doc(player('p-kr'), 'profiles', 'p-kr'), newProfile({ homeCountry: 'KR', homePref: '', liveCountry: 'TW', livePref: '' })));
+    await assertSucceeds(register(player(NEWBIE), NEWBIE));
+    await assertSucceeds(register(player('p-kr'), 'p-kr', { stats: { homeCountry: 'KR', homePref: '', liveCountry: 'TW', livePref: '' } }));
   });
   test('メール未確認・ログインなし・他人の番号では作れない', async () => {
-    await assertFails(setDoc(doc(unverified(NEWBIE), 'profiles', NEWBIE), newProfile()));
+    await assertFails(register(unverified(NEWBIE), NEWBIE));
     await assertFails(setDoc(doc(anon(), 'profiles', NEWBIE), newProfile()));
     await assertFails(setDoc(doc(player(P2), 'profiles', NEWBIE), newProfile()));
+    await assertFails(setDoc(doc(player(P2), 'privateStats', NEWBIE), newStats()));
   });
-  test('選択肢にない値・日本なのに県がない・海外なのに県がある・項目の足りない登録は通らない', async () => {
-    const db = player(NEWBIE), ref = doc(db, 'profiles', NEWBIE);
-    await assertFails(setDoc(ref, newProfile({ ageGroup: '25' })));
-    await assertFails(setDoc(ref, newProfile({ gender: 'x' })));
-    await assertFails(setDoc(ref, newProfile({ homePref: '' })));
-    await assertFails(setDoc(ref, newProfile({ homePref: '48' })));
-    await assertFails(setDoc(ref, newProfile({ liveCountry: 'US', livePref: '13' })));
-    await assertFails(setDoc(ref, newProfile({ homeCountry: 'Japan' })));
-    await assertFails(setDoc(ref, newProfile({ displayName: '' })));
-    await assertFails(setDoc(ref, newProfile({ email: 'a@example.com' })));
-    const { gender, ...noGender } = newProfile();
-    await assertFails(setDoc(ref, noGender));
+  test('プライバシーポリシーに同意していない（版がない・古い・同意の時刻をごまかす）登録は通らない', async () => {
+    const ref = doc(player(NEWBIE), 'profiles', NEWBIE);
+    const { policyVersion, ...noAgree } = newProfile();
+    await assertFails(setDoc(ref, noAgree));
+    await assertFails(setDoc(ref, newProfile({ policyVersion: 0 })));
+    await assertFails(setDoc(ref, newProfile({ agreedAt: T0 })));
     await assertFails(setDoc(ref, newProfile({ createdAt: T0 })));
     await assertFails(setDoc(ref, newProfile({ lastPostAt: Timestamp.fromDate(new Date('2020-01-01')) })));
+    await assertFails(setDoc(ref, newProfile({ displayName: '' })));
   });
-  test('本人は登録を直せる。登録日と投稿の時刻はごまかせず、本人は消せない', async () => {
+  test('メールアドレスは、どの登録にも入れられない（Firebase Authentication の中だけ）', async () => {
+    const db = player(NEWBIE);
+    await assertFails(setDoc(doc(db, 'profiles', NEWBIE), newProfile({ email: 'a@example.com' })));
+    await assertFails(setDoc(doc(db, 'privateStats', NEWBIE), newStats({ email: 'a@example.com' })));
+  });
+  test('年代・性別・出身地・所在地は、名前と同じ文書に入れられない（統計用は privateStats だけ）', async () => {
+    await assertFails(setDoc(doc(player(NEWBIE), 'profiles', NEWBIE), newProfile({ ageGroup: '30s' })));
+    await assertFails(setDoc(doc(player(NEWBIE), 'profiles', NEWBIE), newProfile({ homeCountry: 'JP', homePref: '43' })));
+  });
+  test('統計用：選択肢にない値・日本なのに県がない・海外なのに県がある・項目の足りないものは通らない', async () => {
+    const ref = doc(player(NEWBIE), 'privateStats', NEWBIE);
+    await assertFails(setDoc(ref, newStats({ ageGroup: '25' })));
+    await assertFails(setDoc(ref, newStats({ gender: 'x' })));
+    await assertFails(setDoc(ref, newStats({ homePref: '' })));
+    await assertFails(setDoc(ref, newStats({ homePref: '48' })));
+    await assertFails(setDoc(ref, newStats({ liveCountry: 'US', livePref: '13' })));
+    await assertFails(setDoc(ref, newStats({ homeCountry: 'Japan' })));
+    await assertFails(setDoc(ref, newStats({ updatedAt: T0 })));
+    const { gender, ...noGender } = newStats();
+    await assertFails(setDoc(ref, noGender));
+  });
+  test('本人は登録を直せる。登録日・同意の時刻・投稿の時刻はごまかせない', async () => {
     const db = player(P1), ref = doc(db, 'profiles', P1);
-    await assertSucceeds(updateDoc(ref, { displayName: '熊本の案内人', liveCountry: 'JP', livePref: '40' }));
+    await assertSucceeds(updateDoc(ref, { displayName: '熊本の案内人' }));
+    await assertSucceeds(setDoc(doc(db, 'privateStats', P1), newStats({ liveCountry: 'JP', livePref: '40' })));
     await assertFails(updateDoc(ref, { createdAt: serverTimestamp() }));
+    await assertFails(updateDoc(ref, { agreedAt: Timestamp.fromDate(new Date('2020-01-01')) }));
     await assertFails(updateDoc(ref, { lastPostAt: Timestamp.fromDate(new Date('2020-01-01')) }));
-    await assertFails(deleteDoc(ref));
   });
-  test('登録は本人と運営だけが読める（年代・性別・出身地は公開しない）', async () => {
+  test('名前と同意（profiles）は本人だけが読める。運営もアプリからは読まない', async () => {
     await assertSucceeds(getDoc(doc(player(P1), 'profiles', P1)));
-    await assertSucceeds(getDoc(doc(admin(), 'profiles', P1)));
+    await assertFails(getDoc(doc(admin(), 'profiles', P1)));
     await assertFails(getDoc(doc(player(P2), 'profiles', P1)));
     await assertFails(getDoc(doc(anon(), 'profiles', P1)));
     await assertFails(getDocs(collection(player(P1), 'profiles')));
+  });
+  test('年代・性別・出身地・所在地（privateStats）は本人だけが読める。運営・他人・まとめて読むのは不可', async () => {
+    await assertSucceeds(getDoc(doc(player(P1), 'privateStats', P1)));
+    await assertFails(getDoc(doc(player(P2), 'privateStats', P1)));
+    await assertFails(getDoc(doc(admin(), 'privateStats', P1)));
+    await assertFails(getDoc(doc(anon(), 'privateStats', P1)));
+    await assertFails(getDocs(collection(admin(), 'privateStats')));
+    await assertFails(getDocs(collection(player(P1), 'privateStats')));
+  });
+  test('退会：本人は登録・統計用・記録をいつでも消せる。他人は消せない', async () => {
+    await assertFails(deleteDoc(doc(player(P2), 'profiles', P1)));
+    await assertFails(deleteDoc(doc(player(P2), 'privateStats', P1)));
+    await assertSucceeds(deleteDoc(doc(player(P1), 'privateStats', P1)));
+    await assertSucceeds(deleteDoc(doc(player(P1), 'profiles', P1)));
   });
 });
 
@@ -172,7 +216,8 @@ describe('ログインした人が、地元の人としておすすめスポッ�
     await assertFails(post(player(P1), P1, 'p-e', { spot: '' }));
     await assertFails(post(player(P1), P1, 'p-l', { spot: 'あ'.repeat(41) }));
     await assertFails(post(player(P1), P1, 'p-b', { body: 'あ'.repeat(401) }));
-    await assertFails(post(player(P1), P1, 'p-t', { title: 'あ'.repeat(61) }));
+    await assertFails(post(player(P1), P1, 'p-t', { bond: 'school' }));          // つながりは選択肢から
+    await assertFails(post(player(P1), P1, 'p-u', { bond: 'commute', title: '○○高校の帰り道' })); // 自由に書く欄はない
     await assertFails(post(player(P1), P1, 'p-x', { verified: true }));
     await assertFails(post(player(P1), P1, 'p-d', { createdAt: T0 }));
   });

@@ -1,7 +1,8 @@
-// YT.Voices … 寄り道手帖の「地元の人のおすすめスポット」。
-// - 読む：運営が承認したおすすめ（Firestore の voices）だけ。読んだ文字はすべて esc() を通して文字として出す。
-// - 紹介する：ログインした人は、遊びながら「地元の人」としてこの駅のおすすめスポットを紹介できる（審査待ち voicesPending へ。
-//   載るのは運営が確かめてから）。名前は登録の名前（js/gate.js）、この駅とのつながりは自己申告。
+// YT.Voices … 寄り道手帖の「駅ノート」（夕暮れのローカル線の待合室にあるノートのように、地元の人の思い出の場所を綴る）。
+// - 読む：運営が承認したもの（Firestore の voices）だけ。読んだ文字はすべて esc() を通して文字として出す。
+// - 書く：ログインした人は、遊びながら「地元の人」としてこの駅の思い出の場所を紹介できる（審査待ち voicesPending へ。
+//   載るのは運営が確かめてから）。名前は登録の名前（js/gate.js）。この駅とのつながりは4つの選択肢から選ぶ
+//   （自由に書く欄にすると、学校名・勤め先など人が分かることが入りやすいため）。案内人は js/guides.js。
 // - 書き込みの形は firebase/firestore.rules とそのテストに合わせてある（守りの本体はルール）。AI は使わない。
 (function () {
   'use strict';
@@ -13,15 +14,26 @@
   const MAX = 400;
   const cache = {};
 
+  // この駅とのつながり（ルールの bond と同じ値）
+  const BONDS = [
+    ['commute', '昔の通学・通勤の記憶'],
+    ['homecoming', '帰省すると立ち寄る場所'],
+    ['everyday', '地元の当たり前の日常'],
+    ['detour', '旅で見つけた寄り道'],
+  ];
+  const bondLabel = (v) => (BONDS.find((b) => b[0] === v) || [])[1] || '';
+  const G = () => YT.Guides;
+
   const canSend = () => !!(YT.Gate && YT.Gate.user && YT.Gate.profile);
   const openBtn = (id, name) => `<button class="ghost-btn btn-sm" data-voice-open="${esc(id)}" data-name="${esc(name)}">${I('pin')} この駅のおすすめを紹介する</button>`;
 
   // 手帖の中の枠だけを先に出す。中身は fill() があとから入れる
   function sectionHtml(id, stationName = '') {
     return `<section class="modal-sec voices-sec" data-voices="${esc(id)}" aria-live="polite">
-        <h3 class="sec-title">${I('megaphone')}地元の人のおすすめ <em>この町を知る人から</em></h3>
-        <div class="voices-body"><p class="voices-empty">地元の人のおすすめを読み込んでいます…</p></div>
-        <p class="voices-note">旅をしている人が「地元の人」として紹介したスポットを、運営が一件ずつ確かめてから載せています。</p>
+        <h3 class="sec-title">${I('ledger')}駅ノート <em>この町を知る人の、あの頃の景色</em></h3>
+        ${G() ? G().line('note', { small: true }) : ''}
+        <div class="voices-body"><p class="voices-empty">駅ノートをめくっています…</p></div>
+        <p class="voices-note">この町を知る人が綴った思い出の場所を、運営が一件ずつ確かめてから載せています。</p>
         ${canSend() ? `<div class="voices-send">${openBtn(id, stationName)}</div>` : ''}
       </section>`;
   }
@@ -44,7 +56,7 @@
     return `<li class="voice">
         ${v.spot ? `<p class="voice-spot">${I('pin')}<span>${esc(v.spot)}</span></p>` : ''}
         <p class="voice-body">${esc(v.body)}</p>
-        <p class="voice-by"><span class="voice-name">${esc(v.name)}</span>${v.title ? `<small>${esc(v.title)}</small>` : ''}</p>
+        <p class="voice-by"><span class="voice-name">${esc(v.name)}</span>${bondLabel(v.bond) ? `<small>${esc(bondLabel(v.bond))}</small>` : ''}</p>
       </li>`;
   }
 
@@ -58,10 +70,10 @@
       if (!sec.isConnected) return;
       body.innerHTML = list.length
         ? `<ul class="voices-list">${list.map(itemHtml).join('')}</ul>`
-        : '<p class="voices-empty">この駅のおすすめは、まだ届いていません。この町を知っている方は、ぜひ紹介してください。</p>';
+        : '<p class="voices-empty">この駅のノートは、まだ白いページです。この町を知っている方は、あの頃の景色を書きのこしてください。</p>';
     } catch (e) {
       if (!sec.isConnected) return;
-      body.innerHTML = '<p class="voices-empty">いまは地元の人のおすすめを読み込めません。通信のよいところで、もう一度ひらいてください。</p>';
+      body.innerHTML = '<p class="voices-empty">いまは駅ノートをひらけません。通信のよいところで、もう一度ひらいてください。</p>';
     }
   }
 
@@ -71,15 +83,18 @@
     const name = btn.dataset.name || '';
     const p = YT.Gate.profile;
     btn.closest('.voices-send').innerHTML = `<form class="voice-form" data-voice-form="${esc(id)}" data-name="${esc(name)}">
-        <p class="vf-fixed">「${esc(p.displayName)}」として紹介します（名前は手帖の「登録内容」で変えられます）。</p>
-        <label for="vf-spot">スポットの名前（40字まで）</label>
-        <input type="text" id="vf-spot" maxlength="40" required placeholder="例：駅前の共同湯／角のパン屋／城下の路面電車">
-        <label for="vf-body">おすすめの理由・楽しみ方（${MAX}字まで）</label>
-        <textarea id="vf-body" rows="5" maxlength="${MAX}" required placeholder="例：朝いちばんは地元の人と同じ時間に。湯上がりに海まで歩くと、潮風が気持ちいいです。"></textarea>
-        <label for="vf-title">${esc(name)}駅とのつながり（60字まで・なくてもよい）</label>
-        <input type="text" id="vf-title" maxlength="60" placeholder="例：この町に住んで十年／駅前の宿の者です">
-        <label class="vf-consent"><input type="checkbox" id="vf-consent" required> 運営が確かめたうえで、このおすすめを名前（と駅とのつながり）を添えて寄り道手帖に載せることに同意します。</label>
-        <p class="vf-help">お店の宣伝だけの文、ほかの方のお名前・連絡先、確かめられないことは載せられません。営業時間や料金は変わることがあるので、書くときは「約」をつけてください。</p>
+        ${G() ? G().line('post') : ''}
+        <p class="vf-fixed">「${esc(p.displayName)}」として書きます（名前は手帖の「登録内容」で変えられます）。</p>
+        <label for="vf-spot">思い出の場所（40字まで）</label>
+        <input type="text" id="vf-spot" maxlength="40" required placeholder="例：駅前の小さな食堂／ホームのいちばん端のベンチ／改札横のたい焼き屋">
+        <label for="vf-body">そこでの思い出（${MAX}字まで）</label>
+        <textarea id="vf-body" rows="5" maxlength="${MAX}" required placeholder="例：高校の帰り道、電車を待つ間にいつも食べていました。甘い醤油の匂いがすると、いまでもあの頃を思い出します。／ホームから見える夕日が忘れられません。"></textarea>
+        <fieldset class="vf-bond"><legend>${esc(name)}駅とのつながり</legend>
+          ${BONDS.map(([v, t], i) => `<label><input type="radio" name="vf-bond" value="${v}" ${i === 0 ? 'checked' : ''}> ${esc(t)}</label>`).join('')}
+        </fieldset>
+        <p class="vf-help">学校名・勤め先・住所・ほかの方のお名前など、だれかが分かることは書かないでください。お店の宣伝だけの文や、確かめられないことは載せられません。営業時間や料金は変わることがあるので、書くときは「約」をつけてください。</p>
+        ${G() ? G().line('consent', { small: true }) : ''}
+        <label class="vf-consent"><input type="checkbox" id="vf-consent" required> 運営が確かめたうえで、この思い出を名前と「駅とのつながり」を添えて駅ノートに載せることに同意します。</label>
         <div class="vf-row"><button class="primary-btn btn-sm" type="submit">${I('check')} 運営に送る</button><button class="link-btn" type="button" data-voice-cancel>やめる</button><span class="vf-count"><span data-vf-count>0</span> / ${MAX}字</span></div>
         <div data-vf-msg></div>
       </form>`;
@@ -100,10 +115,11 @@
     const say = (t, ok) => (msg.innerHTML = `<p class="vf-msg ${ok ? 'is-ok' : ''}">${esc(t)}</p>`);
     const spot = form.querySelector('#vf-spot').value.trim();
     const body = form.querySelector('#vf-body').value.trim();
-    const title = form.querySelector('#vf-title').value.trim();
-    if (!spot) return say('スポットの名前を書いてください。');
-    if (!body || body.length > MAX) return say(`おすすめの理由は1〜${MAX}字で書いてください。`);
-    if (!form.querySelector('#vf-consent').checked) return say('掲載への同意にチェックを入れてください。');
+    const bond = (form.querySelector('input[name="vf-bond"]:checked') || {}).value || '';
+    if (!spot) return say('思い出の場所の名前を書いてください。');
+    if (!body || body.length > MAX) return say(`思い出は1〜${MAX}字で書いてください。`);
+    if (!bondLabel(bond)) return say('この駅とのつながりを選んでください。');
+    if (!form.querySelector('#vf-consent').checked) return say('駅ノートへの掲載に同意のチェックを入れてください。');
     const btn = form.querySelector('button[type="submit"]');
     btn.disabled = true;
     try {
@@ -111,10 +127,10 @@
       const uid = YT.Gate.user.uid;
       // 審査待ちの作成と、登録の「最後に紹介した時刻」を今にする更新を1回の一括書き込みで（ルールの連投の歯止め）
       const b = fs.writeBatch(db);
-      b.set(fs.doc(fs.collection(db, 'voicesPending')), { uid, stationId: id, spot, body, name: YT.Gate.profile.displayName, title, consent: true, createdAt: fs.serverTimestamp() });
+      b.set(fs.doc(fs.collection(db, 'voicesPending')), { uid, stationId: id, spot, body, name: YT.Gate.profile.displayName, bond, consent: true, createdAt: fs.serverTimestamp() });
       b.update(fs.doc(db, 'profiles', uid), { lastPostAt: fs.serverTimestamp() });
       await b.commit();
-      form.innerHTML = '<p class="vf-msg is-ok">お預かりしました。運営が確かめてから、この手帖に載ります。ありがとうございます。</p>';
+      form.innerHTML = G() ? G().line('thanks') : '<p class="vf-msg is-ok">お預かりしました。運営が確かめてから、この駅ノートに載ります。</p>';
     } catch (e) {
       btn.disabled = false;
       say(failText(e));
@@ -142,5 +158,5 @@
     if (c) c.textContent = ev.target.value.trim().length;
   });
 
-  YT.Voices = { sectionHtml, fill };
+  YT.Voices = { sectionHtml, fill, BONDS, bondLabel };
 })();
