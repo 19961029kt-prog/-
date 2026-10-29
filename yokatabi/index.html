@@ -60,6 +60,25 @@
   <link rel="stylesheet" href="css/garage.css">
 </head>
 <body>
+  <!-- ログインの関所（js/gate.js）。ログインしてから遊ぶ。手元の開発（localhost）と file:// では出さない -->
+  <div id="login-gate" class="login-gate" role="dialog" aria-modal="true" aria-labelledby="gate-title">
+    <div class="gate-book">
+      <p class="gate-brand">Q-TRIP</p>
+      <p class="eyebrow gate-eyebrow">Kyushu Routes &amp; Roots</p>
+      <h1 id="gate-title" class="gate-title">九州よりみちダイス</h1>
+      <p class="gate-lead">九州の駅をめぐる旅の手帖へ、ようこそ。<br>この旅は、地元の人と旅の人がつながる手帖です。ログインして、旅をはじめてください。</p>
+      <div id="gate-actions" class="gate-actions" hidden>
+        <button id="gate-google" class="primary-btn gate-btn">Google でログイン</button>
+        <form id="gate-email-form" class="gate-email">
+          <label for="gate-email">メールアドレスでログイン（ログイン用のリンクをお送りします）</label>
+          <div class="gate-row"><input id="gate-email" type="email" autocomplete="email" required maxlength="200" placeholder="you@example.com"><button class="ghost-btn" type="submit">リンクを送る</button></div>
+        </form>
+      </div>
+      <div id="gate-register" hidden></div>
+      <div id="gate-msg" aria-live="polite"><p class="gate-msg is-wait">準備しています…</p></div>
+      <p class="gate-note">ログインに使うメールアドレスは、ログインと「地元の人の声」の受付のためだけに使い、画面にも手帖にも出しません。遊んだ記録は、これまでどおりこの端末の中に保存されます。この手帖では、生成AIは使っていません。</p>
+    </div>
+  </div>
   <!-- 画面はスクロールしない3層：上の固定バー（44px の帯＋68px の車窓）／真ん中の地図（ほかのタブは中だけスクロール）／下のタブ（60px）。
        ダイスは右下の親指の位置に常駐させる -->
   <div id="app" class="app">
@@ -151,6 +170,7 @@
             <button id="btn-mute" class="icon-btn" aria-pressed="false" aria-label="サウンドをミュートする"></button>
             <span class="techo-max">全駅の評価額合計 <span id="col-max"></span></span>
           </p>
+          <p id="techo-login" class="techo-login" hidden></p>
         </div>
       </div>
       <div class="seg" role="tablist" aria-label="手帖の切り替え">
@@ -199,7 +219,7 @@
       <p>「Q-TRIP 九州よりみちダイス（KYUSHU ROUTES &amp; ROOTS）」はオリジナルの企画・世界観で制作した非公式の旅メディアです。既存のゲーム作品・鉄道事業者とは関係ありません。列車のデザインは九州の観光列車の雰囲気を参考にしたオリジナルで、実在の列車の名前・ロゴ・紋章は使っていません。</p>
       <p>地図の海岸線・県境・山地・線路・駅の位置は、実際の地理データから作っています（バス・航路の線は経路のイメージ）。黒川温泉・高千穂・屋久島・桜島（港）は旅のマスとして「駅」としています。掲載情報はプロトタイプ用で、最新の営業・運行状況は各公式情報をご確認ください。</p>
       <p>地図の出典：<span id="geo-source">国土数値情報「行政区域（N03）」（国土交通省）を加工／山地：Terrain Tiles（Mapzen・AWS Open Data。SRTM・GMTED2010 は U.S. Geological Survey、ETOPO1 は NOAA 提供）の標高を加工／線路：station_database の線形（国土数値情報「鉄道（N02）」を加工したもの）／駅の位置：station_database（CC BY 4.0、駅データ.jp 由来）</span></p>
-      <p>駅のオーナー権ランキングの相手は、ゲームの中の架空の旅人です。ランキング・配当・クラフト資金はゲームの中だけのもので、お金や景品との交換はできません。旅の便りに投函した写真は、この端末の中にだけ保存され、どこにも送信されません（ほかの旅人のポストカード・「ある旅人から届いた記憶」はゲームの中の架空のもので、絵はイラストです）。「逸品を覗いて急行切符を受け取る」で開くのは、紹介料のつかない各ショップの検索ページです（ご褒美はページを覗いたことに対するもので、購入とは関係しません）。</p>
+      <p>駅のオーナー権ランキングの相手は、ゲームの中の架空の旅人です。ランキング・配当・クラフト資金はゲームの中だけのもので、お金や景品との交換はできません。旅の便りに投函した写真は、この端末に保存します。「ほかの旅人にも見せる」を選んだ写真だけは、審査なしで、ログインした旅人に見えるようになります（気になる写真は通報でき、3件で見えなくなり、運営が確かめます）。架空の旅人のポストカード・「ある旅人から届いた記憶」はゲームの中の架空のもので、絵はイラストです（本物の旅人の便りが3枚そろった駅では外します）。「逸品を覗いて急行切符を受け取る」で開くのは、紹介料のつかない各ショップの検索ページです（ご褒美はページを覗いたことに対するもので、購入とは関係しません）。</p>
       <p>【PR】寄り道手帖の中の購入・予約ボタンはアフィリエイト（広告）リンクを含みます。<span id="data-source" class="dim"></span></p>
     </div>
       </footer>
@@ -280,6 +300,13 @@
   <script src="js/postcards.js"></script>
   <script src="js/sharecard.js"></script>
   <script src="js/game.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase.js"></script>
+  <script src="js/places.js"></script>
+  <script src="js/cloud.js"></script>
+  <script src="js/gate.js"></script>
+  <script src="js/voices.js"></script>
+  <script src="js/shared-cards.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

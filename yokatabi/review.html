@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- 運営の審査：おすすめスポットの承認と却下。運営だけが使う。検索には出さない -->
+  <title>運営の審査｜Q-TRIP 九州よりみちダイス</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <!-- 読み込んでよい先を絞る（自分のサイト・フォント・Firebase と reCAPTCHA の窓口だけ）。127.0.0.1 はローカルのエミュレーター -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/ https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseappcheck.googleapis.com https://content-firebaseappcheck.googleapis.com https://recaptchaenterprise.googleapis.com https://www.google.com http://127.0.0.1:8080 http://127.0.0.1:9099; frame-src https://q-trip-a127e.firebaseapp.com https://www.google.com https://recaptcha.google.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="theme-color" content="#234236">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/review.css">
+</head>
+<body class="local-page">
+  <main class="lp" id="lp">
+    <header class="lp-head">
+      <a class="lp-back" href="./">Q-TRIP 九州よりみちダイス</a>
+      <p class="eyebrow">Review</p>
+      <h1 class="lp-title">運営の審査</h1>
+      <p class="lp-lead">旅をしている人が「地元の人」として紹介したおすすめスポットを、一件ずつ確かめて寄り道手帖に載せる、運営だけのページです。</p>
+    </header>
+
+    <!-- ログインの状態ごとに、js/review.js が中身を入れ替える -->
+    <section class="lp-card" id="lp-auth" aria-live="polite"><p class="lp-muted">準備しています…</p></section>
+    <section class="lp-card" id="lp-admin" hidden></section>
+
+    <footer class="lp-foot">
+      <p>このページでは、生成AIなどの自動の文章づくりは使っていません。承認は、送られた文面をそのまま載せます。</p>
+    </footer>
+  </main>
+  <script src="js/icons.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase.js"></script>
+  <script src="js/review.js"></script>
+</body>
+</html>

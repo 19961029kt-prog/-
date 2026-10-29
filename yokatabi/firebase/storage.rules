@@ -1,0 +1,9 @@
+rules_version = '2';
+// 「地元の人の声」は文字だけなので、Storage はまだ使わない。使うと決めるまで、すべて禁止しておく
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

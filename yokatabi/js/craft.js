@@ -434,6 +434,83 @@
     </g>`;
   }
 
+  // ---------- 鞄の形（bag のスロット。2026年10月に追加） ----------
+  // トランクのほかに、バックパッカーのリュック・ボストンバッグ・肩掛けのサコッシュ・風呂敷包み。色は「鞄の革」（outfit）の色を使う。
+  // どの形も、札（tag）・時計の鎖（chain）・根付（charm）をつなぐ場所を持つ（BAG_AT）。塗りはフラット、線はトランクと同じ太さ。
+  const BAG_AT = {
+    trunk: { tag: [TK.hx - 8, TK.y0 - 2], chain: [TK.hx + 8, TK.y0 - 0.6], charm: [44, TK.y1] },
+    backpack: { tag: [52, 31], chain: [60, 31], charm: [44, 88] },
+    boston: { tag: [47, 41], chain: [66, 41], charm: [44, 86] },
+    sacoche: { tag: [40, 43], chain: [78, 43], charm: [44, 88] },
+    furoshiki: { tag: [50, 44], chain: [65, 44], charm: [44, 88] },
+  };
+  const bagAt = (b) => BAG_AT[b] || BAG_AT.trunk;
+  function bagArt(b, o, detail = true) {
+    const p = leather(o);
+    const sw = detail ? 1 : 1.8;
+    const stitch = (d) => (detail ? `<path d="${d}" fill="none" stroke="${p.stitch}" stroke-width=".45" stroke-dasharray="1.4 1" opacity="${p.so}"/>` : '');
+    const buckle = (x, y) => `<rect x="${x - 2.6}" y="${y - 2}" width="5.2" height="4" rx=".6" fill="none" stroke="${GOLD}" stroke-width="${detail ? 1 : 1.5}"/>`;
+    if (b === 'backpack') {
+      // バックパッカーのリュック：丸い肩の胴に、かぶせのふた・2本のベルトと真鍮の尾錠・前のポケット・上の持ち手。両わきに肩ベルト
+      return `<g class="em-bag em-backpack">
+        <path d="M30,50 C23,58 23,76 29,84 M82,50 C89,58 89,76 83,84" fill="none" stroke="${p.belt}" stroke-width="${detail ? 3 : 4}"/>
+        <path d="M52,33 V28 Q52,25 55,25 H57 Q60,25 60,28 V33" fill="none" stroke="${p.belt}" stroke-width="2.6"/>
+        <path d="M30,46 Q30,34 42,32 H70 Q82,34 82,46 V84 Q82,88 78,88 H34 Q30,88 30,84 Z" fill="${p.body}"/>
+        <path d="M31,46 Q31,35 42,33.5 H70 Q81,35 81,46 V56 Q81,58.5 78.5,58.5 H33.5 Q31,58.5 31,56 Z" fill="${p.lid}"/>
+        ${stitch('M34,46 Q34,38 43,36.6 H69 Q78,38 78,46 V55.4 H34 Z')}
+        <rect x="40" y="56" width="4.4" height="13" fill="${p.belt}"/><rect x="67.6" y="56" width="4.4" height="13" fill="${p.belt}"/>
+        ${buckle(42.2, 63)}${buckle(69.8, 63)}
+        <rect x="37" y="70" width="38" height="15" rx="3" fill="${p.lid}" stroke="${p.line}" stroke-width=".7"/>
+        ${stitch('M39.4,72.4 H72.6 V82.6 H39.4 Z')}
+        <path d="M37,74.4 H75" stroke="${p.line}" stroke-width=".5" opacity=".7"/>
+        <path d="M30,46 Q30,34 42,32 H70 Q82,34 82,46 V84 Q82,88 78,88 H34 Q30,88 30,84 Z" fill="none" stroke="${p.line}" stroke-width="${sw}"/>
+        <path d="M31,58.5 H81" stroke="${p.line}" stroke-width=".7"/>
+      </g>`;
+    }
+    if (b === 'boston') {
+      // ボストンバッグ：横長の胴に、上のファスナー（真鍮の点線）・両はしの丸い当て革・弧の持ち手2本
+      return `<g class="em-bag em-boston">
+        <path d="M45,47 Q45,31 56.5,31 Q68,31 68,47" fill="none" stroke="${p.belt}" stroke-width="3"/>
+        <path d="M49,47 Q49,35 56.5,35 Q64,35 64,47" fill="none" stroke="${p.belt}" stroke-width="2.2" opacity=".85"/>
+        <path d="M21,60 Q21,47 33,47 H87 Q99,47 99,60 V80 Q99,86 93,86 H27 Q21,86 21,80 Z" fill="${p.body}"/>
+        <path d="M27,51 Q33,49 40,49 H80 Q87,49 93,51" fill="none" stroke="${GOLD}" stroke-width="${detail ? 1.2 : 1.6}" stroke-dasharray="${detail ? '1.2 1' : '2 1.4'}"/>
+        <ellipse cx="26" cy="68" rx="5" ry="13" fill="${p.lid}" stroke="${p.line}" stroke-width=".7"/><ellipse cx="94" cy="68" rx="5" ry="13" fill="${p.lid}" stroke="${p.line}" stroke-width=".7"/>
+        <rect x="42" y="47" width="5" height="39" fill="${p.belt}"/><rect x="66" y="47" width="5" height="39" fill="${p.belt}"/>
+        ${stitch('M31,56 H89 M31,80 H89')}
+        <path d="M21,60 Q21,47 33,47 H87 Q99,47 99,60 V80 Q99,86 93,86 H27 Q21,86 21,80 Z" fill="none" stroke="${p.line}" stroke-width="${sw}"/>
+      </g>`;
+    }
+    if (b === 'sacoche') {
+      // 肩掛けのサコッシュ：薄い胴にかぶせのふたと真鍮のホック。上を長い肩ひもが弧を描いて越える
+      return `<g class="em-bag em-sacoche">
+        <path d="M33,58 C33,30 83,30 83,58" fill="none" stroke="${p.belt}" stroke-width="${detail ? 2.6 : 3.6}"/>
+        ${detail ? `<path d="M33,58 C33,30 83,30 83,58" fill="none" stroke="${p.stitch}" stroke-width=".4" stroke-dasharray="1.2 1" opacity="${p.so}"/>` : ''}
+        <rect x="29" y="56" width="58" height="32" rx="4" fill="${p.body}"/>
+        <path d="M29,60 Q29,56 33,56 H83 Q87,56 87,60 V71 Q58,78 29,71 Z" fill="${p.lid}"/>
+        ${stitch('M32,60 H84 V69.4 Q58,75.6 32,69.4 Z')}
+        <circle cx="58" cy="73" r="2.6" fill="${GOLD}" stroke="${GOLD_DK}" stroke-width=".5"/>
+        <rect x="29" y="56" width="58" height="32" rx="4" fill="none" stroke="${p.line}" stroke-width="${sw}"/>
+        <rect x="30.6" y="54.6" width="4.4" height="4" fill="${GOLD}" stroke="${GOLD_DK}" stroke-width=".4"/><rect x="81" y="54.6" width="4.4" height="4" fill="${GOLD}" stroke="${GOLD_DK}" stroke-width=".4"/>
+      </g>`;
+    }
+    if (b === 'furoshiki') {
+      // 風呂敷包み：四角い包みに、上で結んだ二つの耳。地に細い唐草の線（革の色の縫い目の色で）
+      const vine = detail
+        ? `<path d="M34,62 c4,-5 9,-5 11,0 s7,5 11,0 s7,-5 11,0 s7,5 11,0 M34,76 c4,-5 9,-5 11,0 s7,5 11,0 s7,-5 11,0 s7,5 11,0" fill="none" stroke="${p.stitch}" stroke-width=".6" opacity="${p.so}"/>`
+        : '';
+      return `<g class="em-bag em-furoshiki">
+        <path d="M28,58 Q28,47 40,46 H80 Q92,47 92,58 V80 Q92,88 84,88 H36 Q28,88 28,80 Z" fill="${p.body}"/>
+        ${vine}
+        <path d="M44,47 L58,58 L72,47" fill="none" stroke="${p.line}" stroke-width=".7" opacity=".7"/>
+        <path d="M28,58 Q28,47 40,46 H80 Q92,47 92,58 V80 Q92,88 84,88 H36 Q28,88 28,80 Z" fill="none" stroke="${p.line}" stroke-width="${sw}"/>
+        <path d="M57.5,45 C50,44 44,38 46,32 C51,34 55,39 57.5,45 Z" fill="${p.lid}" stroke="${p.line}" stroke-width=".7"/>
+        <path d="M58.5,45 C66,44 72,38 70,32 C65,34 61,39 58.5,45 Z" fill="${p.lid}" stroke="${p.line}" stroke-width=".7"/>
+        <ellipse cx="58" cy="46" rx="4.2" ry="3" fill="${p.belt}" stroke="${p.line}" stroke-width=".6"/>
+      </g>`;
+    }
+    return trunk(o, detail);
+  }
+
   // 真鍮の懐中時計（中心 cx,cy・半径 r）。針は10時8分（時計の広告の決まりの、いちばん形の見える角度）
   function watch(cx, cy, r, detail = true) {
     const hand = (deg, len, wd) => {
@@ -530,10 +607,10 @@
   }
 
   // 札の吊り位置と傾き（tenugui は持ち手に結ぶので傾けない）
-  const tagAt = (h) => `translate(${TK.hx - 8} ${TK.y0 - 2}) rotate(${h === 'tenugui' ? 0 : 42})`;
+  const tagAt = (h, b) => `translate(${bagAt(b).tag[0]} ${bagAt(b).tag[1]}) rotate(${h === 'tenugui' ? 0 : 42})`;
   // 根付は胴の底の左寄り（左のベルトと留め金のあいだ）。丸の内側に収まるよう少し小さく吊る
   const CHARM = { x: 44, y: TK.y1, s: 0.9 };
-  const charmAt = () => `translate(${CHARM.x} ${CHARM.y}) scale(${CHARM.s})`;
+  const charmAt = (b) => `translate(${bagAt(b).charm[0]} ${bagAt(b).charm[1]}) scale(${CHARM.s})`;
   const WATCH = { x: 79, y: 85, r: 14.4 };
 
   function avatarSvg(eq = equipped(), { crop = false, id = 'av' } = {}) {
@@ -562,12 +639,12 @@
       <circle cx="${EC.x}" cy="${EC.y}" r="${EC.r}" fill="#F4EFE6"/>
       <circle cx="${EC.x}" cy="${EC.y}" r="${EC.r2}" fill="${IVORY}"/>
       <g clip-path="url(#${clip})">
-        ${trunk(eq.outfit, d)}
-        ${chain(TK.hx + 8, TK.y0 - 0.6, WATCH.x, n1(WATCH.y - WATCH.r - 6), d)}
+        ${bagArt(eq.bag, eq.outfit, d)}
+        ${chain(bagAt(eq.bag).chain[0], bagAt(eq.bag).chain[1], WATCH.x, n1(WATCH.y - WATCH.r - 6), d)}
         ${watch(WATCH.x, WATCH.y, WATCH.r, d)}
-        ${eq.buddy && eq.buddy !== 'none' ? `<path d="M${CHARM.x - 1.6},${TK.y1} a1.6,1.6 0 0 0 3.2,0" fill="none" stroke="${GOLD}" stroke-width="${d ? 0.9 : 1.3}"/>` : ''}
-        <g transform="${charmAt()}">${charmArt(eq.buddy, d)}</g>
-        <g transform="${tagAt(eq.hat)}">${tagArt(eq.hat, d)}</g>
+        ${eq.buddy && eq.buddy !== 'none' ? `<path d="M${bagAt(eq.bag).charm[0] - 1.6},${bagAt(eq.bag).charm[1]} a1.6,1.6 0 0 0 3.2,0" fill="none" stroke="${GOLD}" stroke-width="${d ? 0.9 : 1.3}"/>` : ''}
+        <g transform="${charmAt(eq.bag)}">${charmArt(eq.buddy, d)}</g>
+        <g transform="${tagAt(eq.hat, eq.bag)}">${tagArt(eq.hat, d)}</g>
       </g>
       <circle cx="${EC.x}" cy="${EC.y}" r="${EC.r}" fill="none" stroke="${GOLD}" stroke-width="${d ? 1.25 : 3}"/>
       <circle cx="${EC.x}" cy="${EC.y}" r="${EC.r2}" fill="none" stroke="${GOLD}" stroke-width="${d ? 0.7 : 1.6}"/>
@@ -590,7 +667,8 @@
     const svg = (vb, body) => `<svg viewBox="${vb}" class="thumb-svg thumb-emblem" aria-hidden="true" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
     // 下に敷く細い二重の罫（棚の板）。札と根付は、上の細い横木（持ち手の革・ベルトの端）から吊る
     const shelf = (x1, x2, y) => `<path d="M${x1},${y} H${x2}" stroke="#C8B9A6" stroke-width=".6"/><path d="M${x1 + 4},${y + 2} H${x2 - 4}" stroke="#C8B9A6" stroke-width=".35"/>`;
-    if (slot === 'outfit') return svg('10 30 92 64', `${shelf(14, 98, TK.y1 + 3.4)}${trunk(id)}`);
+    if (slot === 'outfit') return svg('10 30 92 64', `${shelf(14, 98, TK.y1 + 3.4)}${bagArt(eq.bag, id)}`);
+    if (slot === 'bag') return svg('12 20 96 74', `${shelf(16, 104, 91)}${bagArt(id, eq.outfit)}`);
     if (slot === 'hat') {
       return svg('-22 -6 44 34', `<path d="M-14,-1.6 H14" stroke="${leather(eq.outfit).belt}" stroke-width="3"/><rect x="-2.6" y="-3.2" width="5.2" height="3.2" fill="${GOLD}" stroke="${GOLD_DK}" stroke-width=".5"/>
         <g transform="translate(0 .2)${id === 'tenugui' ? ' scale(1.05)' : ''}">${tagArt(id)}</g>`);

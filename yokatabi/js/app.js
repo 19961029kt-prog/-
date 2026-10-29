@@ -1122,6 +1122,8 @@
         <p class="memo">${esc(s.memo)}</p>
       </section>
 
+      ${YT.Voices.sectionHtml(id, s.name)}
+
       ${Postcards.stationSnapsHtml(id)}
 
       <section class="modal-sec">
@@ -1160,6 +1162,7 @@
         <button class="ghost-btn" data-close>旅をつづける</button>
       </footer>`;
     Postcards.loadImages(card);
+    YT.Voices.fill(card, id); // 地元の人の声（承認済み）は、手帖をひらいてから Firestore に読みにいく
   }
 
   // 順位のチップ（いまいる駅・寄り道手帖）

@@ -1761,3 +1761,115 @@ html[lang="ja"] .lang-btn [data-lang="ja"], html[lang="en"] .lang-btn [data-lang
 @media (prefers-reduced-motion: reduce) {
   .dice-stage, .dice-fab { transition-duration: .01s; }
 }
+
+/* ---- 地元の人の声（寄り道手帖。承認済みだけ・js/voices.js） ---- */
+/* 便箋に書かれた一筆のように：左に細い真鍮の罫、明朝の本文、名前と肩書きは小さく右に */
+.voices-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.voice { padding: 12px 16px 10px 18px; background: var(--fiber), var(--paper); box-shadow: var(--frame); border-left: 2px solid var(--brass); }
+.voice-body { margin: 0; font-family: var(--font-mincho); font-size: 14.5px; line-height: 1.95; color: var(--ink); white-space: pre-line; overflow-wrap: anywhere; }
+.voice-by { margin: 6px 0 0; text-align: right; font-family: var(--font-mincho); font-weight: 700; font-size: 12.5px; color: var(--ink-2); letter-spacing: .06em; }
+.voice-by::before { content: "\2015\2002"; color: var(--brass); }
+.voice-by small { margin-left: 8px; font-family: var(--font-ui); font-weight: 500; font-size: 11px; color: var(--ink-3); letter-spacing: .04em; }
+.voices-empty { margin: 0; padding: 10px 0; font-size: 12.5px; line-height: 1.8; color: var(--ink-3); border-top: 1px dashed var(--perf); border-bottom: 1px dashed var(--perf); }
+.voices-note { margin: 8px 0 0; font-size: 11px; line-height: 1.7; color: var(--ink-3); }
+/* 寄り道手帖（モーダル）をひらいているあいだは、手帖の文字にかぶらないよう親指のダイスを下げる */
+body.modal-open .dice-fab { opacity: 0; transform: scale(.4); visibility: hidden; pointer-events: none; transition: opacity .22s var(--ease), transform .28s var(--ease), visibility 0s .28s; }
+
+/* ---- ログインの関所（js/gate.js）：深緑の革張りの表紙に、生成りの扉の紙 ---- */
+.login-gate { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; padding: 16px; overflow-y: auto; touch-action: pan-y;
+  background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, .06), transparent 60%), repeating-linear-gradient(45deg, rgba(0, 0, 0, .05) 0 2px, transparent 2px 5px), var(--forest);
+  transition: opacity .45s var(--ease); }
+.login-gate[hidden] { display: none; }
+.login-gate.is-closing { opacity: 0; pointer-events: none; }
+.gate-book { width: min(440px, 100%); padding: 30px 26px 24px; text-align: center; background: var(--fiber), var(--ivory); box-shadow: var(--frame-gold), var(--sh-3); }
+.gate-brand { margin: 0; display: inline-block; padding: 2px 14px 3px; font-family: var(--font-serif); font-weight: 600; font-size: 18px; letter-spacing: .32em; color: var(--brass); box-shadow: 0 0 0 1px var(--brass), inset 0 0 0 3px var(--ivory), inset 0 0 0 3.6px var(--brass); }
+.gate-eyebrow { margin: 12px 0 0; }
+.gate-title { margin: 4px 0 12px; font-family: var(--font-mincho); font-weight: 800; font-size: 26px; letter-spacing: .14em; color: var(--ink); }
+.gate-lead { margin: 0 0 18px; font-family: var(--font-mincho); font-size: 14px; line-height: 2; color: var(--ink-2); }
+.gate-actions { display: grid; gap: 14px; text-align: left; }
+.gate-actions[hidden] { display: none; }
+.gate-btn { width: 100%; justify-content: center; }
+.gate-email { display: grid; gap: 6px; padding-top: 14px; border-top: 1px dashed var(--perf); }
+.gate-email label { font-size: 12px; color: var(--ink-2); }
+.gate-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.gate-row input { flex: 1 1 180px; min-width: 0; font: inherit; font-size: 15px; padding: 9px 10px; color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: 0; user-select: text; -webkit-user-select: text; }
+.gate-msg { margin: 14px 0 0; padding: 8px 12px; font-size: 12.5px; line-height: 1.7; text-align: left; color: var(--akane); background: var(--antique); box-shadow: inset 2px 0 0 var(--akane); }
+.gate-msg.is-ok { color: var(--forest); box-shadow: inset 2px 0 0 var(--forest); }
+.gate-msg.is-wait { color: var(--ink-3); box-shadow: none; background: none; text-align: center; }
+.gate-note { margin: 18px 0 0; font-size: 11px; line-height: 1.8; color: var(--ink-3); text-align: left; }
+.techo-login { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin: 8px 0 0; font-size: 12px; color: var(--gold-3); }
+.techo-login[hidden] { display: none; }
+.techo-login .link-btn { color: var(--gold-2); font-size: 12px; }
+
+/* ---- 寄り道手帖から声を届ける（js/voices.js） ---- */
+.voice-badge { display: inline-block; margin-left: 8px; padding: 0 6px; font-family: var(--font-ui); font-weight: 500; font-size: 10.5px; letter-spacing: .04em; color: var(--forest); box-shadow: 0 0 0 1px var(--forest); vertical-align: 1px; }
+.voices-send { margin-top: 12px; }
+.voice-form { display: grid; gap: 6px; margin-top: 10px; padding: 14px 16px; background: var(--fiber), var(--antique); box-shadow: var(--frame); }
+.voice-form label { font-family: var(--font-mincho); font-weight: 700; font-size: 12.5px; color: var(--ink); margin-top: 4px; }
+.voice-form input[type="text"], .voice-form textarea { font: inherit; font-size: 15px; color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: 0; padding: 8px 10px; min-width: 0; user-select: text; -webkit-user-select: text; }
+.voice-form textarea { font-family: var(--font-mincho); line-height: 1.9; resize: vertical; }
+.voice-form .vf-consent { display: flex; gap: 8px; align-items: flex-start; font-family: var(--font-ui); font-weight: 500; font-size: 12px; line-height: 1.7; }
+.voice-form .vf-consent input { margin-top: 4px; }
+.voice-form .vf-help { margin: 0; font-size: 11px; line-height: 1.7; color: var(--ink-3); }
+.voice-form .vf-fixed { margin: 0; font-size: 13px; color: var(--ink-2); }
+.vf-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 6px; }
+.vf-count { margin-left: auto; font-family: var(--font-serif); font-size: 13px; color: var(--ink-3); }
+.vf-msg { margin: 6px 0 0; padding: 8px 12px; font-size: 12.5px; line-height: 1.7; color: var(--akane); background: var(--paper); box-shadow: inset 2px 0 0 var(--akane); }
+.vf-msg.is-ok { color: var(--forest); box-shadow: inset 2px 0 0 var(--forest); }
+
+/* ---- ダイスのトレイ（盤面の真ん中に出る）：生成りの台紙に、深緑のフェルトを張った真鍮縁の受け皿。出目は下に大きく ---- */
+.dice-stage { flex-direction: column; align-items: stretch; gap: 0; padding: 12px 12px 0; min-width: 232px; }
+.dice-stage .dice-tray {
+  position: relative; z-index: 2; max-width: none; justify-content: center; align-items: flex-end; gap: 0 2px;
+  min-height: 150px; padding: 52px 18px 14px; /* 上は弾む高さぶんのゆとり */
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(255, 255, 255, .07), transparent 62%),
+    repeating-linear-gradient(35deg, rgba(0, 0, 0, .06) 0 1px, transparent 1px 3px),
+    #1f3b30;
+  box-shadow: inset 0 0 0 1px rgba(197, 155, 39, .7), inset 0 0 0 4px #1f3b30, inset 0 0 0 4.6px rgba(197, 155, 39, .38), inset 0 8px 18px rgba(0, 0, 0, .45), inset 0 -2px 6px rgba(0, 0, 0, .25);
+}
+.dice-stage .die3d { --size: 64px; --half: 32px; }
+.dice-stage .dice-tray[data-count="2"] .die3d { --size: 56px; --half: 28px; }
+.dice-stage .dice-tray[data-count="3"] .die3d, .dice-stage .dice-tray[data-count="4"] .die3d { --size: 44px; --half: 22px; }
+.dice-stage .dice-tray[data-count="4"] { min-height: 128px; padding-top: 40px; }
+.dice-stage .die-shadow { background: radial-gradient(ellipse, rgba(0, 0, 0, .5), transparent 70%); }
+.dice-stage .dice-result { position: relative; z-index: 2; display: flex; justify-content: center; align-items: baseline; gap: 12px; margin: 0; padding: 6px 16px 10px; font-size: 50px; line-height: 1; }
+.dice-stage .dice-result::before { content: "出目"; font-family: var(--font-mincho); font-style: normal; font-weight: 700; font-size: 13px; letter-spacing: .24em; color: var(--ink-2); }
+.dice-stage #dice-confetti { z-index: 1; }
+@media (max-width: 639px) {
+  .dice-stage { min-width: 214px; }
+  .dice-stage .dice-result { font-size: 44px; }
+}
+/* 関所の登録フォーム（js/gate.js）。縦に長くなっても上が切れないよう、関所は flex＋margin:auto で中央に置く */
+.login-gate { display: flex; place-items: initial; }
+.login-gate .gate-book { margin: auto; }
+.gate-reg { display: grid; gap: 6px; text-align: left; }
+.gate-reg[hidden], #gate-register[hidden] { display: none; }
+.gate-reg-title { margin: 0; font-family: var(--font-mincho); font-weight: 700; font-size: 18px; letter-spacing: .12em; text-align: center; }
+.gate-reg-lead { margin: 0 0 6px; font-size: 12.5px; line-height: 1.7; color: var(--ink-2); text-align: center; }
+.gate-reg label, .gate-reg legend { font-family: var(--font-mincho); font-weight: 700; font-size: 12.5px; color: var(--ink); margin-top: 6px; }
+.gate-reg input[type="text"], .gate-reg select { width: 100%; min-width: 0; font: inherit; font-size: 15px; padding: 9px 10px; color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: 0; user-select: text; -webkit-user-select: text; }
+.gate-reg select[hidden], #reg-live[hidden] { display: none; }
+.gate-reg-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.gate-reg-place { display: grid; gap: 6px; margin: 4px 0 0; padding: 8px 10px 10px; border: 1px solid var(--rule); }
+.gate-reg-place legend { padding: 0 4px; margin: 0; }
+#reg-live { display: grid; gap: 6px; }
+.gate-reg-same { display: flex; align-items: center; gap: 6px; margin: 0 !important; font-family: var(--font-ui) !important; font-weight: 500 !important; }
+.gate-reg .gate-row { margin-top: 8px; }
+.voice-spot { display: flex; align-items: center; gap: 6px; margin: 0 0 4px; font-family: var(--font-mincho); font-weight: 700; font-size: 15.5px; letter-spacing: .06em; color: var(--ink); }
+.voice-spot .ico { color: var(--akane); }
+/* ---- 本物の旅人の便り（js/shared-cards.js）：通報のリンクと、その場の小さな欄 ---- */
+/* 素敵ねと通報を1行に（狭いカードでは通報が下の行へ回る。重ねない） */
+.pol-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; justify-self: stretch; }
+.pol-report { margin-top: 8px; font-size: 11px; color: var(--ink-3); text-decoration-color: var(--rule); display: inline-flex; align-items: center; gap: 3px; }
+.pol-report .ico { width: 12px; height: 12px; }
+.pol-report-form { position: relative; z-index: 3; display: grid; gap: 4px; margin: 8px 0 0; padding: 10px 12px; text-align: left; background: var(--paper); box-shadow: var(--frame); font-size: 12px; transform: rotate(calc(var(--tilt, 0deg) * -1)); }
+.pol-report-form label { display: flex; gap: 6px; align-items: flex-start; line-height: 1.5; }
+.pol-report-form input[type="text"] { font: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid var(--rule); background: var(--ivory); border-radius: 0; user-select: text; -webkit-user-select: text; }
+.prf-title { margin: 0; font-family: var(--font-mincho); font-weight: 700; display: flex; align-items: center; gap: 4px; color: var(--akane); }
+.prf-help { margin: 0; font-size: 10.5px; color: var(--ink-3); line-height: 1.6; }
+.prf-row { display: flex; gap: 10px; align-items: center; }
+.prf-done { margin: 0; font-size: 12px; color: var(--forest); }
+.lt-share { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; line-height: 1.6; margin: 4px 0 2px; }
+.lt-share input { margin-top: 4px; }
+.lt-real-slot { display: contents; }

@@ -1,0 +1,248 @@
+rules_version = '2';
+
+// Q-TRIP の Security Rules。
+// 方針：書いていないことはすべて禁止。
+// - profiles：遊ぶ人の登録（手帖に載せる名前・年代・性別・出身地・現在の所在地）。本人と運営だけが読める。画面には名前しか出さない。
+// - saves：遊んだ記録（端末の localStorage と同じ JSON）。本人だけが読み書きできる。
+// - voicesPending → voices：ログインした人が「地元の人」として紹介するおすすめスポット。審査待ちと承認済みを別のコレクションに分け、
+//   承認済みは「投稿された文面そのまま」しか載せられない（運営も書き換えられない）。
+// App Check はここでは見えないので、Firebase コンソールで Firestore と Authentication の「適用（Enforce）」を必ず有効にする。
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+    // ゲームで遊ぶ人：メールアドレスが確かめられた人（Google・メールリンク。匿名は不可）
+    function isPlayer() {
+      return signedIn() && request.auth.token.email_verified == true;
+    }
+    function docPath(col, id) {
+      return /databases/$(database)/documents/$(col)/$(id);
+    }
+    // 運営（審査する人）：admins/{uid} があるかどうか。admins はコンソールからしか作れない
+    function isAdmin() {
+      return signedIn() && exists(docPath('admins', request.auth.uid));
+    }
+    function isText(v, min, max) {
+      return v is string && v.size() >= min && v.size() <= max;
+    }
+    // ゲームの26駅だけ（stations.json の id。駅を足したらここにも足す）
+    function isGameStation(v) {
+      return v in ['hakata', 'mojiko', 'dazaifu', 'saga', 'karatsu', 'ureshino-onsen', 'arita', 'nagasaki', 'huis-ten-bosch',
+        'shimabara', 'kumamoto', 'aso', 'kurokawa-onsen', 'hitoyoshi', 'misumi', 'beppu', 'yufuin', 'hita', 'miyazaki',
+        'takachiho', 'aoshima', 'kagoshima-chuo', 'kirishima-onsen', 'sakurajima', 'ibusuki', 'yakushima'];
+    }
+    // 国は ISO 3166-1 の2文字。日本（JP）のときだけ都道府県（01〜47 の JIS コード）が要る。日本以外は空
+    function isPlace(country, pref) {
+      return country is string && country.matches('^[A-Z]{2}$') && pref is string
+        && (country == 'JP' ? pref.matches('^(0[1-9]|[1-3][0-9]|4[0-7])$') : pref == '');
+    }
+
+    // ---------- 運営（クライアントからは誰も書けない） ----------
+    match /admins/{uid} {
+      // 自分が運営かどうかを画面が知るためだけに、本人の1件だけ読める
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+
+    // ---------- 遊ぶ人の登録 ----------
+    match /profiles/{uid} {
+      function validProfile(d) {
+        return d.keys().hasOnly(['displayName', 'ageGroup', 'gender', 'homeCountry', 'homePref', 'liveCountry', 'livePref', 'createdAt', 'lastPostAt'])
+          && d.keys().hasAll(['displayName', 'ageGroup', 'gender', 'homeCountry', 'homePref', 'liveCountry', 'livePref', 'createdAt'])
+          && isText(d.displayName, 1, 40)
+          && d.ageGroup in ['10s', '20s', '30s', '40s', '50s', '60s', '70plus']
+          && d.gender in ['female', 'male', 'other', 'noanswer']
+          && isPlace(d.homeCountry, d.homePref)
+          && isPlace(d.liveCountry, d.livePref)
+          && d.createdAt is timestamp
+          && (!('lastPostAt' in d) || d.lastPostAt is timestamp);
+      }
+      allow get: if (signedIn() && request.auth.uid == uid) || isAdmin();
+      allow list: if isAdmin();
+      // 本人だけが書ける。登録した時刻は「今」で、あとから変えられない。
+      // lastPostAt は「今」以外にできない（過去にして連投の歯止めをすり抜けないように）
+      allow create: if isPlayer() && request.auth.uid == uid && validProfile(request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && !('lastPostAt' in request.resource.data);
+      allow update: if isPlayer() && request.auth.uid == uid && validProfile(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (request.resource.data.get('lastPostAt', null) == resource.data.get('lastPostAt', null)
+            || request.resource.data.lastPostAt == request.time);
+      // 消して作り直すと連投の歯止めが外れるので、本人は消せない（運営だけ）
+      allow delete: if isAdmin();
+    }
+
+    // ---------- 遊んだ記録（本人だけ） ----------
+    match /saves/{uid} {
+      function validSave(d) {
+        return d.keys().hasOnly(['data', 'version', 'progress', 'savedAt', 'updatedAt'])
+          && d.keys().hasAll(['data', 'version', 'progress', 'savedAt', 'updatedAt'])
+          && d.data is string && d.data.size() <= 400000   // 記録の JSON（写真は入れない。1MB の上限よりずっと小さく）
+          && d.version is int && d.version >= 1 && d.version <= 99
+          && d.progress is int && d.progress >= 0
+          && d.savedAt is int                              // 端末で最後に保存した時刻（ミリ秒）。どちらが新しいかを比べる
+          && d.updatedAt == request.time;
+      }
+      allow get: if isPlayer() && request.auth.uid == uid;
+      allow list: if false;
+      allow create, update: if isPlayer() && request.auth.uid == uid && validSave(request.resource.data);
+      allow delete: if isPlayer() && request.auth.uid == uid;
+    }
+
+    // ---------- おすすめスポット：審査待ち（投稿した本人と運営だけが見られる） ----------
+    match /voicesPending/{voiceId} {
+      function profilePath() {
+        return docPath('profiles', request.auth.uid);
+      }
+      function validNewVoice(d) {
+        let p = get(profilePath()).data;
+        let last = p.get('lastPostAt', timestamp.value(0));
+        return d.keys().hasOnly(['uid', 'stationId', 'spot', 'body', 'name', 'title', 'consent', 'createdAt'])
+          && d.keys().hasAll(['uid', 'stationId', 'spot', 'body', 'name', 'title', 'consent', 'createdAt'])
+          && d.uid == request.auth.uid
+          && isGameStation(d.stationId)
+          && isText(d.spot, 1, 40)                // スポットの名前
+          && isText(d.body, 1, 400)               // おすすめの理由・楽しみ方
+          && isText(d.title, 0, 60)               // この駅とのつながり（自己申告）
+          && d.name == p.displayName              // 名前は登録のとおり（なりすまし防止）
+          && d.consent == true                    // 寄り道手帖への掲載に同意した
+          && d.createdAt == request.time
+          // 連投の歯止め：前の投稿から3分（推定の値）。同じ一括書き込みで登録の lastPostAt を今に更新していること
+          && request.time > last + duration.value(180, 's')
+          && getAfter(profilePath()).data.lastPostAt == request.time;
+      }
+      allow create: if isPlayer() && exists(profilePath()) && validNewVoice(request.resource.data);
+      // 本人の分は、uid で絞った問い合わせでも読める
+      allow get, list: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      // 審査中の書き換えは認めない（直したいときは取り下げて出し直す）
+      allow update: if false;
+      // 本人はいつでも取り下げられる。運営が消すとき（承認・却下）は、同じ一括書き込みで審査の記録を残すこと
+      allow delete: if (signedIn() && resource.data.uid == request.auth.uid)
+        || (isAdmin() && existsAfter(docPath('moderationLog', voiceId)));
+    }
+
+    // ---------- おすすめスポット：承認済み（だれでも読める） ----------
+    match /voices/{voiceId} {
+      // 承認は「審査待ちの文面をそのまま写す＋審査待ちを消す＋審査の記録を残す」を1回の一括書き込みで行う
+      function approvedCopy(d) {
+        let p = get(docPath('voicesPending', voiceId)).data;
+        return d.keys().hasOnly(['uid', 'stationId', 'spot', 'body', 'name', 'title', 'consent', 'createdAt', 'approvedAt', 'approvedBy'])
+          && d.uid == p.uid && d.stationId == p.stationId && d.spot == p.spot && d.body == p.body
+          && d.name == p.name && d.title == p.title && d.consent == p.consent && d.createdAt == p.createdAt
+          && d.approvedAt == request.time
+          && d.approvedBy == request.auth.uid;
+      }
+      allow get, list: if true;
+      allow create: if isAdmin()
+        && exists(docPath('voicesPending', voiceId))
+        && !existsAfter(docPath('voicesPending', voiceId))
+        && getAfter(docPath('moderationLog', voiceId)).data.action == 'approve'
+        && approvedCopy(request.resource.data);
+      allow update: if false;
+      // 本人の取り下げ（同意の撤回）と、運営による削除
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    // ---------- 審査の記録（あとから消せない・書き換えられない） ----------
+    match /moderationLog/{voiceId} {
+      allow get, list: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['action', 'by', 'at', 'reason'])
+        && request.resource.data.action in ['approve', 'reject']
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.at == request.time
+        && isText(request.resource.data.get('reason', ''), 0, 200);
+      allow update, delete: if false;
+    }
+
+    // ---------- 旅の便り（写真のポストカード）：審査なしで、ログインした人どうしで見せ合う。通報が3件で自動で隠す ----------
+    // 文書の id は「投函した人の uid _ 駅の id」（1人1駅1枚。投函し直すと差し替え）。写真は JPEG の data URL（50万字まで）
+    match /postcards/{pid} {
+      function isOwnerOf(d) {
+        return signedIn() && d.uid == request.auth.uid;
+      }
+      function validCard(d) {
+        return d.keys().hasOnly(['uid', 'stationId', 'memo', 'image', 'name', 'createdAt', 'updatedAt', 'likeCount', 'reportCount', 'hidden'])
+          && d.keys().hasAll(['uid', 'stationId', 'memo', 'image', 'name', 'createdAt', 'updatedAt', 'likeCount', 'reportCount', 'hidden'])
+          && pid == d.uid + '_' + d.stationId
+          && isGameStation(d.stationId)
+          && isText(d.memo, 0, 60)
+          && d.image is string && d.image.size() <= 500000 && d.image.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$')
+          && d.likeCount is int && d.likeCount >= 0
+          && d.reportCount is int && d.reportCount >= 0
+          && d.hidden == (d.reportCount >= 3)
+          && d.createdAt is timestamp && d.updatedAt is timestamp;
+      }
+      function nameOk(d) {
+        return exists(docPath('profiles', request.auth.uid)) && d.name == get(docPath('profiles', request.auth.uid)).data.displayName;
+      }
+      // 見られるのは、ログインした人（隠れていないものだけ）・投函した本人・運営
+      allow get: if isPlayer() && (resource.data.hidden == false || isOwnerOf(resource.data) || isAdmin());
+      allow list: if (isPlayer() && resource.data.hidden == false) || isAdmin();
+      // 投函：本人だけ。いいね・通報は0から。名前は登録のとおり
+      allow create: if isPlayer() && isOwnerOf(request.resource.data) && validCard(request.resource.data) && nameOk(request.resource.data)
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time
+        && request.resource.data.likeCount == 0 && request.resource.data.reportCount == 0;
+      allow update: if isPlayer() && validCard(request.resource.data) && (
+        // ① 本人の差し替え（写真・一言・名前）。いいね・通報・隠れ・投函日は変えられない。差し替えは30秒あける
+        (isOwnerOf(resource.data) && nameOk(request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memo', 'image', 'name', 'updatedAt'])
+          && request.resource.data.updatedAt == request.time
+          && request.time > resource.data.updatedAt + duration.value(30, 's'))
+        // ② ほかの人の「素敵ね」：いいねの数を1つだけ増やす。同じ一括書き込みで、その人のいいねの印を新しく作ること
+        || (!isOwnerOf(resource.data) && resource.data.hidden == false
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount'])
+          && request.resource.data.likeCount == resource.data.likeCount + 1
+          && !exists(/databases/$(database)/documents/postcards/$(pid)/likes/$(request.auth.uid))
+          && existsAfter(/databases/$(database)/documents/postcards/$(pid)/likes/$(request.auth.uid)))
+        // ③ ほかの人の通報：通報の数を1つだけ増やす（3件で隠れる）。同じ一括書き込みで、その人の通報を新しく作ること
+        || (!isOwnerOf(resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reportCount', 'hidden'])
+          && request.resource.data.reportCount == resource.data.reportCount + 1
+          && !exists(docPath('reports', request.auth.uid + '_' + pid))
+          && existsAfter(docPath('reports', request.auth.uid + '_' + pid)))
+        // ④ 運営が「問題なし」で戻す（通報を0にして見えるようにする）
+        || (isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reportCount', 'hidden'])
+          && request.resource.data.reportCount == 0)
+      );
+      allow delete: if isOwnerOf(resource.data) || isAdmin();
+
+      // いいねの印（1人1回）。だれがいいねしたかは本人と運営だけが見られる
+      match /likes/{likerUid} {
+        allow get: if (signedIn() && request.auth.uid == likerUid) || isAdmin();
+        allow list: if isAdmin();
+        allow create: if isPlayer() && request.auth.uid == likerUid
+          && request.resource.data.keys().hasOnly(['at']) && request.resource.data.at == request.time
+          && get(docPath('postcards', pid)).data.uid != request.auth.uid
+          && getAfter(docPath('postcards', pid)).data.likeCount == get(docPath('postcards', pid)).data.likeCount + 1;
+        allow update, delete: if false;
+      }
+    }
+
+    // ---------- 旅の便りの通報（運営だけが読める。文書の id は「通報した人の uid _ ポストカードの id」で1人1回） ----------
+    match /reports/{rid} {
+      allow get, list: if isAdmin();
+      allow create: if isPlayer()
+        && rid == request.auth.uid + '_' + request.resource.data.postcardId
+        && request.resource.data.keys().hasOnly(['postcardId', 'reporter', 'reason', 'note', 'createdAt'])
+        && request.resource.data.reporter == request.auth.uid
+        && request.resource.data.reason in ['face', 'private', 'copyright', 'inappropriate', 'other']
+        && isText(request.resource.data.note, 0, 200)
+        && request.resource.data.createdAt == request.time
+        && exists(docPath('postcards', request.resource.data.postcardId))
+        && get(docPath('postcards', request.resource.data.postcardId)).data.uid != request.auth.uid
+        && getAfter(docPath('postcards', request.resource.data.postcardId)).data.reportCount
+           == get(docPath('postcards', request.resource.data.postcardId)).data.reportCount + 1;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // ---------- それ以外はすべて禁止（以前の地元の人の名簿 contributors も） ----------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

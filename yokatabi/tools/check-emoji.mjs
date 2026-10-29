@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 // 絵文字として描かれうる字（Extended_Pictographic）と、絵文字の異体字セレクタ・結合子・肌色・旗の字
 const EMOJI = /[\p{Extended_Pictographic}\u{FE0F}\u{200D}\u{1F3FB}-\u{1F3FF}\u{1F1E6}-\u{1F1FF}\u{20E3}]/u;
-const files = ['index.html', 'stations.json', ...readdirSync(join(root, 'css')).map((f) => `css/${f}`), ...readdirSync(join(root, 'js')).filter((f) => f.endsWith('.js') && f !== 'geo.js' && f !== 'stations-fallback.js').map((f) => `js/${f}`)];
+const files = ['index.html', 'review.html', 'stations.json', ...readdirSync(join(root, 'css')).map((f) => `css/${f}`), ...readdirSync(join(root, 'js')).filter((f) => f.endsWith('.js') && f !== 'geo.js' && f !== 'stations-fallback.js').map((f) => `js/${f}`)];
 let found = 0;
 for (const f of files) {
   readFileSync(join(root, f), 'utf8').split('\n').forEach((line, i) => {

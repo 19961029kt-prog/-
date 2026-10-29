@@ -44,7 +44,7 @@
       // クラフト資金：残高は「発見ボーナス × 初到着の駅数 ＋ 共同株主の配当 − 使った額」で毎回計算する
       spent: 0,
       owned: {},     // { 'livery:forest': ISO日時, … } … アンロック済みのパーツ（初期装備は持っている扱い）
-      equipped: { livery: 'hidamari', carriage: 'none', trail: 'puff', hat: 'straw', outfit: 'canvas', buddy: 'none' },
+      equipped: { livery: 'hidamari', carriage: 'none', trail: 'puff', bag: 'trunk', hat: 'straw', outfit: 'canvas', buddy: 'none' },
       tickets: { date: '', used: 0 }, // よりみち切符：その日に使った枚数
       // オートナビ：人が地図の進路の札で選んだ分かれ道の進路 { 分かれ道の駅ID: 進む隣の駅ID }（その分かれ道を通ったら消す）
       routeLocks: {},
@@ -54,6 +54,9 @@
       memories: {},
       prefaceSeen: false, // 初回の表紙（巻頭言）をひらいたか
       lang: 'ja',         // 表示の言語（'ja'／'en'。画面の枠と駅名だけ切り替える）
+      // ---- ログインと記録の保存（js/cloud.js） ----
+      savedAt: 0,   // この記録を最後に保存した時刻（ミリ秒）。端末とデータベースのどちらが新しいかを比べる
+      cloudUid: '', // この端末の記録が、どのログインの人のものか（ログインを切り替えたとき、ほかの人の記録を混ぜないため）
     };
   }
 
@@ -153,6 +156,7 @@
   }
 
   function save() {
+    state.savedAt = Date.now();
     write();
     listeners.forEach((fn) => fn(state));
   }
@@ -214,6 +218,12 @@
       return { card: state.postcards[id], first: !prev, oldImageId: prev && prev.imageId };
     },
     getPostcards: () => state.postcards,
+    // ほかの旅人にも見せているか（データベースの postcards に送ったか）
+    markShared(id, on) {
+      if (!state.postcards[id]) return;
+      state.postcards[id].shared = on ? new Date().toISOString() : null;
+      save();
+    },
     // ひらいたときに「新しく届いたいいね」をお知らせするため、見せ終えた数を覚えておく
     markPostcardSeen(id, n) {
       if (!state.postcards[id]) return;
@@ -374,13 +384,41 @@
     },
     // 旅の記録をリセット（出資・ポストカードの記録も消す。画像は呼び出し側で IndexedDB から消す）
     reset() {
-      const { muted, itineraries, profile } = state;
+      const { muted, itineraries, profile, cloudUid } = state;
       state = blank();
       state.muted = muted;
+      state.cloudUid = cloudUid; // リセットしても、だれの記録かは変えない（データベースの記録もまっさらにする）
       state.itineraries = itineraries; // 保存した旅しおりは旅の記録のリセットでは消さない
       state.profile = profile;
       save();
     },
+  };
+
+  // ---- データベースとのやりとり（js/cloud.js から使う） ----
+  Store.progress = (s = state) => progress(s);
+  Store.toJSON = () => JSON.stringify(state);
+  // データベースから読んだ記録に入れ替える（保存の時刻はそのまま。入れ替えたあと画面は読み込み直す）
+  Store.adopt = (json, uid) => {
+    let s = null;
+    try { s = normalize(JSON.parse(json)); } catch (e) { s = null; }
+    if (!s) return false;
+    s.cloudUid = uid;
+    state = s;
+    write();
+    return true;
+  };
+  // この端末の記録をログインの人のものにする（保存の時刻は変えない。変えると、ほかの端末の新しい記録に勝ってしまう）
+  Store.claim = (uid) => {
+    state.cloudUid = uid;
+    write();
+  };
+  // ほかの人の記録が残っていたとき：まっさらにする（音の設定だけ残す）
+  Store.clearForeign = (uid) => {
+    const { muted } = state;
+    state = blank();
+    state.muted = muted;
+    state.cloudUid = uid;
+    write();
   };
 
   YT.Store = Store;

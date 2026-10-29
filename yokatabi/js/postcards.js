@@ -9,7 +9,9 @@
 //   ・投函した写真は、Canvas でアンティークの切手（目打ちのギザギザの白い縁）にして、右下に朱肉の「駅名＋日付」の消印を押してから保存する
 //   ・霧の解放：フォトマップのまだ訪れていない駅は霧に沈んだモノクロ、到着・投函した駅だけ真鍮と色で灯る
 //   ・ある旅人から届いた記憶：ダイスで止まった駅に旅人たちの便りがあれば、ポラロイドがすっと届く（1通につき1回、閲覧ボーナス）
-// 写真は端末の中だけ（IndexedDB。js/photos.js の保存を使う）。どこにも送らない。
+// 写真は端末の中（IndexedDB。js/photos.js）に保存し、ログインしていて「ほかの旅人にも見せる」を選んだときは、
+// データベースにも送って、ほかの旅人の「旅人たちのポストカード」と寄り道手帖の現地スナップに出す（js/shared-cards.js。審査なし・通報3件で隠れる）。
+// 架空の旅人の便りは、本物の便りが REAL_ENOUGH 枚そろった駅から外す。
 (function () {
   'use strict';
   const YT = (window.YT = window.YT || {});
@@ -24,6 +26,10 @@
   const I = (name, opts) => YT.Icon.svg(name, opts); // 線画のアイコン（絵文字は使わない）
   const unlocked = (stationId) => YT.Store.isVisited(stationId) || YT.Store.get().currentStationId === stationId;
   const seedLikes = (p) => p.likes + (YT.Store.hasLiked(p.id) ? 1 : 0);
+  const REAL_ENOUGH = 3; // 本物の便りがこの枚数そろった駅は、架空の旅人の便りを外す（推定の値）
+  const Shared = () => YT.SharedCards;
+  const realReady = () => !!(Shared() && Shared().ready());
+  const realById = {}; // 画面に出した本物の便り（素敵ね・通報のときに使う）
 
   // ---------- 自分のポストカードに届く「いいね」 ----------
   // 旅人たち（架空）が時間とともに見つけてくれる想定：投函した直後に1〜3、そのあと約40分ごとに1つ、最大 likeReceivedMax
@@ -132,7 +138,9 @@
     const s = D.byId[card.stationId];
     const color = (D.meta.prefectures[s.prefecture] || {}).color;
     const tilt = ((hash(card.id) % 7) - 3) * 0.6;
-    const photo = card.imageId
+    const photo = card.src
+      ? `<img class="pol-stampimg" alt="${esc(s.name)}駅の写真（${esc(card.byName)}さんの旅の便り）" src="${esc(card.src)}" loading="lazy">`
+      : card.imageId
       ? `<img class="pol-stampimg" alt="${esc(s.name)}駅の写真（切手と消印つき）" data-pc-img="${esc(card.imageId)}">`
       : illust(card.scene || 'train', color, card.id.replace(/[^a-z0-9-]/gi, ''));
     const av = card.avatar ? YT.Craft.avatarSvg(card.avatar, { crop: true, id: `pa-${card.id}` }) : '';
@@ -146,7 +154,10 @@
           <p class="pol-by"><span class="pol-av">${av}</span>${esc(card.byName)}<span class="pol-station">${esc(s.name)}駅</span></p>
         </figcaption>
         ${
-          card.kind === 'seed'
+          card.kind === 'real'
+            ? `<div class="pol-acts"><button class="pol-like ${card.liked ? 'is-on' : ''}" data-real-like="${esc(card.id)}" ${card.locked || card.liked ? 'disabled' : ''} aria-label="素敵ね（いいね）">${I('heart')} <b>${card.likes}</b>${card.liked ? '<small>素敵ね済み</small>' : card.locked ? '' : '<small>素敵ね</small>'}</button>
+               ${card.locked ? '' : `<button class="pol-report link-btn" data-report="${esc(card.id)}">${I('warning')} 通報</button>`}</div>`
+            : card.kind === 'seed'
             ? `<button class="pol-like ${card.liked ? 'is-on' : ''}" data-like="${esc(card.id)}" ${card.locked || card.liked ? 'disabled' : ''} aria-label="素敵ね（いいね）">${I('heart')} <b>${card.likes}</b>${card.liked ? '<small>素敵ね済み</small>' : card.locked ? '' : '<small>素敵ね</small>'}</button>`
             : `<span class="pol-like is-mine">${I('heart')} <b>${card.likes}</b><small>いいね・${api.yen(card.likes * C().likeReceivedBonus)}</small></span>`
         }
@@ -156,10 +167,19 @@
     const r = rival(p.rivalId);
     return { kind: 'seed', id: p.id, stationId: p.stationId, memo: p.comment, scene: p.scene, date: '2026.10', byName: r.name, avatar: r.avatar, likes: seedLikes(p), liked: YT.Store.hasLiked(p.id), locked: !unlocked(p.stationId) };
   };
+  // 本物の旅人の便り（データベースの postcards）
+  const realCard = (c) => {
+    realById[c.id] = c;
+    return { kind: 'real', id: c.id, stationId: c.stationId, memo: c.memo, src: c.image, date: c.updatedAt ? api.fmtDate(c.updatedAt.toDate().toISOString()) : '', byName: c.name, avatar: null, likes: c.likeCount || 0, liked: YT.Store.hasLiked(`real:${c.id}`), locked: !unlocked(c.stationId) };
+  };
   const mineCard = (stationId, c) => ({ kind: 'mine', id: c.id, stationId, memo: c.memo, imageId: c.imageId, date: api.fmtDate(c.at), byName: YT.Ownership.youName(), avatar: { ...YT.Store.get().equipped }, likes: likesOf(c) });
 
-  // 写真の差し込み（IndexedDB の画像は、描いたあとで URL を入れる）
+  // 写真の差し込み（IndexedDB の画像は、描いたあとで URL を入れる）。本物の旅人の便りも、ここで読みにいく
   function loadImages(r = root) {
+    if (r) {
+      r.querySelectorAll('[data-real-snaps]').forEach((el) => fillSnaps(el));
+      r.querySelectorAll('[data-real-board]').forEach((el) => fillBoard(el));
+    }
     r.querySelectorAll('img[data-pc-img]').forEach((img) => {
       YT.Photos.thumbUrl(img.dataset.pcImg).then((u) => {
         if (u) img.src = u;
@@ -171,7 +191,7 @@
   }
 
   // ---------- 画面 ----------
-  let form = { stationId: null, file: null, url: null, memo: '' };
+  let form = { stationId: null, file: null, url: null, memo: '', share: true };
   let filter = 'all';
 
   function stationOptions(sel) {
@@ -202,9 +222,10 @@
             </label>
             <label class="lt-label">ひとこと<span class="lt-count" data-pc-count>${[...form.memo].length}/60</span>
               <textarea data-pc-memo maxlength="60" rows="2" placeholder="湯けむりの向こうに、夕焼けが…">${esc(form.memo)}</textarea></label>
+            ${realReady() ? `<label class="lt-share"><input type="checkbox" data-pc-share ${form.share === false ? '' : 'checked'}> ほかの旅人にも見せる（ログインした旅人の「旅人たちのポストカード」と寄り道手帖に出ます）</label>` : ''}
             <button class="primary-btn lt-submit" data-pc-submit ${form.file ? '' : 'disabled'}>${I('postcard')} この景色を、次の旅人の手帖へ託す<small>${has ? `${esc(s.name)}駅の1枚を差し替え` : `${esc(s.name)}駅へ投函・地域発信ボーナス +${api.yen(C().postBonus)}`}</small></button>
             <p class="lt-pass">あなたの1枚が、誰かの次の旅の行き先になります</p>
-            <p class="lt-note">※投函した写真は、目打ちのある切手の縁と、${esc(s.name)}駅の消印（朱肉）をつけて保存します。※写真はこの端末の中だけに保存されます（どこにも送信されません）。1駅に1枚で、投函し直すと差し替えになります。人の顔や住所が写った写真は避けましょう。</p>
+            <p class="lt-note">※投函した写真は、目打ちのある切手の縁と、${esc(s.name)}駅の消印（朱肉）をつけて保存します。${realReady() ? '※「ほかの旅人にも見せる」を選ぶと、写真は審査なしで、ログインした旅人に見えるようになります。人の顔・車のナンバー・住所など、だれかがわかるものは写さないでください（撮った場所などの情報は消して送ります）。気になる写真は通報でき、3件で見えなくなります。' : '※写真はこの端末の中だけに保存されます（どこにも送信されません）。'}1駅に1枚で、投函し直すと差し替えになります。</p>
           </div>
           <div class="lt-preview">${polaroidPreview(preview)}</div>
         </div>
@@ -378,8 +399,8 @@
             ${[['all', 'すべて'], ['open', '見られる'], ['locked', 'まだ']].map(([k, l]) => `<button class="seg-btn ${filter === k ? 'is-active' : ''}" data-pc-filter="${k}">${l}</button>`).join('')}
           </div>
         </div>
-        <div class="lt-grid">${shown.map((c) => polaroid(c)).join('') || '<p class="lt-empty">ここに出せるポストカードはまだありません。</p>'}</div>
-        <p class="lt-note">※ほかの旅人のポストカードは、ゲームの中の架空の旅人が送ったもので、絵はイラストです。</p>
+        <div class="lt-grid">${realReady() ? '<div class="lt-real-slot" data-real-board></div>' : ''}${shown.map((c) => polaroid(c)).join('') || (realReady() ? '' : '<p class="lt-empty">ここに出せるポストカードはまだありません。</p>')}</div>
+        <p class="lt-note">※写真のポストカードは、ログインした旅人が送ったものです（気になる写真は「通報」してください。3件で見えなくなり、運営が確かめます）。絵のポストカードは、ゲームの中の架空の旅人の便りで、本物の便りがそろった駅から外れていきます。</p>
       </section>`;
     loadImages();
     mountPhotoCamera();
@@ -389,12 +410,81 @@
   function stationSnapsHtml(id) {
     const list = seeds().filter((p) => p.stationId === id).map(seedCard);
     const c = mine()[id];
-    if (!list.length && !c) return '';
+    if (!list.length && !c && !realReady()) return '';
     return `<section class="modal-sec">
         <h3 class="sec-title">${I('camera')}現地スナップ <em>${unlocked(id) ? '旅人たちの便り' : '停車すると解放'}</em></h3>
-        <div class="snaps">${c ? polaroid(mineCard(id, c), 'mini') : ''}${list.map((x) => polaroid(x, 'mini')).join('')}</div>
+        <div class="snaps" ${realReady() ? `data-real-snaps="${esc(id)}"` : ''}>${c ? polaroid(mineCard(id, c), 'mini') : ''}${list.map((x) => polaroid(x, 'mini')).join('')}</div>
         <p class="snaps-foot"><button class="link-btn" data-letters-post="${esc(id)}">${I('postcard')} この駅に旅の便りを投函する</button></p>
       </section>`;
+  }
+
+  // 現地スナップに、その駅の本物の旅人の便りを足す。そろった駅は、架空の旅人の便りを外す
+  async function fillSnaps(el) {
+    if (el.dataset.filled) return;
+    el.dataset.filled = '1';
+    const id = el.dataset.realSnaps;
+    let list = [];
+    try { list = await Shared().forStation(id); } catch (e) { return; }
+    if (!el.isConnected || !list.length) return;
+    if (list.length >= REAL_ENOUGH) el.querySelectorAll('[data-pc^="seed-"]').forEach((x) => x.remove());
+    el.insertAdjacentHTML('beforeend', list.map((c) => polaroid(realCard(c), 'mini')).join(''));
+  }
+  // 旅の便りのタブ：九州じゅうの本物の便りを上に。そろった駅の架空の便りは外す
+  async function fillBoard(el) {
+    if (el.dataset.filled) return;
+    el.dataset.filled = '1';
+    let list = [];
+    try { list = await Shared().latest(); } catch (e) { return; }
+    if (!el.isConnected || !list.length) return;
+    const per = {};
+    list.forEach((c) => (per[c.stationId] = (per[c.stationId] || 0) + 1));
+    const grid = el.closest('.lt-grid');
+    Object.entries(per).forEach(([sid, n]) => n >= REAL_ENOUGH && grid && grid.querySelectorAll(`[data-pc^="seed-${sid}-"]`).forEach((x) => x.remove()));
+    const show = list.filter((c) => filter === 'open' ? unlocked(c.stationId) : filter === 'locked' ? !unlocked(c.stationId) : true);
+    el.outerHTML = show.map((c) => polaroid(realCard(c))).join('');
+  }
+
+  // 素敵ね（本物の旅人の便り）：1人1回。クラフト資金には入れない
+  async function likeReal(id, btn) {
+    const c = realById[id];
+    if (!c || !realReady()) return;
+    btn.disabled = true;
+    try {
+      await Shared().like(c);
+      YT.Store.like(`real:${id}`);
+      YT.Sound.coin();
+      hearts(btn);
+      btn.classList.add('is-on');
+      btn.innerHTML = `${I('heart')} <b>${c.likeCount}</b><small>素敵ね済み</small>`;
+    } catch (e) {
+      btn.disabled = false;
+      api.toast('素敵ねを送れませんでした。時間をおいて、もう一度お試しください');
+    }
+  }
+  // 通報：その場に理由を選ぶ小さな欄を出す
+  function openReport(id, btn) {
+    const fig = btn.closest('.polaroid');
+    if (!fig || fig.querySelector('.pol-report-form')) return;
+    fig.insertAdjacentHTML('beforeend', `<form class="pol-report-form" data-report-form="${esc(id)}">
+        <p class="prf-title">${I('warning')} この写真を通報する</p>
+        ${Shared().REASONS.map(([v, t], i) => `<label><input type="radio" name="rr-${esc(id)}" value="${v}" ${i === 0 ? 'checked' : ''}> ${esc(t)}</label>`).join('')}
+        <input type="text" maxlength="200" placeholder="くわしく（200字まで・なくてもよい）" data-report-note>
+        <p class="prf-help">通報は運営だけが見ます。3件そろうと、この写真は見えなくなり、運営が確かめます。</p>
+        <div class="prf-row"><button class="primary-btn btn-sm" type="submit">送る</button><button class="link-btn" type="button" data-report-cancel>やめる</button></div>
+      </form>`);
+  }
+  async function sendReport(form) {
+    const id = form.dataset.reportForm;
+    const c = realById[id];
+    const reason = (form.querySelector('input[type="radio"]:checked') || {}).value || 'other';
+    const note = form.querySelector('[data-report-note]').value.trim().slice(0, 200);
+    form.querySelector('button[type="submit"]').disabled = true;
+    try {
+      await Shared().report(c, reason, note);
+      form.innerHTML = '<p class="prf-done">通報を受けつけました。ありがとうございます。</p>';
+    } catch (e) {
+      form.innerHTML = '<p class="prf-done">通報を送れませんでした（同じ写真への通報は1回だけです）。</p>';
+    }
   }
 
   // 拡大ポストカード（フォトマップのピン・カードから）
@@ -411,6 +501,7 @@
           <p><b>${I('heart')} ${n}</b> いいね <span class="pcv-earn">クリエイター評価配当 ${api.yen(n * C().likeReceivedBonus)}</span></p>
           <p class="pcv-likers">配当は、ダイス7回ごとの「週末の大精算まつり」でまとめて振り込まれます</p>
           <p class="pcv-likers">${likersOf(c, Math.min(n, 5)).map((r) => esc(r.name)).join('・')}${n > 5 ? ` ほか${n - 5}人` : ''}がいいねしました</p>
+          ${c.shared ? `<p class="pcv-likers">${I('eye')} ほかの旅人にも見せています <button class="link-btn" data-unshare="${esc(id)}">見せるのをやめる</button></p>` : realReady() ? '<p class="pcv-likers">この1枚は、この端末の中だけにあります（差し替えるときに「ほかの旅人にも見せる」を選べます）</p>' : ''}
           <p class="pcv-actions"><button class="ghost-btn" data-letters-post="${esc(id)}">${I('refresh')} 写真を差し替える</button><button class="ghost-btn" data-pcv-close>閉じる</button></p>
         </div>
       </div>`;
@@ -590,10 +681,22 @@
     if (!blob) return api.toast('写真を読み込めませんでした。別の画像でお試しください');
     const imageId = `pcimg-${Date.now().toString(36)}`;
     await YT.Photos.put(imageId, blob);
-    const { first, oldImageId } = YT.Store.putPostcard(sid, { memo: form.memo.trim(), imageId });
+    const memo = form.memo.trim();
+    const { first, oldImageId } = YT.Store.putPostcard(sid, { memo, imageId });
     if (oldImageId) YT.Photos.del(oldImageId); // 差し替えた古い写真は消す
     if (form.url) URL.revokeObjectURL(form.url);
-    form = { stationId: sid, file: null, url: null, memo: '' };
+    const wantShare = realReady() && form.share !== false;
+    form = { stationId: sid, file: null, url: null, memo: '', share: form.share };
+    // ほかの旅人にも見せる：データベースへ送る（失敗しても、端末の1枚はそのまま）
+    if (wantShare) {
+      Shared().share(sid, blob, memo).then(
+        () => { YT.Store.markShared(sid, true); api.toast('ほかの旅人にも見えるようになりました', 'toast-green', 'eye'); render(); },
+        (e) => api.toast(/permission/.test((e && e.code) || '') ? '続けて差し替えるときは、30秒ほどあけてください（端末には保存しました）' : 'ほかの旅人に見せる送信ができませんでした（端末には保存しました）')
+      );
+    } else if (YT.Store.getPostcards()[sid] && YT.Store.getPostcards()[sid].shared && realReady()) {
+      // 見せていた1枚を、見せずに差し替えた：前の写真が残らないよう取り下げる
+      Shared().unshare(sid).then(() => YT.Store.markShared(sid, false), () => {});
+    }
     const s = D.byId[sid];
     if (first) {
       YT.Sound.fanfare();
@@ -653,6 +756,27 @@
   }
 
   function onClick(e) {
+    const rl = e.target.closest('[data-real-like]');
+    if (rl && !rl.disabled) {
+      likeReal(rl.dataset.realLike, rl);
+      return true;
+    }
+    const rp = e.target.closest('[data-report]');
+    if (rp) {
+      openReport(rp.dataset.report, rp);
+      return true;
+    }
+    const rc = e.target.closest('[data-report-cancel]');
+    if (rc) {
+      rc.closest('.pol-report-form').remove();
+      return true;
+    }
+    const us = e.target.closest('[data-unshare]');
+    if (us) {
+      const sid = us.dataset.unshare;
+      Shared().unshare(sid).then(() => { YT.Store.markShared(sid, false); api.toast('ほかの旅人に見せるのをやめました'); closeViewer(); render(); }, () => api.toast('取り下げられませんでした。時間をおいて、もう一度お試しください'));
+      return true;
+    }
     const lk = e.target.closest('[data-like]');
     if (lk && !lk.disabled) {
       like(lk.dataset.like, lk);
@@ -714,7 +838,14 @@
       api = a;
       root = el;
       document.addEventListener('click', onClick);
+      document.addEventListener('submit', (e) => {
+        const f = e.target.closest('[data-report-form]');
+        if (!f) return;
+        e.preventDefault();
+        sendReport(f);
+      });
       root.addEventListener('change', (e) => {
+        if (e.target.matches('[data-pc-share]')) form.share = e.target.checked;
         if (e.target.matches('[data-pc-station]')) {
           form.stationId = e.target.value;
           render();
@@ -744,6 +875,8 @@
           p.dispatchEvent(new MouseEvent('click', { bubbles: true }));
         }
       });
+      // ログイン・登録がすんだら、旅の便りの画面を描き直す（ほかの旅人と見せ合えるようになる）
+      if (YT.Gate) YT.Gate.onChange(() => { if (document.body.dataset.screen === 'letters') render(); });
       announceLikes();
       setInterval(() => {
         if (!document.hidden) announceLikes();

@@ -89,6 +89,7 @@ window.YOKATABI_FALLBACK_DATA = {
         "name": "湯けむり探訪人",
         "icon": "onsen",
         "avatar": {
+          "bag": "boston",
           "hat": "tenugui",
           "outfit": "yukata",
           "buddy": "none",
@@ -100,6 +101,7 @@ window.YOKATABI_FALLBACK_DATA = {
         "name": "駅弁ハンター",
         "icon": "bento",
         "avatar": {
+          "bag": "furoshiki",
           "hat": "conductor",
           "outfit": "canvas",
           "buddy": "bento",
@@ -111,6 +113,7 @@ window.YOKATABI_FALLBACK_DATA = {
         "name": "車窓スケッチ部",
         "icon": "pencil",
         "avatar": {
+          "bag": "backpack",
           "hat": "straw",
           "outfit": "blazer",
           "buddy": "camera",
@@ -122,6 +125,7 @@ window.YOKATABI_FALLBACK_DATA = {
         "name": "港町の食いしん坊",
         "icon": "fish",
         "avatar": {
+          "bag": "sacoche",
           "hat": "straw",
           "outfit": "canvas",
           "buddy": "bento",
@@ -133,6 +137,7 @@ window.YOKATABI_FALLBACK_DATA = {
         "name": "峠の写真家",
         "icon": "camera",
         "avatar": {
+          "bag": "backpack",
           "hat": "conductor",
           "outfit": "canvas",
           "buddy": "camera",
@@ -144,6 +149,7 @@ window.YOKATABI_FALLBACK_DATA = {
         "name": "朝市の常連さん",
         "icon": "basket",
         "avatar": {
+          "bag": "boston",
           "hat": "tenugui",
           "outfit": "yukata",
           "buddy": "bento",
@@ -155,6 +161,7 @@ window.YOKATABI_FALLBACK_DATA = {
         "name": "秘湯めぐり隊",
         "icon": "mountain",
         "avatar": {
+          "bag": "furoshiki",
           "hat": "straw",
           "outfit": "yukata",
           "buddy": "none",
@@ -166,6 +173,7 @@ window.YOKATABI_FALLBACK_DATA = {
         "name": "夜汽車の旅人",
         "icon": "moon",
         "avatar": {
+          "bag": "trunk",
           "hat": "kinghat",
           "outfit": "tuxedo",
           "buddy": "cat",
@@ -428,6 +436,43 @@ window.YOKATABI_FALLBACK_DATA = {
         }
       ],
       "avatar": [
+        {
+          "slot": "bag",
+          "label": "鞄の形",
+          "icon": "bag",
+          "items": [
+            {
+              "id": "trunk",
+              "name": "革のトランク",
+              "price": 0,
+              "desc": "ベルトと真鍮の角金具の、昔ながらの旅行鞄。旅のはじまりの相棒。"
+            },
+            {
+              "id": "backpack",
+              "name": "バックパッカーのリュック",
+              "price": 300,
+              "desc": "かぶせのふたに尾錠のベルト。両手をあけて、どこまでも歩いていける。"
+            },
+            {
+              "id": "furoshiki",
+              "name": "風呂敷包み",
+              "price": 800,
+              "desc": "唐草の風呂敷を、上できゅっとひと結び。おみやげもまとめて包める。"
+            },
+            {
+              "id": "boston",
+              "name": "ボストンバッグ",
+              "price": 1500,
+              "desc": "横長の胴に真鍮のファスナー。週末の温泉旅に、ちょうどいい大きさ。"
+            },
+            {
+              "id": "sacoche",
+              "name": "肩掛けのサコッシュ",
+              "price": 2500,
+              "desc": "切符と手帖だけを入れて、身軽に。路地歩きの日の小さな鞄。"
+            }
+          ]
+        },
         {
           "slot": "hat",
           "label": "鞄の札",
