@@ -9,7 +9,7 @@
   'use strict';
   const YT = (window.YT = window.YT || {});
   const VERSION = '13.0.0';
-  const RECAPTCHA_SITE_KEY = '6Ldf2_8tAAAAACas2lgaNIMcckacg8X6QCHjEjpZ'; // サイトキーは秘密ではない（ページに載る前提の値）
+  const RECAPTCHA_SITE_KEY = '6Ldf2_8tAAAAACas2IgaNlMcckacg8X6QCHjEjpZ'; // サイトキーは秘密ではない（ページに載る前提の値）
   const local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
   const params = new URLSearchParams(location.search);
   const emulator = local && params.has('emulator');
