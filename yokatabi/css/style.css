@@ -1873,3 +1873,7 @@ body.modal-open .dice-fab { opacity: 0; transform: scale(.4); visibility: hidden
 .lt-share { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; line-height: 1.6; margin: 4px 0 2px; }
 .lt-share input { margin-top: 4px; }
 .lt-real-slot { display: contents; }
+
+/* 本物の旅人の便り：写真を押すと拡大（大きな写真はそのときだけ読む）。「もっと見る」は一覧の幅いっぱいに */
+.pol-stampimg[data-real-open] { cursor: zoom-in; }
+.lt-real-more { grid-column: 1 / -1; margin: 4px 0 8px; text-align: center; }

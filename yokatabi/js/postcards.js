@@ -138,8 +138,9 @@
     const s = D.byId[card.stationId];
     const color = (D.meta.prefectures[s.prefecture] || {}).color;
     const tilt = ((hash(card.id) % 7) - 3) * 0.6;
+    // 本物の旅人の便りは小さな写真を出し、押すと大きな写真で拡大する（大きな写真はそのときだけ読む）
     const photo = card.src
-      ? `<img class="pol-stampimg" alt="${esc(s.name)}駅の写真（${esc(card.byName)}さんの旅の便り）" src="${esc(card.src)}" loading="lazy">`
+      ? `<img class="pol-stampimg" alt="${esc(s.name)}駅の写真（${esc(card.byName)}さんの旅の便り）" src="${esc(card.src)}" loading="lazy" ${card.kind === 'real' && !card.locked && size !== 'big' ? `data-real-open="${esc(card.id)}" role="button" tabindex="0"` : ''}>`
       : card.imageId
       ? `<img class="pol-stampimg" alt="${esc(s.name)}駅の写真（切手と消印つき）" data-pc-img="${esc(card.imageId)}">`
       : illust(card.scene || 'train', color, card.id.replace(/[^a-z0-9-]/gi, ''));
@@ -170,7 +171,7 @@
   // 本物の旅人の便り（データベースの postcards）
   const realCard = (c) => {
     realById[c.id] = c;
-    return { kind: 'real', id: c.id, stationId: c.stationId, memo: c.memo, src: c.image, date: c.updatedAt ? api.fmtDate(c.updatedAt.toDate().toISOString()) : '', byName: c.name, avatar: null, likes: c.likeCount || 0, liked: YT.Store.hasLiked(`real:${c.id}`), locked: !unlocked(c.stationId) };
+    return { kind: 'real', id: c.id, stationId: c.stationId, memo: c.memo, src: c.thumb, date: c.updatedAt ? api.fmtDate(c.updatedAt.toDate().toISOString()) : '', byName: c.name, avatar: null, likes: c.likeCount || 0, liked: YT.Store.hasLiked(`real:${c.id}`), locked: !unlocked(c.stationId) };
   };
   const mineCard = (stationId, c) => ({ kind: 'mine', id: c.id, stationId, memo: c.memo, imageId: c.imageId, date: api.fmtDate(c.at), byName: YT.Ownership.youName(), avatar: { ...YT.Store.get().equipped }, likes: likesOf(c) });
 
@@ -429,19 +430,45 @@
     if (list.length >= REAL_ENOUGH) el.querySelectorAll('[data-pc^="seed-"]').forEach((x) => x.remove());
     el.insertAdjacentHTML('beforeend', list.map((c) => polaroid(realCard(c), 'mini')).join(''));
   }
-  // 旅の便りのタブ：九州じゅうの本物の便りを上に。そろった駅の架空の便りは外す
-  async function fillBoard(el) {
-    if (el.dataset.filled) return;
+  // 旅の便りのタブ：九州じゅうの本物の便りを上に（新しい順に20枚ずつ。「もっと見る」で続き）。そろった駅の架空の便りは外す
+  async function fillBoard(el, more = false) {
+    if (el.dataset.filled && !more) return;
     el.dataset.filled = '1';
-    let list = [];
-    try { list = await Shared().latest(); } catch (e) { return; }
-    if (!el.isConnected || !list.length) return;
+    let page;
+    try { page = await Shared().latest({ more }); } catch (e) { return; }
+    if (!el.isConnected) return;
+    const { list } = page;
     const per = {};
     list.forEach((c) => (per[c.stationId] = (per[c.stationId] || 0) + 1));
     const grid = el.closest('.lt-grid');
     Object.entries(per).forEach(([sid, n]) => n >= REAL_ENOUGH && grid && grid.querySelectorAll(`[data-pc^="seed-${sid}-"]`).forEach((x) => x.remove()));
     const show = list.filter((c) => filter === 'open' ? unlocked(c.stationId) : filter === 'locked' ? !unlocked(c.stationId) : true);
-    el.outerHTML = show.map((c) => polaroid(realCard(c))).join('');
+    el.innerHTML = show.map((c) => polaroid(realCard(c))).join('')
+      + (page.more ? `<p class="lt-real-more"><button class="ghost-btn" data-real-more>${I('postcard')} 旅人たちの便りをもっと見る</button></p>` : '');
+  }
+
+  // 本物の旅人の便りの拡大：まず小さな写真で開き、大きな写真が届いたら差し替える
+  async function openRealViewer(id) {
+    const c = realById[id];
+    if (!c) return;
+    const s = D.byId[c.stationId];
+    const v = $('#pc-viewer');
+    v.innerHTML = `<div class="pcv-box" role="dialog" aria-modal="true" aria-label="${esc(s.name)}駅の旅の便り（${esc(c.name)}さん）">
+        <button class="modal-close" data-pcv-close aria-label="閉じる">×</button>
+        ${polaroid(realCard(c), 'big')}
+        <div class="pcv-stats"><p class="pcv-actions"><button class="ghost-btn" data-pcv-close>閉じる</button></p></div>
+      </div>`;
+    v.hidden = false;
+    requestAnimationFrame(() => v.classList.add('is-open'));
+    setTimeout(() => $('[data-pcv-close]', v).focus({ preventScroll: true }), 50);
+    try {
+      const big = await Shared().fullImage(c);
+      const img = v.querySelector(`[data-pc="${CSS.escape(id)}"] .pol-stampimg`);
+      if (big && img && !v.hidden) {
+        img.src = big;
+        img.dataset.full = '1';
+      }
+    } catch (e) { /* 大きな写真が読めなければ、小さな写真のまま見せる */ }
   }
 
   // 素敵ね（本物の旅人の便り）：1人1回。クラフト資金には入れない
@@ -756,6 +783,18 @@
   }
 
   function onClick(e) {
+    const ro = e.target.closest('[data-real-open]');
+    if (ro) {
+      openRealViewer(ro.dataset.realOpen);
+      return true;
+    }
+    const rm = e.target.closest('[data-real-more]');
+    if (rm) {
+      rm.disabled = true;
+      const slot = rm.closest('[data-real-board]');
+      if (slot) fillBoard(slot, true);
+      return true;
+    }
     const rl = e.target.closest('[data-real-like]');
     if (rl && !rl.disabled) {
       likeReal(rl.dataset.realLike, rl);
@@ -838,6 +877,14 @@
       api = a;
       root = el;
       document.addEventListener('click', onClick);
+      // 本物の便りの写真（拡大）は、Tab で選んで Enter・Space でも開ける
+      document.addEventListener('keydown', (e) => {
+        const ro = e.target.closest && e.target.closest('[data-real-open]');
+        if (ro && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          openRealViewer(ro.dataset.realOpen);
+        }
+      });
       document.addEventListener('submit', (e) => {
         const f = e.target.closest('[data-report-form]');
         if (!f) return;

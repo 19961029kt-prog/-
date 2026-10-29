@@ -9,12 +9,24 @@
   'use strict';
   const YT = (window.YT = window.YT || {});
   const VERSION = '13.0.0';
-  const RECAPTCHA_SITE_KEY = '6Ldf2_8tAAAAACas2lgaNIMcckacg8X6QCHjEjpZ'; // サイトキーは秘密ではない（ページに載る前提の値）
+  const RECAPTCHA_SITE_KEY = '6Ldf2_8tAAAAACas2IgaNlMcckacg8X6QCHjEjpZ'; // サイトキーは秘密ではない（ページに載る前提の値）
   const local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
   const params = new URLSearchParams(location.search);
   const emulator = local && params.has('emulator');
   const offline = local && !emulator && !params.has('live'); // 手元で何も付けないときは、どこにもつながない
   let booting = null;
+  let appCheck = null;
+
+  // App Check の証明が取れないとき、その理由（SDK のエラーの文）を返す。取れれば ''。ログインの失敗の案内に添えて、原因を画面で確かめるため
+  async function appCheckReason() {
+    if (!appCheck) return '';
+    try {
+      await appCheck.ac.getToken(appCheck.inst, true);
+      return '';
+    } catch (e) {
+      return String((e && (e.code || '')) + ' ' + ((e && e.message) || e)).trim();
+    }
+  }
 
   function base() {
     // index.html と review.html のどちらから呼んでも、サイトの中の写しを指す
@@ -34,7 +46,7 @@
           // 手元（localhost?live）で本番につなぐときは、App Check のデバッグ用トークンを使う（コンソールに登録したものだけが通る）
           if (local) self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
           const ac = await import(b + 'firebase-app-check.js');
-          ac.initializeAppCheck(app, { provider: new ac.ReCaptchaEnterpriseProvider(RECAPTCHA_SITE_KEY), isTokenAutoRefreshEnabled: true });
+          appCheck = { ac, inst: ac.initializeAppCheck(app, { provider: new ac.ReCaptchaEnterpriseProvider(RECAPTCHA_SITE_KEY), isTokenAutoRefreshEnabled: true }) };
         }
         const db = fs.getFirestore(app);
         if (emulator) fs.connectFirestoreEmulator(db, '127.0.0.1', 8080);
@@ -58,5 +70,5 @@
     });
   }
 
-  YT.Firebase = { boot, emulator, offline: offline || location.protocol === 'file:' };
+  YT.Firebase = { boot, appCheckReason, emulator, offline: offline || location.protocol === 'file:' };
 })();
