@@ -62,6 +62,12 @@ async function register(page, { name, home = ['JP', '43'], live = null, agree = 
   } else await page.check('#reg-same');
   if (agree) await page.check('#reg-agree');
 }
+// はじめての登録のあとに出る、3匹のあいさつの窓を閉じる
+async function closeWelcome(page) {
+  await page.waitForSelector('.gw-layer.is-open [data-gw-close]', { timeout: 8000 });
+  await page.click('.gw-layer [data-gw-close]');
+  await page.waitForSelector('.gw-layer', { state: 'detached', timeout: 5000 });
+}
 const gateGone = (page) => page.waitForSelector('#login-gate', { state: 'hidden', timeout: 20000 });
 const uidOf = (page) => page.evaluate(() => YT.Gate.user && YT.Gate.user.uid);
 
@@ -120,6 +126,11 @@ try {
   if (OUT) await a.screenshot({ path: `${OUT}/register.png`, fullPage: true });
   await a.click('#gate-reg button[type="submit"]');
   await gateGone(a);
+  await a.waitForSelector('.gw-layer.is-open .gw-one', { timeout: 8000 });
+  const gw = await a.textContent('.gw-layer');
+  check(/ツシ丸/.test(gw) && /ゴロ太/.test(gw) && /カチ助/.test(gw) && (await a.$$('.gw-layer svg.gart')).length === 3, 'はじめての登録のあと、3匹の案内人があいさつする（線画の全身）');
+  if (OUT) { await a.waitForTimeout(1000); await a.screenshot({ path: `${OUT}/welcome.png` }); }
+  await closeWelcome(a);
   const uidA = await uidOf(a);
   const prof = await ownerGet(`profiles/${uidA}`);
   const stat = await ownerGet(`privateStats/${uidA}`);
@@ -154,6 +165,7 @@ try {
   await register(b, { name: '湯の町の常連', home: ['KR'] });
   await b.click('#gate-reg button[type="submit"]');
   await gateGone(b);
+  await closeWelcome(b);
 
   // 6. 遊びながら「地元の人」としておすすめスポットを紹介する
   const openTecho = async (p) => {
@@ -161,7 +173,7 @@ try {
     await gateGone(p);
     await p.waitForSelector('#btn-open-current');
     await p.click('#btn-open-current');
-    await p.waitForSelector('[data-voices] .voices-body :is(ul, .voices-empty:not(:has-text("読み込んでいます")))', { timeout: 15000 });
+    await p.waitForSelector('[data-voices] .voices-body :is(ul, .guide, .voices-empty:not(:has-text("めくっています")))', { timeout: 15000 });
   };
   await openTecho(a);
   const st = await a.evaluate(() => YT.Store.get().currentStationId);
@@ -184,6 +196,7 @@ try {
   check(true, '遊ぶ人が寄り道手帖からおすすめを紹介できる（審査待ちへ・ゴロ太がお礼を言う）');
   await openTecho(a);
   check(!/坂の上の共同湯/.test(await a.textContent('[data-voices]')), '承認前は寄り道手帖に出ない');
+  check(/まっさらムツ/.test(await a.textContent('[data-voices]')), '駅ノートが空のときは、ゴロ太が最初のページをお願いする');
 
   // 7. 運営の審査（review.html）：運営でない人は審査できない → 運営にすると承認できる
   const adm = await ctx(false);
@@ -207,6 +220,7 @@ try {
   check((await a.$$('[data-voices] img')).length === 0 && !(await a.evaluate(() => window.__xss)), '投稿の中のタグは画面で動かない');
   check(!/30s|noanswer|熊本県/.test(await a.textContent('[data-voices]')), '年代・性別・出身地は画面に出ない');
   check(/いつでもこの駅に帰ってこられるカチ/.test(await a.textContent('[data-voices]')), '駅ノートの欄で、カチ助が案内する');
+  check(/新しく駅ノートが1件届いてたカチ/.test(await a.textContent('[data-voices]')), '前に見たあとで新しく載ったノートを、カチ助が知らせる');
   if (OUT) { await a.evaluate(() => document.querySelector('[data-voices]').scrollIntoView()); await a.screenshot({ path: `${OUT}/techo-voices.png` }); }
 
   // 9. 登録内容を直せる
@@ -226,6 +240,8 @@ try {
   const PHOTO = join(dirname(fileURLToPath(import.meta.url)), 'fixture-photo.jpg');
   await a.click('[data-tab="letters"]');
   await a.waitForSelector('[data-pc-station]');
+  check(/まだ一枚も届いてないカチ/.test(await a.textContent('.lt-map, body')), '自分の旅の便りが空のときは、カチ助が声をかける');
+  check(/甘い醤油の匂い/.test(await a.getAttribute('[data-pc-memo]', 'placeholder')), '旅の便りの一言の例文も、九州の日常の空気');
   await a.selectOption('[data-pc-station]', 'hakata');
   await a.setInputFiles('[data-pc-file]', PHOTO);
   await a.waitForSelector('[data-pc-submit]:not([disabled])');
