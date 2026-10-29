@@ -92,14 +92,14 @@ try {
   await a.goto(`${ORIGIN}/index.html?emulator`);
   await a.waitForSelector('#gate-actions:not([hidden])');
   check(await a.evaluate(() => document.getElementById('app').inert), 'ログインしないと関所が出て、盤面はさわれない');
-  // 「視差効果を減らす」の端末では、案内人は動かない1コマ目（動く絵は読まない）
+  // 「視差効果を減らす」の端末では、案内人を動かさない（絵はそのまま出す）
   {
     const c = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
     const p = await c.newPage();
     await p.goto(`${ORIGIN}/index.html?emulator`);
     await p.waitForSelector('#gate-guide .guide-face img');
-    const still = await p.$eval('#gate-guide .guide-face img', (x) => x.decode().then(() => x.currentSrc, () => ''));
-    check(/tsushimaru-face-still\.webp$/.test(still), '動きを減らす端末では、案内人は動かない絵（1コマ目）を出す');
+    const still = await p.$eval('#gate-guide .guide-face img', (x) => x.decode().then(() => [x.naturalWidth, getComputedStyle(x).animationName, getComputedStyle(x.closest('.gart')).animationName], () => [0]));
+    check(still[0] > 0 && still[1] === 'none' && still[2] === 'none', '動きを減らす端末では、案内人は動かない');
     await c.close();
   }
   // Google のログイン：窓を開く部品（popupRedirectResolver）を渡し忘れると、押すたびに auth/argument-error になる
@@ -120,7 +120,7 @@ try {
   check(await a.evaluate(() => document.getElementById('app').inert), 'はじめてのログインでは、登録するまで遊べない');
   check(/他の旅人には見えないように俺がしっかり守るニャ/.test(await a.textContent('#gate-reg')), '登録フォームで、ツシ丸が年代や性別を守ると案内する');
   const face = await a.$eval('#gate-reg .guide-face img', (x) => x.decode().then(() => [x.naturalWidth, x.currentSrc], () => [0, x.currentSrc]));
-  check(face[0] === 112 && /img\/guides\/tsushimaru-face\.webp/.test(face[1]), '吹き出しの顔は、設定画から切り出したツシ丸の動く絵');
+  check(face[0] === 168 && /img\/guides\/tsushimaru-face\.webp/.test(face[1]), '吹き出しの顔は、設定画から切り出したツシ丸の絵');
   await register(a, { name: 'くまの旅人', home: ['JP', '43'], live: ['KR'], agree: false });
   check(await a.isHidden('#reg-live-pref'), '現在の所在地が海外なら、都道府県は出さない');
   await a.selectOption('#reg-live-country', 'JP');
@@ -140,9 +140,9 @@ try {
   await gateGone(a);
   await a.waitForSelector('.gw-layer.is-open .gw-one', { timeout: 8000 });
   const gw = await a.textContent('.gw-layer');
-  // 絵は設定画の動く絵（img/guides/）。3枚とも読めて、ちゃんと描けること
+  // 絵は設定画の切り抜き（img/guides/）。3枚とも読めて、ちゃんと描けること
   const arts = await a.$$eval('.gw-layer .gart img', (xs) => Promise.all(xs.map((x) => x.decode().then(() => x.naturalWidth, () => 0))));
-  check(/ツシ丸/.test(gw) && /ゴロ太/.test(gw) && /カチ助/.test(gw) && arts.length === 3 && arts.every((w) => w > 0), 'はじめての登録のあと、3匹の案内人があいさつする（設定画の動く絵の全身）');
+  check(/ツシ丸/.test(gw) && /ゴロ太/.test(gw) && /カチ助/.test(gw) && arts.length === 3 && arts.every((w) => w > 0), 'はじめての登録のあと、3匹の案内人があいさつする（設定画の全身）');
   if (OUT) { await a.waitForTimeout(1000); await a.screenshot({ path: `${OUT}/welcome.png` }); }
   await closeWelcome(a);
   const uidA = await uidOf(a);
