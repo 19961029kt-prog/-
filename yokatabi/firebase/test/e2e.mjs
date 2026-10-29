@@ -218,8 +218,10 @@ try {
   const pid = `${uidA}_hakata`;
   let shared = null;
   for (let i = 0; i < 40 && !shared; i++) { await a.waitForTimeout(250); shared = await ownerGet(`postcards/${pid}`); }
-  check(shared && /^data:image\/jpeg;base64,/.test(shared.fields.image.stringValue) && shared.fields.memo.stringValue === '駅前の屋台の灯り' && shared.fields.name.stringValue === '熊本の案内人', '投函した写真がデータベースに入る（JPEG・一言・登録の名前）');
-  check(shared && shared.fields.image.stringValue.length <= 500000, '写真は送る前に縮める（50万字以内）');
+  const sharedBig = shared && (await ownerGet(`postcardImages/${pid}`));
+  check(shared && /^data:image\/jpeg;base64,/.test(shared.fields.thumb.stringValue) && shared.fields.memo.stringValue === '駅前の屋台の灯り' && shared.fields.name.stringValue === '熊本の案内人', '投函した写真がデータベースに入る（JPEG・一言・登録の名前）');
+  check(shared && shared.fields.thumb.stringValue.length <= 60000 && !shared.fields.image, '一覧に出す文書には、小さな写真だけを入れる（6万字以内）');
+  check(sharedBig && /^data:image\/jpeg;base64,/.test(sharedBig.fields.image.stringValue) && sharedBig.fields.image.stringValue.length <= 500000 && sharedBig.fields.image.stringValue.length > shared.fields.thumb.stringValue.length, '大きな写真は別の文書に分けて入れる（50万字以内）');
 
   // 11. ほかの旅人（b）：旅人たちのポストカードに本物の写真が出る → 素敵ね → 通報
   await b.goto(`${ORIGIN}/index.html?emulator`);
@@ -237,6 +239,13 @@ try {
   await b.click(`[data-real-like="${pid}"]`);
   await b.waitForFunction((x) => /素敵ね済み/.test(document.querySelector(`[data-real-like="${x}"]`).textContent), pid);
   check((await ownerGet(`postcards/${pid}`)).fields.likeCount.integerValue === '1', '素敵ねで、いいねの数が1つ増える');
+  // 写真を押すと拡大し、そのときだけ大きな写真を読む
+  await b.click(`[data-real-open="${pid}"]`);
+  await b.waitForSelector(`#pc-viewer [data-pc="${pid}"] img[data-full="1"]`, { timeout: 10000 });
+  check(await b.$eval(`#pc-viewer [data-pc="${pid}"] img`, (img, n) => img.src.length > n, shared.fields.thumb.stringValue.length), '本物の便りの写真を押すと、大きな写真で拡大する');
+  if (OUT) { await b.waitForTimeout(500); await b.screenshot({ path: `${OUT}/real-viewer.png` }); }
+  await b.click('#pc-viewer .pcv-actions [data-pcv-close]');
+  await b.waitForSelector('#pc-viewer', { state: 'hidden' });
   await b.click(`[data-report="${pid}"]`);
   await b.waitForSelector(`[data-report-form="${pid}"]`);
   if (OUT) await b.screenshot({ path: `${OUT}/report.png` });
@@ -260,7 +269,7 @@ try {
   check(back.fields.reportCount.integerValue === '0' && back.fields.hidden.booleanValue === false, '運営が「問題なし」で戻すと、また見えるようになる');
 
   // 13. 寄り道手帖の現地スナップにも出る。本物が3枚そろった駅は、架空の旅人の便りを外す
-  const fake = (n) => ({ uid: { stringValue: `fake${n}` }, stationId: { stringValue: 'hakata' }, memo: { stringValue: `博多の便り${n}` }, image: shared.fields.image, name: { stringValue: `旅人${n}` }, createdAt: { timestampValue: '2026-10-20T00:00:00Z' }, updatedAt: { timestampValue: '2026-10-20T00:00:00Z' }, likeCount: { integerValue: '0' }, reportCount: { integerValue: '0' }, hidden: { booleanValue: false } });
+  const fake = (n) => ({ uid: { stringValue: `fake${n}` }, stationId: { stringValue: 'hakata' }, memo: { stringValue: `博多の便り${n}` }, thumb: shared.fields.thumb, name: { stringValue: `旅人${n}` }, createdAt: { timestampValue: '2026-10-20T00:00:00Z' }, updatedAt: { timestampValue: '2026-10-20T00:00:00Z' }, likeCount: { integerValue: '0' }, reportCount: { integerValue: '0' }, hidden: { booleanValue: false } });
   const openSnaps = async () => {
     await b.goto(`${ORIGIN}/index.html?emulator`);
     await gateGone(b);
@@ -277,6 +286,22 @@ try {
   await openSnaps();
   check((await b.$$('[data-real-snaps="hakata"] [data-pc^="seed-"]')).length === 0 && (await b.$$('[data-real-snaps="hakata"] [data-real-like]')).length === 3, '本物の便りが3枚そろった駅は、架空の旅人の便りを外す');
   if (OUT) { await b.evaluate(() => document.querySelector('[data-real-snaps]').scrollIntoView({ block: 'center' })); await b.screenshot({ path: `${OUT}/snaps-real.png` }); }
+
+  // 14. 旅の便りのタブは20枚ずつ読み、「もっと見る」で続きを読む
+  for (let n = 0; n < 22; n++) {
+    const t = new Date(Date.UTC(2026, 9, 1, 0, n)).toISOString();
+    await ownerSet(`postcards/many${n}_beppu`, { ...fake(100 + n), uid: { stringValue: `many${n}` }, stationId: { stringValue: 'beppu' }, updatedAt: { timestampValue: t } });
+  }
+  await b.goto(`${ORIGIN}/index.html?emulator`);
+  await gateGone(b);
+  await b.click('[data-tab="letters"]');
+  await b.waitForSelector('[data-real-more]', { timeout: 15000 });
+  const first = (await b.$$('[data-real-board] [data-pc]')).length;
+  if (OUT) { await b.evaluate(() => document.querySelector('[data-real-more]').scrollIntoView({ block: 'center' })); await b.screenshot({ path: `${OUT}/real-more.png` }); }
+  await b.click('[data-real-more]');
+  await b.waitForFunction((n) => document.querySelectorAll('[data-real-board] [data-pc]').length > n, first, { timeout: 10000 });
+  const second = (await b.$$('[data-real-board] [data-pc]')).length;
+  check(first <= 20 && second > first && !(await b.$('[data-real-more]')), `旅の便りは20枚ずつ読み、「もっと見る」で続きを読む（${first}枚 → ${second}枚）`);
 
   check(errors.length === 0, `画面のエラーなし${errors.length ? '：' + errors.join(' / ') : ''}`);
 } finally {

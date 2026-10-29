@@ -89,7 +89,17 @@
     const REASON = { face: '人の顔・だれかがわかる', private: '個人の情報', copyright: 'ほかの人の写真・著作物', inappropriate: '不快・不適切', other: 'その他' };
     const groups = {};
     reports.docs.forEach((d) => (groups[d.data().postcardId] ||= []).push({ id: d.id, ...d.data() }));
-    const cards = await Promise.all(Object.keys(groups).map((pid) => fs.getDoc(fs.doc(db, 'postcards', pid)).then((x) => [pid, x.exists() ? x.data() : null], () => [pid, null])));
+    // 運営は大きな写真で確かめる（postcardImages。読めなければ小さな写真）
+    const cards = await Promise.all(Object.keys(groups).map(async (pid) => {
+      try {
+        const x = await fs.getDoc(fs.doc(db, 'postcards', pid));
+        if (!x.exists()) return [pid, null];
+        const big = await fs.getDoc(fs.doc(db, 'postcardImages', pid)).catch(() => null);
+        return [pid, { ...x.data(), image: big && big.exists() ? big.data().image : x.data().thumb }];
+      } catch (e) {
+        return [pid, null];
+      }
+    }));
     const reportRows = cards.map(([pid, c]) => {
       const list = groups[pid];
       return `<li class="lp-item" data-report-pid="${esc(pid)}">
@@ -163,7 +173,10 @@
         const b = fs.writeBatch(db);
         reps.docs.forEach((d) => b.delete(d.ref));
         if (act === 'restore-card') b.update(fs.doc(db, 'postcards', id), { reportCount: 0, hidden: false });
-        if (act === 'delete-card') b.delete(fs.doc(db, 'postcards', id));
+        if (act === 'delete-card') {
+          b.delete(fs.doc(db, 'postcards', id));
+          b.delete(fs.doc(db, 'postcardImages', id));
+        }
         await b.commit();
         await renderAdmin();
         say($('#lp-admin [data-msg]'), act === 'delete-card' ? '写真を消しました。' : act === 'restore-card' ? '見えるように戻しました。' : '片づけました。', 'is-ok');

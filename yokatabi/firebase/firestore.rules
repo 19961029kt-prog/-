@@ -164,12 +164,13 @@ service cloud.firestore {
         return signedIn() && d.uid == request.auth.uid;
       }
       function validCard(d) {
-        return d.keys().hasOnly(['uid', 'stationId', 'memo', 'image', 'name', 'createdAt', 'updatedAt', 'likeCount', 'reportCount', 'hidden'])
-          && d.keys().hasAll(['uid', 'stationId', 'memo', 'image', 'name', 'createdAt', 'updatedAt', 'likeCount', 'reportCount', 'hidden'])
+        return d.keys().hasOnly(['uid', 'stationId', 'memo', 'thumb', 'name', 'createdAt', 'updatedAt', 'likeCount', 'reportCount', 'hidden'])
+          && d.keys().hasAll(['uid', 'stationId', 'memo', 'thumb', 'name', 'createdAt', 'updatedAt', 'likeCount', 'reportCount', 'hidden'])
           && pid == d.uid + '_' + d.stationId
           && isGameStation(d.stationId)
           && isText(d.memo, 0, 60)
-          && d.image is string && d.image.size() <= 500000 && d.image.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$')
+          // 一覧に出す小さな写真だけ（6万字まで）。大きな写真は postcardImages に分けて、拡大したときだけ読む（読み込みの量とお金を抑える）
+          && d.thumb is string && d.thumb.size() <= 60000 && d.thumb.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$')
           && d.likeCount is int && d.likeCount >= 0
           && d.reportCount is int && d.reportCount >= 0
           && d.hidden == (d.reportCount >= 3)
@@ -182,15 +183,19 @@ service cloud.firestore {
       allow get: if isPlayer() && (resource.data.hidden == false || isOwnerOf(resource.data) || isAdmin());
       allow list: if (isPlayer() && resource.data.hidden == false) || isAdmin();
       // 投函：本人だけ。いいね・通報は0から。名前は登録のとおり
+      // 大きな写真（postcardImages）も、同じ一括書き込みで作ること
       allow create: if isPlayer() && isOwnerOf(request.resource.data) && validCard(request.resource.data) && nameOk(request.resource.data)
         && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time
-        && request.resource.data.likeCount == 0 && request.resource.data.reportCount == 0;
+        && request.resource.data.likeCount == 0 && request.resource.data.reportCount == 0
+        && existsAfter(docPath('postcardImages', pid));
       allow update: if isPlayer() && validCard(request.resource.data) && (
         // ① 本人の差し替え（写真・一言・名前）。いいね・通報・隠れ・投函日は変えられない。差し替えは30秒あける
         (isOwnerOf(resource.data) && nameOk(request.resource.data)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memo', 'image', 'name', 'updatedAt'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memo', 'thumb', 'name', 'updatedAt'])
           && request.resource.data.updatedAt == request.time
-          && request.time > resource.data.updatedAt + duration.value(30, 's'))
+          && request.time > resource.data.updatedAt + duration.value(30, 's')
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['thumb'])
+              || getAfter(docPath('postcardImages', pid)).data.updatedAt == request.time))
         // ② ほかの人の「素敵ね」：いいねの数を1つだけ増やす。同じ一括書き込みで、その人のいいねの印を新しく作ること
         || (!isOwnerOf(resource.data) && resource.data.hidden == false
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount'])
@@ -220,6 +225,25 @@ service cloud.firestore {
           && getAfter(docPath('postcards', pid)).data.likeCount == get(docPath('postcards', pid)).data.likeCount + 1;
         allow update, delete: if false;
       }
+    }
+
+    // ---------- 旅の便りの大きな写真（文書の id はポストカードと同じ。拡大したときだけ1枚読む） ----------
+    match /postcardImages/{pid} {
+      // 見られるのは、ポストカードが見える人だけ（隠れた写真は本人と運営だけ）。一覧で読むのは運営だけ
+      allow get: if isAdmin() || (isPlayer() && exists(docPath('postcards', pid))
+        && (get(docPath('postcards', pid)).data.hidden == false || get(docPath('postcards', pid)).data.uid == request.auth.uid));
+      allow list: if isAdmin();
+      // 書けるのは投函した本人だけで、ポストカードの作成・差し替えと同じ一括書き込みのときだけ（30秒あける決まりもポストカード側でかかる）
+      allow create, update: if isPlayer()
+        && request.resource.data.keys().hasOnly(['uid', 'image', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['uid', 'image', 'updatedAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.image is string && request.resource.data.image.size() <= 500000
+        && request.resource.data.image.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$')
+        && request.resource.data.updatedAt == request.time
+        && getAfter(docPath('postcards', pid)).data.uid == request.auth.uid
+        && getAfter(docPath('postcards', pid)).data.updatedAt == request.time;
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
     }
 
     // ---------- 旅の便りの通報（運営だけが読める。文書の id は「通報した人の uid _ ポストカードの id」で1人1回） ----------

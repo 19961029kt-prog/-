@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { after, before, beforeEach, describe, test } from 'node:test';
 import { assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing';
-import { Timestamp, collection, deleteDoc, doc, getDoc, getDocs, increment, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { Timestamp, collection, deleteDoc, doc, getDoc, getDocs, increment, limit, orderBy, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
 
 let env;
 const ADMIN = 'admin-1', P1 = 'player-1', P2 = 'player-2', NEWBIE = 'player-new';
@@ -244,10 +244,21 @@ describe('承認と却下（運営）', () => {
 
 describe('旅の便り（写真）：ログインした人どうしで見せ合う・素敵ね・通報（3件で隠れる）', () => {
   const IMG = 'data:image/jpeg;base64,' + 'A'.repeat(2000);
-  const card = (uid, st = 'beppu', over = {}) => ({ uid, stationId: st, memo: '湯けむりの朝', image: IMG, name: uid === P1 ? 'くまの旅人' : '湯の町の常連', createdAt: serverTimestamp(), updatedAt: serverTimestamp(), likeCount: 0, reportCount: 0, hidden: false, ...over });
+  const BIG = 'data:image/jpeg;base64,' + 'B'.repeat(200000);
+  const card = (uid, st = 'beppu', over = {}) => ({ uid, stationId: st, memo: '湯けむりの朝', thumb: IMG, name: uid === P1 ? 'くまの旅人' : '湯の町の常連', createdAt: serverTimestamp(), updatedAt: serverTimestamp(), likeCount: 0, reportCount: 0, hidden: false, ...over });
   const id = (uid, st = 'beppu') => `${uid}_${st}`;
   async function seedCard(uid = P2, over = {}) {
-    await env.withSecurityRulesDisabled(async (ctx) => setDoc(doc(ctx.firestore(), 'postcards', id(uid)), { ...card(uid), createdAt: T0, updatedAt: T0, ...over }));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'postcards', id(uid)), { ...card(uid), createdAt: T0, updatedAt: T0, ...over });
+      await setDoc(doc(ctx.firestore(), 'postcardImages', id(uid)), { uid, image: BIG, updatedAt: T0 });
+    });
+  }
+  // 投函：小さな写真のポストカードと、大きな写真を1回の一括書き込みで
+  function post(db, uid, { over = {}, image = BIG, withImage = true, st = 'beppu' } = {}) {
+    const b = writeBatch(db);
+    b.set(doc(db, 'postcards', id(uid, st)), card(uid, st, over));
+    if (withImage) b.set(doc(db, 'postcardImages', id(uid, st)), { uid, image, updatedAt: serverTimestamp() });
+    return b.commit();
   }
   function likeIt(db, pid, uid, { bump = true, mark = true } = {}) {
     const b = writeBatch(db);
@@ -268,28 +279,47 @@ describe('旅の便り（写真）：ログインした人どうしで見せ合�
   }
 
   test('登録済みの人は、自分の1駅1枚を投函できる。ログインした人は見られる', async () => {
-    await assertSucceeds(setDoc(doc(player(P1), 'postcards', id(P1)), card(P1)));
+    await assertFails(setDoc(doc(player(P1), 'postcards', id(P1)), card(P1))); // 大きな写真なしでは投函できない
+    await assertSucceeds(post(player(P1), P1));
     await assertSucceeds(getDoc(doc(player(P2), 'postcards', id(P1))));
+    await assertSucceeds(getDoc(doc(player(P2), 'postcardImages', id(P1))));
+    await assertFails(getDocs(collection(player(P2), 'postcardImages'))); // 大きな写真をまとめて読むことはできない（運営だけ）
+    await assertFails(getDoc(doc(anon(), 'postcardImages', id(P1))));
     await assertSucceeds(getDocs(query(collection(player(P2), 'postcards'), where('stationId', '==', 'beppu'), where('hidden', '==', false))));
     await assertFails(getDoc(doc(anon(), 'postcards', id(P1))));
   });
   test('他人の名前・他人の番号の文書・名前違い・ゲームにない駅・写真でない・大きすぎ・いいねの水増しは通らない', async () => {
     const db = player(P1);
-    await assertFails(setDoc(doc(db, 'postcards', id(P2)), card(P2)));
-    await assertFails(setDoc(doc(db, 'postcards', id(P1)), card(P1, 'beppu', { name: '湯の町の常連' })));
-    await assertFails(setDoc(doc(db, 'postcards', id(P1, 'tokyo')), card(P1, 'tokyo')));
-    await assertFails(setDoc(doc(db, 'postcards', id(P1)), card(P1, 'beppu', { image: 'data:text/html;base64,PHNjcmlwdD4=' })));
-    await assertFails(setDoc(doc(db, 'postcards', id(P1)), card(P1, 'beppu', { image: 'javascript:alert(1)' })));
-    await assertFails(setDoc(doc(db, 'postcards', id(P1)), card(P1, 'beppu', { image: 'data:image/jpeg;base64,' + 'A'.repeat(500000) })));
-    await assertFails(setDoc(doc(db, 'postcards', id(P1)), card(P1, 'beppu', { likeCount: 99 })));
-    await assertFails(setDoc(doc(db, 'postcards', id(P1)), card(P1, 'beppu', { memo: 'あ'.repeat(61) })));
-    await assertFails(setDoc(doc(player(NEWBIE), 'postcards', id(NEWBIE)), card(NEWBIE)));
-    await assertFails(setDoc(doc(unverified(P1), 'postcards', id(P1)), card(P1)));
+    await assertFails(post(db, P2));
+    await assertFails(post(db, P1, { over: { name: '湯の町の常連' } }));
+    await assertFails(post(db, P1, { st: 'tokyo' }));
+    await assertFails(post(db, P1, { over: { thumb: 'data:text/html;base64,PHNjcmlwdD4=' } }));
+    await assertFails(post(db, P1, { over: { thumb: 'javascript:alert(1)' } }));
+    await assertFails(post(db, P1, { over: { thumb: 'data:image/jpeg;base64,' + 'A'.repeat(60000) } })); // 小さな写真は6万字まで
+    await assertFails(post(db, P1, { image: 'data:text/html;base64,PHNjcmlwdD4=' }));
+    await assertFails(post(db, P1, { image: 'data:image/jpeg;base64,' + 'A'.repeat(500000) }));
+    await assertFails(post(db, P1, { over: { likeCount: 99 } }));
+    await assertFails(post(db, P1, { over: { memo: 'あ'.repeat(61) } }));
+    await assertFails(post(player(NEWBIE), NEWBIE));
+    await assertFails(post(unverified(P1), P1));
+    // 他人のポストカードの大きな写真を、すり替えることはできない
+    await seedCard(P2);
+    await assertFails(setDoc(doc(db, 'postcardImages', id(P2)), { uid: P1, image: BIG, updatedAt: serverTimestamp() }));
+    await assertFails(setDoc(doc(db, 'postcardImages', id(P2)), { uid: P2, image: BIG, updatedAt: serverTimestamp() }));
+    await assertFails(deleteDoc(doc(db, 'postcardImages', id(P2))));
   });
   test('本人は差し替え・削除できる（30秒あける）。いいね・通報・隠れは本人も変えられない。他人は差し替え・削除できない', async () => {
     await seedCard(P1);
     const ref = doc(player(P1), 'postcards', id(P1));
-    await assertSucceeds(updateDoc(ref, { memo: '差し替えた一言', image: IMG, updatedAt: serverTimestamp() }));
+    const db1 = player(P1);
+    const swap = () => {
+      const b = writeBatch(db1);
+      b.update(doc(db1, 'postcards', id(P1)), { memo: '差し替えた一言', thumb: IMG + 'C', updatedAt: serverTimestamp() });
+      b.set(doc(db1, 'postcardImages', id(P1)), { uid: P1, image: BIG, updatedAt: serverTimestamp() });
+      return b.commit();
+    };
+    await assertFails(updateDoc(ref, { thumb: IMG + 'B', updatedAt: serverTimestamp() })); // 小さな写真だけ差し替えて、大きな写真をそのままにはできない
+    await assertSucceeds(swap());
     await assertFails(updateDoc(ref, { memo: 'すぐもう一度', updatedAt: serverTimestamp() }));
     await env.withSecurityRulesDisabled(async (ctx) => updateDoc(doc(ctx.firestore(), 'postcards', id(P1)), { updatedAt: T0 }));
     await assertFails(updateDoc(ref, { likeCount: 50, updatedAt: serverTimestamp() }));
@@ -297,6 +327,7 @@ describe('旅の便り（写真）：ログインした人どうしで見せ合�
     await assertFails(updateDoc(doc(player(P2), 'postcards', id(P1)), { memo: 'のっとり', updatedAt: serverTimestamp() }));
     await assertFails(deleteDoc(doc(player(P2), 'postcards', id(P1))));
     await assertSucceeds(deleteDoc(ref));
+    await assertSucceeds(deleteDoc(doc(db1, 'postcardImages', id(P1))));
   });
   test('素敵ね：ほかの人は1回だけ1つ増やせる。自分の便り・印なし・2回目・2つ増やすは通らない', async () => {
     await seedCard(P2);
@@ -331,6 +362,9 @@ describe('旅の便り（写真）：ログインした人どうしで見せ合�
     await assertFails(bx.commit());
     await assertSucceeds(report(player('p-y'), pid, 'p-y', 2));
     await assertFails(getDoc(doc(player(P1), 'postcards', pid)));
+    await assertFails(getDoc(doc(player(P1), 'postcardImages', pid))); // 隠れた写真は、大きな写真も見えない
+    await assertSucceeds(getDoc(doc(player(P2), 'postcardImages', pid)));
+    await assertSucceeds(getDoc(doc(admin(), 'postcardImages', pid)));
     await assertFails(getDocs(query(collection(player(P1), 'postcards'), where('stationId', '==', 'beppu'))));
     await assertSucceeds(getDoc(doc(player(P2), 'postcards', pid)));
     await assertSucceeds(getDoc(doc(admin(), 'postcards', pid)));
@@ -344,5 +378,12 @@ describe('旅の便り（写真）：ログインした人どうしで見せ合�
     await assertSucceeds(updateDoc(doc(admin(), 'postcards', pid), { reportCount: 0, hidden: false }));
     await assertSucceeds(getDoc(doc(player(P1), 'postcards', pid)));
     await assertSucceeds(deleteDoc(doc(admin(), 'postcards', pid)));
+    await assertSucceeds(deleteDoc(doc(admin(), 'postcardImages', pid)));
+  });
+  test('一覧は新しい順に少しずつ読める（隠れていないものだけ）', async () => {
+    await seedCard(P2);
+    await assertSucceeds(getDocs(query(collection(player(P1), 'postcards'), where('hidden', '==', false), orderBy('updatedAt', 'desc'), limit(20))));
+    await assertSucceeds(getDocs(query(collection(player(P1), 'postcards'), where('stationId', '==', 'beppu'), where('hidden', '==', false), orderBy('updatedAt', 'desc'), limit(12))));
+    await assertFails(getDocs(query(collection(player(P1), 'postcards'), orderBy('updatedAt', 'desc'), limit(20))));
   });
 });
