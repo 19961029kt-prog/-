@@ -1,7 +1,7 @@
 // YT.Gate … ログインの関所。Q-TRIP は「人と人とのつながり」の旅なので、ログインしてから遊ぶ（Google かメールリンク）。
 // ログインした人は、遊びながら寄り道手帖から「地元の人の声」を送れる（js/voices.js）。
 // - 守りの本体は Security Rules と App Check。この関所は画面の入口で、静的なページそのものを隠すしくみではない。
-// - 遊んだ記録はこれまでどおり端末の中（localStorage）。ログインの情報はゲームの記録とは混ぜない。
+// - 遊んだ記録は端末の中（localStorage）と、データベースの本人だけの場所（js/cloud.js）。
 // - 手元の開発（localhost で ?emulator・?live なし）と file:// では関所を出さない（どこにもつながないため）。
 (function () {
   'use strict';
@@ -16,12 +16,20 @@
 
   function failText(e) {
     const code = (e && e.code) || '';
+    const msg = (e && e.message) || '';
+    // 原因を確かめられるよう、決まった言葉のあとに Firebase の番号（auth/…）を小さく添える
+    const tag = code ? `（${code}）` : '';
+    if (e) console.error('[Q-TRIP ログイン]', code, msg);
     if (/popup-closed|cancelled-popup/.test(code)) return 'ログインを取りやめました。';
     if (/popup-blocked/.test(code)) return 'ポップアップが止められました。ブラウザの設定でこのサイトのポップアップを許してください。';
     if (/invalid-email/.test(code)) return 'メールアドレスの形を確かめてください。';
     if (/invalid-action-code|expired-action-code/.test(code)) return 'ログインのリンクの期限が切れているか、すでに使われています。もう一度メールを送ってください。';
     if (/network|unavailable/.test(code)) return '通信できませんでした。通信のよいところで、もう一度お試しください。';
-    return 'ログインできませんでした。時間をおいて、もう一度お試しください。';
+    if (/app-check/i.test(code + msg)) return `安全の確認（App Check）が通りませんでした。運営が設定を確かめています。${tag}`;
+    if (/unauthorized-domain/.test(code)) return `このサイトからのログインが、まだ許可されていません。${tag}`;
+    if (/operation-not-allowed/.test(code)) return `このログインの方法は、いま使えません。もうひとつの方法をお試しください。${tag}`;
+    if (/web-storage-unsupported/.test(code)) return `ブラウザの設定（サイト越えのトラッキングを防ぐ・プライベートブラウズなど）でログインが止められました。${tag}`;
+    return `ログインできませんでした。時間をおいて、もう一度お試しください。${tag}`;
   }
 
   function el() { return $('#login-gate'); }
