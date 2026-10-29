@@ -18,7 +18,10 @@
     const code = (e && e.code) || '';
     const msg = (e && e.message) || '';
     // 原因を確かめられるよう、決まった言葉のあとに Firebase の番号（auth/…）を小さく添える
-    const tag = code ? `（${code}）` : '';
+    // internal-error などは、サーバーの返した理由（customData）があれば短く添える（原因を絞り込むため。esc() は say() が通す）
+    const cd = e && e.customData ? (e.customData._serverResponse || e.customData.message || '') : '';
+    const detail = cd ? ` ${String(typeof cd === 'string' ? cd : JSON.stringify(cd)).slice(0, 160)}` : '';
+    const tag = code ? `（${code}${detail}）` : '';
     if (e) console.error('[Q-TRIP ログイン]', code, msg);
     if (/popup-closed|cancelled-popup/.test(code)) return 'ログインを取りやめました。';
     if (/popup-blocked/.test(code)) return 'ポップアップが止められました。ブラウザの設定でこのサイトのポップアップを許してください。';
