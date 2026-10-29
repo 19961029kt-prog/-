@@ -1,96 +1,46 @@
-// YT.GuideArt … 案内人の3匹の絵（運営が描いた設定画をもとに、線画で描き起こしたもの）。
-// - 墨の細い線（1.25px・拡大しても太さが変わらない）と、紙の白で塗る。差し色は、茜（ゴロ太の「食」の前掛け・カチ助の帽子の帯）と
-//   真鍮（帽子の徽章）、藍・紺（ツシ丸の手ぬぐい・カチ助の羽のつやと帽子）、頬の淡い紅だけ。藍・紺は案内人の絵だけに許す色（設定画に合わせるため）。
-// - 1枚の絵（120×140）から、吹き出し用は顔のまわりだけを切り出して使う（FACE の viewBox）。
+// YT.GuideArt … 案内人の3匹の絵。運営の設定画（2026年10月、運営が自分で用意した動く絵）を、描き直さずにそのまま使う（依頼「そのまま採用」）。
+// - 絵は img/guides/ の WebP。tools/guide-sprites.py が設定画（tools/guides-source.gif・30コマ・1コマ100ms）から
+//   3匹を1匹ずつ切り抜いて作る（背景を透明にするだけで、色も形も変えない）。動きも設定画のまま（まばたき・地図をひらく・跳ねる・羽ばたく）。
+// - 全身（歓迎の窓）と、吹き出しの顔（顔のまわりを、顔の動きを追いかけて切り出した 112px）の2種類。
+// - 「視差効果を減らす」の端末では、動かない1コマ目を出す（<picture> の media で選ぶので、動く絵は読まない）。
 (function () {
   'use strict';
   const YT = (window.YT = window.YT || {});
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  // かわいらしさの決まり（2026年10月の依頼「もう少し可愛く」）：頭を大きく・体は小さく丸く（ちびの比率）、大きな丸い目に光を2つ、
-  // 頬に淡い紅、小さな口、短い手足、輪郭はすべて丸く。設定画の持ち物（手ぬぐい・地図・「食」の前掛け・駅員帽・手紙）は残す。
-  const eye = (x, y, r, look = 0) => `<path class="k" d="M${x - r} ${y}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0"/>`
-    + `<path class="w" d="M${x + r * 0.15 + look} ${y - r * 0.38}a${r * 0.36} ${r * 0.36} 0 1 0 ${r * 0.72} 0a${r * 0.36} ${r * 0.36} 0 1 0 ${-r * 0.72} 0M${x - r * 0.55 + look} ${y + r * 0.42}a${r * 0.16} ${r * 0.16} 0 1 0 ${r * 0.32} 0a${r * 0.16} ${r * 0.16} 0 1 0 ${-r * 0.32} 0"/>`;
-  const blush = (x, y) => `<path class="blush" d="M${x - 5.5} ${y}a5.5 3.2 0 1 0 11 0a5.5 3.2 0 1 0 -11 0"/>`;
+  const BASE = 'img/guides/';
+  const IDS = ['tsushimaru', 'gorota', 'kachisuke'];
+  // 全身の絵の大きさ（px）。3匹は設定画の中で同じ縮尺なので、並べるときは高さ272を基準にそろえる（ゴロ太が少し小さい）
+  const SIZE = { tsushimaru: [211, 272], gorota: [172, 219], kachisuke: [280, 272] };
+  const FACE_PX = 112;
+  const TALL = 272;
+  const reduced = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const src = (id, full, still) => `${BASE}${id}${full ? '' : '-face'}${still ? '-still' : ''}.webp`;
 
-  // ツシマヤマネコの「ツシ丸」：丸い耳・額の縦じま・大きな目・白い口もと・ωの口・青い手ぬぐい・折りたたんだ地図・縞のしっぽ
-  const tsushimaru = `
-    <path class="t" d="M84 116c10 2 18-4 20-12 1-5 5-8 8-6 2 1 1 4-1 4-3 1-4 3-4 6-2 10-12 16-23 14z"/>
-    <path class="st" d="M92 115l2 3M99 110l3 2M103 102l3.5.5"/>
-    <path class="t" d="M42 86c-5 8-6 22-2 34h44c4-12 3-26-2-34z"/>
-    <path class="w" d="M52 90c-3 7-3 16 0 24 6 3 14 3 20 0 3-8 3-17 0-24z"/>
-    <path class="st" d="M42 100c3 1 5 1 7 0M43 110c3 1 5 1 7 0M82 100c-3 1-5 1-7 0M81 110c-3 1-5 1-7 0"/>
-    <path class="t" d="M45 119c0 5 4 6 8 5 2-1 3-3 3-5M68 119c0 2 1 4 3 5 4 1 8 0 8-5"/>
-    <path class="t" d="M30 34c-4-10-2-20 4-24 7 2 14 8 18 13M94 34c4-10 2-20-4-24-7 2-14 8-18 13"/>
-    <path class="al" d="M33.5 27c-1-6 0-10 2.5-12 4 2 7 5 9 8M90.5 27c1-6 0-10-2.5-12-4 2-7 5-9 8"/>
-    <path class="t" d="M24 52c0-22 17-36 38-36s38 14 38 36c0 19-17 32-38 32S24 71 24 52z"/>
-    <path class="st" d="M58 20c-.5 3-.5 6 0 8M62 19v9M66 20c.5 3 .5 6 0 8M27 54c3 .5 5 1.5 7 3M97 54c-3 .5-5 1.5-7 3M26 60c2.5 .3 4.5 1 6 2M98 60c-2.5.3-4.5 1-6 2"/>
-    <path class="w" d="M49 65c0-5 6-8 13-8s13 3 13 8-6 9-13 9-13-4-13-9z"/>
-    ${eye(45, 51, 7.5, 0.5)}${eye(79, 51, 7.5, 0.5)}
-    ${blush(36, 63)}${blush(88, 63)}
-    <path class="al" d="M59.5 61.5h5L62 64.3z"/>
-    <path d="M62 64.3c-.5 2.6-3.6 3.3-5.2 1M62 64.3c.5 2.6 3.6 3.3 5.2 1"/>
-    <path d="M38 63.5l-10-1.5M38 67l-9 1.6M86 63.5l10-1.5M86 67l9 1.6"/>
-    <path class="i" d="M36 80c14 8 38 8 52 0l2 6c-16 10-40 10-56 0z"/>
-    <path class="i" d="M84 86c6 0 10 3 12 8-5 0-9-2-11-5M86 88c2 5 2 9-1 12-1-4-2-8-2-12"/>
-    <path class="t" d="M45 94c-6 3-10 7-12 12"/>
-    <path class="p" d="M14 100l18-4 3 22-18 4z"/>
-    <path d="M20 99l3 22M26 97.5l3 22"/>
-    <path class="la" d="M17 112c3-3 6 3 9-1 2-2 4 1 6 3"/>
-    <path class="t" d="M30 104c3-2 7-1 7 2-1 3-5 3-7 1z"/>`;
-
-  // ムツゴロウの「ゴロ太」：頭の上の大きなまんまるの目・にっこりの口・茜の「食」の前掛け・手のように上げた小さな胸びれ・まだら・干潟
-  const gorota = `
-    <path d="M16 124c22-5 62 4 92-2"/>
-    <path class="g" d="M56 104c-5 6-11 9-17 10 7 2 13 1 19-3M68 104c5 6 11 9 17 10-7 2-13 1-19-3"/>
-    <path class="g" d="M30 66c0-22 14-36 32-36s32 14 32 36c0 20-10 34-22 40-6 3-14 3-20 0-12-6-22-20-22-40z"/>
-    <path class="w" d="M44 86c3 10 9 17 18 20 9-3 15-10 18-20-10 4-26 4-36 0z"/>
-    <path class="k" d="M36.8 92a1.4 1.4 0 1 0 2.8 0 1.4 1.4 0 1 0-2.8 0M84.6 90a1.4 1.4 0 1 0 2.8 0 1.4 1.4 0 1 0-2.8 0M42 100a1.1 1.1 0 1 0 2.2 0 1.1 1.1 0 1 0-2.2 0M80.6 99a1.1 1.1 0 1 0 2.2 0 1.1 1.1 0 1 0-2.2 0M55 44a1 1 0 1 0 2 0 1 1 0 1 0-2 0M68 43a1 1 0 1 0 2 0 1 1 0 1 0-2 0"/>
-    <path class="g" d="M34 80c-9-2-15-8-16-14 6 1 12 5 16 10M90 78c9-4 13-10 14-16-6 1-11 5-14 10"/>
-    <path d="M22 68l8 8M26 67l6 7M102 64l-8 9M98 64l-6 8"/>
-    <path class="w" d="M35 26a13 13 0 1 0 26 0 13 13 0 1 0-26 0M63 26a13 13 0 1 0 26 0 13 13 0 1 0-26 0"/>
-    ${eye(50.5, 27.5, 7.2, 0.4)}${eye(73.5, 27.5, 7.2, 0.4)}
-    ${blush(40, 57)}${blush(84, 57)}
-    <path class="al" d="M52 54c4 7.5 16 7.5 20 0-6 2-14 2-20 0z"/>
-    <path d="M52 54c4 7.5 16 7.5 20 0"/>
-    <path class="a" d="M42 66c10 6 30 6 40 0l-2 18c-8 9-28 9-36 0z"/>
-    <path d="M42 66c-3-2-4-5-3-8M82 66c3-2 4-5 3-8"/>
-    <text x="62" y="82" text-anchor="middle" class="ga-kanji">食</text>`;
-
-  // カササギの「カチ助」：駅員の帽子（茜の帯・真鍮の徽章）・大きな光る目・くわえた手紙・黒い頭と背・白いおなか・丸く広げた翼・尾
-  const kachisuke = `
-    <path class="k" d="M70 100c4 12 9 22 16 30l6-3c-6-9-10-18-13-29z"/>
-    <path class="il" d="M74 106c3 8 6 15 11 21"/>
-    <path class="k" d="M44 70C34 58 22 50 10 48c1 4 0 6 3 8-2 3-1 5 2 6-1 3 1 5 4 5 0 3 3 5 6 4 2 3 6 3 8 1 4 2 8 2 11 1z"/>
-    <path class="k" d="M80 70c10-12 22-20 34-22-1 4 0 6-3 8 2 3 1 5-2 6 1 3-1 5-4 5 0 3-3 5-6 4-2 3-6 3-8 1-4 2-8 2-11 1z"/>
-    <path class="w" d="M16 55c7 1 14 4 19 8-7 1-13-1-18-4zM108 55c-7 1-14 4-19 8 7 1 13-1 18-4z"/>
-    <path class="il" d="M24 66c6-1 11 0 16 2M100 66c-6-1-11 0-16 2"/>
-    <path class="k" d="M40 80c0-14 10-22 22-22s22 8 22 22c0 16-10 26-22 26S40 96 40 80z"/>
-    <path class="w" d="M48 82c0-8 6-12 14-12s14 4 14 12c0 10-6 18-14 18s-14-8-14-18z"/>
-    <path d="M55 104v7M69 104v7M51 111h8M65 111h8"/>
-    <path class="k" d="M34 44c0-16 12-26 28-26s28 10 28 26-12 24-28 24-28-8-28-24z"/>
-    <path class="w" d="M45.2 45a6.8 6.8 0 1 0 13.6 0 6.8 6.8 0 1 0-13.6 0M65.2 45a6.8 6.8 0 1 0 13.6 0 6.8 6.8 0 1 0-13.6 0"/>
-    ${eye(53, 46, 4.4, 0.3)}${eye(71, 46, 4.4, -0.3)}
-    ${blush(42, 55)}${blush(82, 55)}
-    <path class="kb" d="M58.5 53.5h7L62 59z"/>
-    <path class="p" d="M64 56l14 3-2.4 10-14-3z"/>
-    <path d="M66 59.6l9 1.9M65.2 63l9 1.9"/>
-    <path class="a" d="M69.6 67.4a1.5 1.5 0 1 0 3 0 1.5 1.5 0 1 0-3 0" style="stroke:none"/>
-    <path class="cap" d="M36 32c1-14 50-16 52-2v5c-15-3-37-3-52 0z"/>
-    <path class="pl" d="M45 24c8-3.5 24-4.5 35-1"/>
-    <path class="a" d="M36 35c15-3 37-3 52 0v5c-15-3-37-3-52 0z"/>
-    <path class="cap" d="M31 40.5c12-2.4 50-2.4 62 0-6 4.6-56 4.6-62 0z"/>
-    <path class="b" d="M58.6 26.5a3.4 3.4 0 1 0 6.8 0 3.4 3.4 0 1 0-6.8 0"/>`;
-
-  const ART = { tsushimaru, gorota, kachisuke };
-  // 吹き出しの顔に使う切り出し（x y 幅 高さ）
-  const FACE = { tsushimaru: '18 6 88 88', gorota: '20 6 84 84', kachisuke: '24 10 76 76' };
-
-  // full: 全身（歓迎の窓など）／そうでなければ顔のまわりだけ
-  function svg(id, { full = false, label = '' } = {}) {
-    const vb = full ? '0 0 124 142' : FACE[id];
-    const aria = label ? ` role="img" aria-label="${label}"` : ' aria-hidden="true"';
-    return `<svg class="gart gart-${id}" viewBox="${vb}"${aria} focusable="false">${ART[id] || ''}</svg>`;
+  // full: 全身（歓迎の窓など）／そうでなければ吹き出しの顔。label があれば絵の名前として読み上げる
+  function html(id, { full = false, label = '' } = {}) {
+    if (!SIZE[id]) return '';
+    const [w, h] = full ? SIZE[id] : [FACE_PX, FACE_PX];
+    const scale = full ? ` style="--w:${(w / TALL).toFixed(3)}"` : '';
+    const alt = label ? ` alt="${esc(label)}"` : ' alt="" aria-hidden="true"';
+    return `<picture class="gart gart-${id}${full ? ' gart-full' : ''}"${scale}>`
+      + `<source srcset="${src(id, full, true)}" media="(prefers-reduced-motion: reduce)">`
+      + `<img src="${src(id, full, false)}" width="${w}" height="${h}"${alt} decoding="async" draggable="false"></picture>`;
   }
 
-  YT.GuideArt = { svg, ids: Object.keys(ART) };
+  // 先に読んでおく（登録フォームをひらいたときに全身を読んでおけば、登録した直後の歓迎の窓で絵が遅れて出ない）
+  const loaded = {};
+  function preload(full) {
+    const still = reduced();
+    IDS.forEach((id) => {
+      const u = src(id, full, still);
+      if (loaded[u]) return;
+      loaded[u] = true;
+      const im = new Image();
+      im.decoding = 'async';
+      im.src = u;
+    });
+  }
+
+  YT.GuideArt = { html, preload, ids: IDS };
 })();

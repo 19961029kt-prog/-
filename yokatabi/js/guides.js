@@ -1,6 +1,7 @@
 // YT.Guides … 案内人の3匹（ツシマヤマネコのツシ丸・ムツゴロウのゴロ太・カササギのカチ助）の吹き出し。
 // 夕暮れのローカル線の待合室にある「駅ノート」の世界観で、登録・駅ノート・手帖の要所に1言ずつ出す。
-// - 絵は js/guide-art.js（設定画をもとにした線画。絵文字は使わない）。セリフは esc() を通して文字として出す。
+// - 絵は js/guide-art.js（運営の設定画をそのまま切り抜いた動く絵。絵文字は使わない）。セリフは esc() を通して文字として出す。
+// - 顔を押すと、ぴょんと跳ねる（絵そのものの動きに、さわったときの小さな反応を足す）。
 // - 役目：ツシ丸＝システム（ログイン・登録・読み込めないとき・プライバシー）と裏路地の深い話、ゴロ太＝投稿とグルメ、カチ助＝ナビと新着の知らせ。
 // - 実在の動物の名前ではなく、九州の生きものの種類をもとにしたオリジナルの案内人。
 (function () {
@@ -48,8 +49,8 @@
   // 吹き出し1つ。id は WHO の名前、text はセリフ（small: 小さめ）
   function say(id, text, { small = false } = {}) {
     const w = WHO[id];
-    // 絵は設定画をもとにした線画（js/guide-art.js）。読み込めないときは小さなアイコン
-    const face = YT.GuideArt ? YT.GuideArt.svg(id) : YT.Icon ? YT.Icon.svg(id) : '';
+    // 絵は設定画の顔のまわり（js/guide-art.js）。guide-art.js を読めないときは小さな線画のアイコン
+    const face = YT.GuideArt ? YT.GuideArt.html(id) : YT.Icon ? YT.Icon.svg(id) : '';
     return `<div class="guide guide-${id}${small ? ' guide-sm' : ''}">
         <span class="guide-face" title="${esc(w.name)}（${esc(w.role)}）">${face}</span>
         <p class="guide-say"><b class="guide-name">${esc(w.name)}</b>${esc(text)}</p>
@@ -67,8 +68,8 @@
         <p class="eyebrow">Welcome</p>
         <h2 class="pp-title">九州の案内人たち</h2>
         <div class="gw-row">${['tsushimaru', 'gorota', 'kachisuke'].map((id, i) => `
-          <figure class="gw-one" style="--i:${i}">
-            <div class="gw-art">${A ? A.svg(id, { full: true, label: WHO[id].name }) : ''}</div>
+          <figure class="gw-one gw-${id}" style="--i:${i}">
+            <div class="gw-art">${A ? A.html(id, { full: true, label: WHO[id].name }) : ''}</div>
             <figcaption><b>${esc(WHO[id].name)}</b><small>${esc(WHO[id].role)}</small><span>${esc(LINES['welcome' + (i + 1)][1])}</span></figcaption>
           </figure>`).join('')}
         </div>
@@ -86,6 +87,14 @@
     layer.addEventListener('click', (e) => { if (e.target === layer || e.target.closest('[data-gw-close]')) close(); });
     setTimeout(() => { const b = layer.querySelector('[data-gw-close]'); if (b) b.focus({ preventScroll: true }); }, 60);
   }
+
+  // 顔（吹き出し・歓迎の窓の全身）を押すと、ぴょんと跳ねる。動きを減らす端末では CSS が跳ねさせない
+  document.addEventListener('click', (e) => {
+    const f = e.target.closest && e.target.closest('.guide-face, .gw-art');
+    if (!f || f.classList.contains('is-hop')) return;
+    f.classList.add('is-hop');
+    setTimeout(() => f.classList.remove('is-hop'), 650);
+  });
 
   YT.Guides = { say, line, news, welcome, WHO, LINES };
 })();

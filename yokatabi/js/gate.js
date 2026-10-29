@@ -151,6 +151,8 @@
     const box = $('#gate-register');
     box.hidden = false;
     box.innerHTML = registerHtml({ ...stats, ...(Gate.profile || {}) }, edit, reagree);
+    // はじめての登録なら、登録した直後に出す歓迎の窓の全身の絵を先に読んでおく
+    if (!edit && !reagree && YT.GuideArt) YT.GuideArt.preload(true);
     const sync = () => {
       const hc = $('#reg-home-country').value, lc = $('#reg-live-country').value;
       $('#reg-home-pref').hidden = hc !== 'JP';

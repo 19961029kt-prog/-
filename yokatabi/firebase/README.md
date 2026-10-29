@@ -45,7 +45,7 @@ Firestore の Security Rules・Storage の Rules・エミュレーターの設�
 cd yokatabi/firebase
 npm install
 npm test        # ルールのテスト（test/rules.test.mjs・36件）
-npm run e2e     # 画面の通し（test/e2e.mjs・55件。写真は test/fixture-photo.jpg。Auth と Firestore のエミュレーターに index.html?emulator・review.html?emulator をつなぐ）
+npm run e2e     # 画面の通し（test/e2e.mjs・57件。写真は test/fixture-photo.jpg。Auth と Firestore のエミュレーターに index.html?emulator・review.html?emulator をつなぐ）
 ```
 
 - ルールを変えたら必ず `npm test` を通す。新しいコレクションを足すときは、ルールとテストを同時に書く。

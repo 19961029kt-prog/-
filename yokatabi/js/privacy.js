@@ -85,7 +85,7 @@
       ${G ? G.line('privacy') : ''}
       ${SECTIONS.map(([h, items]) => `<section class="pp-sec"><h3>${esc(h)}</h3><ul>${items.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></section>`).join('')}
       <section class="pp-sec"><h3>お問い合わせ</h3><p>${CONTACT ? esc(CONTACT) : 'お問い合わせの窓口は準備中です。決まりしだい、ここに書きます。'}</p></section>
-      <p class="pp-foot">${esc(UPDATED)}・第${VERSION}版。内容を変えたときは、次にひらいたときにお知らせして、もう一度同意をいただきます。この手帖では、生成AIは使っていません。</p>
+      <p class="pp-foot">${esc(UPDATED)}・第${VERSION}版。内容を変えたときは、次にひらいたときにお知らせして、もう一度同意をいただきます。この手帖のしくみ（画面・投稿の審査など）には、生成AIを組み込んでいません。</p>
       <p class="pp-row"><button class="primary-btn btn-sm" data-pp-close data-pp-focus>閉じる</button></p>`;
   }
   const open = () => show(policyHtml(), 'プライバシーポリシー');
