@@ -35,6 +35,16 @@
     return `ログインできませんでした。時間をおいて、もう一度お試しください。${tag}`;
   }
 
+  // 失敗を案内する。App Check が原因のときは、App Check の SDK が返した理由も添える（reCAPTCHA が止められた、など）
+  async function sayFail(e) {
+    let text = failText(e);
+    if (/app-check|internal-error/i.test(((e && e.code) || '') + ((e && e.message) || '')) && YT.Firebase.appCheckReason) {
+      const why = await YT.Firebase.appCheckReason();
+      if (why) text += ` 安全の確認の理由：${why.slice(0, 200)}`;
+    }
+    say(text);
+  }
+
   function el() { return $('#login-gate'); }
   function lock(on) {
     const app = $('#app');
@@ -200,7 +210,7 @@
         await authMod.signInWithEmailLink(auth, email.trim(), location.href);
         localStore('del');
       } catch (e) {
-        say(failText(e));
+        await sayFail(e);
       }
       const clean = new URL(location.href);
       ['apiKey', 'oobCode', 'mode', 'lang', 'continueUrl'].forEach((k) => clean.searchParams.delete(k));
@@ -210,7 +220,7 @@
     if ($('#gate-msg .is-wait')) say('');
     $('#gate-google').addEventListener('click', async () => {
       setBusy(true);
-      try { await authMod.signInWithPopup(auth, new authMod.GoogleAuthProvider()); } catch (e) { say(failText(e)); }
+      try { await authMod.signInWithPopup(auth, new authMod.GoogleAuthProvider()); } catch (e) { await sayFail(e); }
       setBusy(false);
     });
     $('#gate-email-form').addEventListener('submit', async (ev) => {
@@ -222,7 +232,7 @@
         localStore('set', email);
         say('ログイン用のリンクをお送りしました。この端末の、このブラウザでメールのリンクをひらいてください。', true);
       } catch (e) {
-        say(failText(e));
+        await sayFail(e);
       }
       setBusy(false);
     });
