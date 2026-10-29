@@ -17,6 +17,9 @@
     del: (k) => { try { localStorage.removeItem(k); } catch (e) { /* 同上 */ } },
   };
   const stName = (id) => (stations[id] ? `${stations[id]}駅` : id);
+  // 駅ノートの「駅とのつながり」（js/voices.js の BONDS と同じ）
+  const BONDS = { commute: '昔の通学・通勤の記憶', homecoming: '帰省すると立ち寄る場所', everyday: '地元の当たり前の日常', detour: '旅で見つけた寄り道' };
+  const bondText = (v) => BONDS[v] || '';
   const fmt = (ts) => {
     if (!ts || !ts.toDate) return '';
     const d = ts.toDate();
@@ -113,7 +116,7 @@
     const pendRows = pend.docs.sort(byTime).map((d) => {
       const v = d.data();
       return `<li class="lp-item">
-          <p class="lp-item-meta"><span class="chip">${esc(stName(v.stationId))}</span><b>${esc(v.name)}</b>${v.title ? `<small>${esc(v.title)}</small>` : ''}<small>${esc(fmt(v.createdAt))}</small></p>
+          <p class="lp-item-meta"><span class="chip">${esc(stName(v.stationId))}</span><b>${esc(v.name)}</b>${bondText(v.bond) ? `<small>${esc(bondText(v.bond))}</small>` : ''}<small>${esc(fmt(v.createdAt))}</small></p>
           <p class="lp-item-spot">${I('pin')} ${esc(v.spot || '')}</p>
           <p class="lp-item-body">${esc(v.body)}</p>
           <div class="lp-row">
@@ -151,7 +154,7 @@
         if (!snap.exists()) return renderAdmin();
         const v = snap.data();
         const b = fs.writeBatch(db);
-        b.set(fs.doc(db, 'voices', id), { uid: v.uid, stationId: v.stationId, spot: v.spot, body: v.body, name: v.name, title: v.title, consent: v.consent, createdAt: v.createdAt, approvedAt: fs.serverTimestamp(), approvedBy: user.uid });
+        b.set(fs.doc(db, 'voices', id), { uid: v.uid, stationId: v.stationId, spot: v.spot, body: v.body, name: v.name, bond: v.bond, consent: v.consent, createdAt: v.createdAt, approvedAt: fs.serverTimestamp(), approvedBy: user.uid });
         b.delete(fs.doc(db, 'voicesPending', id));
         b.set(fs.doc(db, 'moderationLog', id), { action: 'approve', by: user.uid, at: fs.serverTimestamp() });
         await b.commit();

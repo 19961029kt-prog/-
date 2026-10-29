@@ -1877,3 +1877,44 @@ body.modal-open .dice-fab { opacity: 0; transform: scale(.4); visibility: hidden
 /* 本物の旅人の便り：写真を押すと拡大（大きな写真はそのときだけ読む）。「もっと見る」は一覧の幅いっぱいに */
 .pol-stampimg[data-real-open] { cursor: zoom-in; }
 .lt-real-more { grid-column: 1 / -1; margin: 4px 0 8px; text-align: center; }
+
+/* ---------- 案内人の吹き出し（js/guides.js）：線画の顔と、明朝の一言。駅ノートの余白に書き添えたメモの調子 ---------- */
+.guide { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; margin: 4px 0 8px; text-align: left; }
+.guide-face { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; color: var(--ink); background: var(--paper); box-shadow: inset 0 0 0 1px var(--rule), inset 0 0 0 3px var(--paper), inset 0 0 0 4px var(--brass); }
+.guide-face .ico { width: 34px; height: 34px; vertical-align: 0; }
+.guide-say { position: relative; margin: 2px 0 0; padding: 8px 12px; font-family: var(--font-mincho); font-size: 13.5px; line-height: 1.85; color: var(--ink); background: var(--fiber), var(--paper); box-shadow: var(--frame); }
+.guide-say::before { content: ''; position: absolute; left: -6px; top: 14px; width: 10px; height: 10px; background: var(--paper); border-left: 1px solid var(--rule); border-bottom: 1px solid var(--rule); transform: rotate(45deg); }
+.guide-name { display: block; font-size: 11px; letter-spacing: .12em; color: var(--brass); font-weight: 700; }
+.guide-sm .guide-face { width: 36px; height: 36px; }
+.guide-sm .guide-face .ico { width: 26px; height: 26px; }
+.guide-sm .guide-say { font-size: 12.5px; padding: 6px 10px; }
+.gate-book .guide { margin: 10px 0 14px; }
+
+/* 駅ノートの「駅とのつながり」（4つの選択肢） */
+.voice-form .vf-bond { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; margin: 6px 0 2px; padding: 8px 10px 10px; border: 1px dashed var(--perf); }
+.voice-form .vf-bond legend { padding: 0 4px; font-family: var(--font-mincho); font-weight: 700; font-size: 12.5px; }
+.voice-form .vf-bond label { display: flex; gap: 6px; align-items: center; margin: 0; font-family: var(--font-ui); font-weight: 500; font-size: 12.5px; }
+@media (max-width: 420px) { .voice-form .vf-bond { grid-template-columns: minmax(0, 1fr); } }
+
+/* 登録の同意・退会のリンク */
+.reg-agree { display: flex; gap: 8px; align-items: center; margin: 6px 0 2px; font-size: 13px; }
+.reg-agree .link-btn { font-size: 13px; }
+.gate-reg-leave { margin: 10px 0 0; text-align: right; }
+.link-quiet { color: var(--ink-3); font-size: 11.5px; }
+.gate-note .link-btn { font-size: 11px; margin-left: 4px; }
+
+/* プライバシーポリシー・退会の窓（js/privacy.js）。関所の上にも重ねてひらく */
+.pp-layer { position: fixed; inset: 0; z-index: 10050; display: grid; place-items: center; padding: 16px; background: rgba(30, 24, 20, .58); opacity: 0; transition: opacity .45s var(--ease); touch-action: pan-x pan-y; }
+.pp-layer.is-open { opacity: 1; }
+.pp-box { position: relative; width: min(560px, 100%); max-height: calc(100dvh - 32px); overflow: auto; padding: 26px 20px 18px; text-align: left; background: var(--fiber), var(--ivory); box-shadow: var(--frame), var(--sh-3); user-select: text; -webkit-user-select: text; }
+.pp-title { margin: 2px 0 10px; font-family: var(--font-mincho); font-size: 20px; letter-spacing: .08em; }
+.pp-sec { padding: 10px 0; border-top: 1px dashed var(--perf); }
+.pp-sec h3 { margin: 0 0 6px; font-family: var(--font-mincho); font-size: 14.5px; }
+.pp-sec ul, .pp-list { margin: 0; padding-left: 1.3em; font-size: 13px; line-height: 1.85; list-style: disc; }
+.pp-sec li, .pp-list li { margin: 2px 0; }
+.pp-sec li::marker, .pp-list li::marker { color: var(--brass); }
+.pp-sec p { margin: 0; font-size: 13px; line-height: 1.85; }
+.pp-foot { margin: 10px 0 0; font-size: 11px; line-height: 1.8; color: var(--ink-3); }
+.pp-warn { margin: 10px 0 0; font-size: 12.5px; color: var(--akane); }
+.pp-row { display: flex; gap: 10px; justify-content: flex-end; margin: 14px 0 0; }
+.pp-danger { background: var(--akane); border-color: var(--akane); }

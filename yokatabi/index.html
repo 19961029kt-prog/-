@@ -67,6 +67,7 @@
       <p class="eyebrow gate-eyebrow">Kyushu Routes &amp; Roots</p>
       <h1 id="gate-title" class="gate-title">九州よりみちダイス</h1>
       <p class="gate-lead">九州の駅をめぐる旅の手帖へ、ようこそ。<br>この旅は、地元の人と旅の人がつながる手帖です。ログインして、旅をはじめてください。</p>
+      <div id="gate-guide"></div>
       <div id="gate-actions" class="gate-actions" hidden>
         <button id="gate-google" class="primary-btn gate-btn">Google でログイン</button>
         <form id="gate-email-form" class="gate-email">
@@ -76,7 +77,7 @@
       </div>
       <div id="gate-register" hidden></div>
       <div id="gate-msg" aria-live="polite"><p class="gate-msg is-wait">準備しています…</p></div>
-      <p class="gate-note">ログインに使うメールアドレスは、ログインと「地元の人の声」の受付のためだけに使い、画面にも手帖にも出しません。遊んだ記録は、この端末と、本人だけが読めるデータベースの場所に保存され、別の端末でも続きから遊べます。この手帖では、生成AIは使っていません。</p>
+      <p class="gate-note">メールアドレスはログインのしくみ（Firebase Authentication）の中だけで使い、このゲームのデータベースにも画面にも出しません。遊んだ記録は、この端末と、本人だけが読めるデータベースの場所に保存され、別の端末でも続きから遊べます。この手帖では、生成AIは使っていません。<button type="button" class="link-btn" data-privacy-open>プライバシーポリシー</button></p>
     </div>
   </div>
   <!-- 画面はスクロールしない3層：上の固定バー（44px の帯＋68px の車窓）／真ん中の地図（ほかのタブは中だけスクロール）／下のタブ（60px）。
@@ -303,6 +304,8 @@
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase.js"></script>
   <script src="js/places.js"></script>
+  <script src="js/guides.js"></script>
+  <script src="js/privacy.js"></script>
   <script src="js/cloud.js"></script>
   <script src="js/gate.js"></script>
   <script src="js/voices.js"></script>
