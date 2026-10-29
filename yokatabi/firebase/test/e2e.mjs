@@ -85,6 +85,17 @@ try {
   await a.goto(`${ORIGIN}/index.html?emulator`);
   await a.waitForSelector('#gate-actions:not([hidden])');
   check(await a.evaluate(() => document.getElementById('app').inert), 'ログインしないと関所が出て、盤面はさわれない');
+  // Google のログイン：窓を開く部品（popupRedirectResolver）を渡し忘れると、押すたびに auth/argument-error になる
+  // （この開発環境は apis.google.com に出られないので窓そのものは開かない。部品があるかだけを確かめる）
+  const before = errors.length;
+  const popup = a.context().waitForEvent('page', { timeout: 4000 }).catch(() => null);
+  await a.click('#gate-google');
+  const pw = await popup;
+  if (pw) await pw.close();
+  await a.waitForTimeout(500);
+  check(!/argument-error/.test(await a.textContent('#gate-msg')), 'Google でログインを押しても、設定の不足（argument-error）にならない');
+  await a.evaluate(() => (document.getElementById('gate-msg').innerHTML = ''));
+  errors.length = before; // 窓が開けなかったことの記録（この環境だけのもの）は、画面のエラーに数えない
 
   // 2. はじめてのログイン → 登録（年代・性別・出身地・現在の所在地）
   await emailLogin(a, 'index.html', 'kuma@example.com');
