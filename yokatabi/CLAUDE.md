@@ -43,6 +43,7 @@
   - 本物の便りへの素敵ねは1人1枚1回（`postcards/{id}/likes/{uid}` と数をルールが突き合わせる）。**クラフト資金には入れない**（つり合いを崩さないため。資金に入るのは架空の旅人の便りへの素敵ねだけ）。
 - **運営の審査**：`review.html`（`js/review.js`・`css/review.css`。検索に出さない）。運営（`admins/{uid}`。Firebase コンソールでしか作れない）だけが、審査待ちの承認（文面そのまま）・却下（理由つき）・掲載の取りやめをできる。手帖の「ログイン中」の行に、運営にだけ「運営の審査」が出る。
 - **ルール**（`firebase/firestore.rules`）：投稿・登録・記録はメール確認済み（`email_verified`）だけ。登録は選択肢の値だけ・日本は都道府県が必須で海外は空・登録日は変えられず本人は消せない。投稿は26駅だけ・名前は登録のとおり・同意が必要・連投は3分あける（推定の値）・投稿時刻は「今」以外にできない。承認は文面・スポット名・名前・駅を変えられず、審査の記録（`moderationLog`）は消せない。書いていないコレクションはすべて禁止。
+- **Google のログイン**は `signInWithPopup`。`js/firebase.js` の `initializeAuth` には `popupRedirectResolver: browserPopupRedirectResolver` を必ず渡す（渡さないと押すたびに `auth/argument-error`。2026年10月の公開直後にこれで Google ログインが通らなかった）。ログインに失敗したときは、決まった言葉のあとに `auth/…` の番号を出す（`gate.js` の `failText`）。
 - SDK：`js/vendor/firebase-13.0.0/`（`node tools/vendor-firebase.mjs` が npm の firebase から写す。手で編集しない。Google の CDN からは読まない）。`js/firebase.js` の `YT.Firebase.boot()` が必要になったときだけ `import()` し、App Check（reCAPTCHA Enterprise）を Firestore・Authentication より先に起動する。設定値は `js/firebase-config.js`（アナリティクスは使わない）。
 - 手元（localhost）では、何も付けなければどこにもつながない。`?emulator` でローカルのエミュレーター（demo-qtrip）、`?live` で本番（App Check のデバッグ用トークンをコンソールに登録したときだけ通る）。
 - `review.html` には CSP（読み込み先を自分・フォント・Firebase と reCAPTCHA の窓口に絞る）を `<meta>` で入れている。本番で読み込みが CSP に止められたら、DevTools のコンソールで止められた先を確かめて足す（推定で書いた一覧なので）。
@@ -455,6 +456,7 @@ python3 -m http.server 8000     # → http://localhost:8000/
   bash yokatabi/tools/publish-site.sh /tmp/q-trip.github.io   # 検証 → tools/ と CLAUDE.md を除いて並べる
   cd /tmp/q-trip.github.io && git add -A && git commit -m "…" && git push origin main
   ```
+- `publish-site.sh` は、公開する `index.html`・`review.html` の js・css の URL に版の印（`?v=<コミット>`）を付ける（ブラウザに残った古い js と新しい html が混ざらないように。2026年10月、古い gate.js が残ってログインの不具合の確認が遅れたため）。
 - `robots.txt`・`sitemap.xml` は公開URLのサイトの一番上に置かれる前提で書いてある。URL を変えるときは、これと `<head>` の URL をまとめて直す。
 - **旧URL（`https://19961029kt-prog.github.io/-/yokatabi/`）**：リポジトリ直下の `.github/workflows/deploy-pages.yml` が、`node yokatabi/tools/build-redirect.mjs https://q-trip.github.io/ dist/yokatabi` で転送ページだけを置く。転送ページは遊んだ記録を URL の # に載せて渡し、`js/store.js` が受け取る（新しい URL で先に進んでいた場合は、進んでいるほうを残す）。
 

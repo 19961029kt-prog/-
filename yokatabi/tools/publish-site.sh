@@ -13,5 +13,10 @@ dest="${1:?使い方: bash yokatabi/tools/publish-site.sh <公開用リポジト
 find "$dest" -mindepth 1 -maxdepth 1 ! -name .git ! -name CNAME -exec rm -rf {} +
 cp -r "$here"/. "$dest"/
 rm -rf "$dest/tools" "$dest/CLAUDE.md" "$dest/firebase" # firebase/ はルールとテスト（node_modules を含む）なので公開しない
+# 新しい版を出したあと、ブラウザに残った古い js・css と新しい html が混ざらないよう、読み込みの URL に版の印を付ける
+stamp="$(cd "$here" && git rev-parse --short HEAD 2>/dev/null || date +%s)"
+for f in "$dest/index.html" "$dest/review.html"; do
+  [ -f "$f" ] && sed -i -E "s#(src=\"js/[^\"?]+\.js)\"#\1?v=$stamp\"#g; s#(href=\"css/[^\"?]+\.css)\"#\1?v=$stamp\"#g" "$f"
+done
 touch "$dest/.nojekyll" # Jekyll の変換を通さず、ファイルをそのまま配信する
 echo "公開用のファイルを並べました: $dest"

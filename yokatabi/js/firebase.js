@@ -46,7 +46,12 @@
     return booting.then(async (fb) => {
       if (fb.auth) return fb;
       const authMod = await import(base() + 'firebase-auth.js');
-      const a = authMod.initializeAuth(fb.app, { persistence: authMod.browserLocalPersistence });
+      // initializeAuth は必要な部品だけを入れる。Google のログインの窓（signInWithPopup）を使うので、窓を開く部品も必ず渡す
+      // （渡さないと Google でのログインが必ず失敗する）。ログインの記録は IndexedDB を先に、使えなければ localStorage に
+      const a = authMod.initializeAuth(fb.app, {
+        persistence: [authMod.indexedDBLocalPersistence, authMod.browserLocalPersistence],
+        popupRedirectResolver: authMod.browserPopupRedirectResolver,
+      });
       if (emulator) authMod.connectAuthEmulator(a, 'http://127.0.0.1:9099', { disableWarnings: true });
       a.languageCode = 'ja';
       return Object.assign(fb, { authMod, auth: a });
