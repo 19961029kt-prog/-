@@ -1954,3 +1954,8 @@ body.modal-open .dice-fab { opacity: 0; transform: scale(.4); visibility: hidden
 }
 .guide-news .guide-say { background: var(--fiber), var(--gold-3); }
 .lt-grid > .lt-empty { grid-column: 1 / -1; }
+.gart .w { fill: #FFFDF8; }
+.gart .blush { fill: #E9A296; stroke: none; opacity: .55; }
+.gart .kb { fill: #6E5D4F; }
+.gart .pl { stroke: #6E5D4F; }
+.gart .cap { fill: #34405A; }
