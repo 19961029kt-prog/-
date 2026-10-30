@@ -126,6 +126,7 @@ body{font-family:"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;background:#
 <!-- HOME -->
 <div id="s-home" class="screen">
   <div id="home-userbar"></div>
+  <div id="home-buddies"></div>
   <div id="home-resume"></div>
   <div id="home-empty"></div>
   <div class="section-label">出題モード</div>
@@ -1928,6 +1929,7 @@ async function renderHome() {
       </div>
     </div>`;
   document.getElementById('flag-count').textContent = flaggedQuestions().length;
+  renderBuddies();
   document.getElementById('home-empty').innerHTML = allQuestions().length ? '' :
     '<div class="notice">問題データがまだ収録されていません。過去問データを追加すると出題できるようになります。</div>';
   const resumeArea = document.getElementById('home-resume');
@@ -2549,6 +2551,42 @@ function studyTimeHtml() {
     ${days.map((d,i) => `<div class="study-bar"><span class="lbl">${d.getMonth()+1}/${d.getDate()}(${youbi[d.getDay()]})</span><span class="bar"><span style="width:${vals[i]/max*100}%"></span></span><span class="val">${formatDuration(vals[i])}</span></div>`).join('')}
     <div style="font-size:11px;color:#999;margin-top:.4rem">アプリを画面に表示して操作できる状態の時間だけを数えています（バックグラウンドや他のアプリを使っている間は数えません）</div>
   </div>`;
+}
+
+/* =====================================================================================
+ * 学習仲間：同じグループのメンバーはトップ画面でお互いの学習時間（累計・今日・直近7日間）を確認できる。
+ * 相手の users/{ニックネーム}/gijutsushi_stats/time を読み取って表示するだけで、書き込みはしない。
+ * ===================================================================================== */
+const STUDY_GROUPS = [ ['かき', 'ながしま'] ];
+function buddiesOf(nick) {
+  const g = STUDY_GROUPS.find(g => g.includes(nick));
+  return g ? g.filter(n => n !== nick) : [];
+}
+async function renderBuddies() {
+  const area = document.getElementById('home-buddies');
+  const buddies = buddiesOf(currentUser);
+  if(!buddies.length) { area.innerHTML = ''; return; }
+  const rows = await Promise.all(buddies.map(async nick => {
+    try {
+      const doc = await db.collection('users').doc(nick).collection('gijutsushi_stats').doc('time').get();
+      const d = doc.exists ? doc.data() : {};
+      const daily = d.daily || {};
+      let week = 0;
+      for(let i=0; i<7; i++) { const x = new Date(); x.setDate(x.getDate()-i); week += daily[dayKey(x)] || 0; }
+      return `<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:14px;padding:.25rem 0">
+          <span>👤 ${esc(nick)} さん</span>
+          <span>累計 <strong>${formatDuration(d.totalSec)}</strong>　今日 ${formatDuration(daily[dayKey()])}　直近7日 ${formatDuration(week)}</span>
+        </div>`;
+    } catch(e) {
+      console.error('学習仲間の学習時間の取得に失敗しました', e);
+      return `<div style="font-size:14px;padding:.25rem 0">👤 ${esc(nick)} さん：取得できませんでした</div>`;
+    }
+  }));
+  if(buddiesOf(currentUser).join() !== buddies.join()) return;   // 取得中にサインアウト等で利用者が変わった場合
+  area.innerHTML = `<div class="card" style="cursor:default">
+      <div class="card-title">🤝 学習仲間の学習時間</div>
+      ${rows.join('')}
+    </div>`;
 }
 
 /* ===== 起動時：匿名サインインを済ませ、前回のニックネームだけ入力欄に補完する ===== */
