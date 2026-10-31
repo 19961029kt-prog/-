@@ -62,6 +62,12 @@ async function register(page, { name, home = ['JP', '43'], live = null, agree = 
   } else await page.check('#reg-same');
   if (agree) await page.check('#reg-agree');
 }
+// はじめての登録のあとに出る、3匹のあいさつの窓を閉じる
+async function closeWelcome(page) {
+  await page.waitForSelector('.gw-layer.is-open [data-gw-close]', { timeout: 8000 });
+  await page.click('.gw-layer [data-gw-close]');
+  await page.waitForSelector('.gw-layer', { state: 'detached', timeout: 5000 });
+}
 const gateGone = (page) => page.waitForSelector('#login-gate', { state: 'hidden', timeout: 20000 });
 const uidOf = (page) => page.evaluate(() => YT.Gate.user && YT.Gate.user.uid);
 
@@ -86,6 +92,16 @@ try {
   await a.goto(`${ORIGIN}/index.html?emulator`);
   await a.waitForSelector('#gate-actions:not([hidden])');
   check(await a.evaluate(() => document.getElementById('app').inert), 'ログインしないと関所が出て、盤面はさわれない');
+  // 「視差効果を減らす」の端末では、案内人を動かさない（絵はそのまま出す）
+  {
+    const c = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
+    const p = await c.newPage();
+    await p.goto(`${ORIGIN}/index.html?emulator`);
+    await p.waitForSelector('#gate-guide .guide-face img');
+    const still = await p.$eval('#gate-guide .guide-face img', (x) => x.decode().then(() => [x.naturalWidth, getComputedStyle(x).animationName, getComputedStyle(x.closest('.gart')).animationName], () => [0]));
+    check(still[0] > 0 && still[1] === 'none' && still[2] === 'none', '動きを減らす端末では、案内人は動かない');
+    await c.close();
+  }
   // Google のログイン：窓を開く部品（popupRedirectResolver）を渡し忘れると、押すたびに auth/argument-error になる
   // （この開発環境は apis.google.com に出られないので窓そのものは開かない。部品があるかだけを確かめる）
   const before = errors.length;
@@ -103,6 +119,8 @@ try {
   await a.waitForSelector('#gate-reg');
   check(await a.evaluate(() => document.getElementById('app').inert), 'はじめてのログインでは、登録するまで遊べない');
   check(/他の旅人には見えないように俺がしっかり守るニャ/.test(await a.textContent('#gate-reg')), '登録フォームで、ツシ丸が年代や性別を守ると案内する');
+  const face = await a.$eval('#gate-reg .guide-face img', (x) => x.decode().then(() => [x.naturalWidth, x.currentSrc], () => [0, x.currentSrc]));
+  check(face[0] === 168 && /img\/guides\/tsushimaru-face\.webp/.test(face[1]), '吹き出しの顔は、設定画から切り出したツシ丸の絵');
   await register(a, { name: 'くまの旅人', home: ['JP', '43'], live: ['KR'], agree: false });
   check(await a.isHidden('#reg-live-pref'), '現在の所在地が海外なら、都道府県は出さない');
   await a.selectOption('#reg-live-country', 'JP');
@@ -120,6 +138,13 @@ try {
   if (OUT) await a.screenshot({ path: `${OUT}/register.png`, fullPage: true });
   await a.click('#gate-reg button[type="submit"]');
   await gateGone(a);
+  await a.waitForSelector('.gw-layer.is-open .gw-one', { timeout: 8000 });
+  const gw = await a.textContent('.gw-layer');
+  // 絵は設定画の切り抜き（img/guides/）。3枚とも読めて、ちゃんと描けること
+  const arts = await a.$$eval('.gw-layer .gart img', (xs) => Promise.all(xs.map((x) => x.decode().then(() => x.naturalWidth, () => 0))));
+  check(/ツシ丸/.test(gw) && /ゴロ太/.test(gw) && /カチ助/.test(gw) && arts.length === 3 && arts.every((w) => w > 0), 'はじめての登録のあと、3匹の案内人があいさつする（設定画の全身）');
+  if (OUT) { await a.waitForTimeout(1000); await a.screenshot({ path: `${OUT}/welcome.png` }); }
+  await closeWelcome(a);
   const uidA = await uidOf(a);
   const prof = await ownerGet(`profiles/${uidA}`);
   const stat = await ownerGet(`privateStats/${uidA}`);
@@ -154,6 +179,7 @@ try {
   await register(b, { name: '湯の町の常連', home: ['KR'] });
   await b.click('#gate-reg button[type="submit"]');
   await gateGone(b);
+  await closeWelcome(b);
 
   // 6. 遊びながら「地元の人」としておすすめスポットを紹介する
   const openTecho = async (p) => {
@@ -161,7 +187,7 @@ try {
     await gateGone(p);
     await p.waitForSelector('#btn-open-current');
     await p.click('#btn-open-current');
-    await p.waitForSelector('[data-voices] .voices-body :is(ul, .voices-empty:not(:has-text("読み込んでいます")))', { timeout: 15000 });
+    await p.waitForSelector('[data-voices] .voices-body :is(ul, .guide, .voices-empty:not(:has-text("めくっています")))', { timeout: 15000 });
   };
   await openTecho(a);
   const st = await a.evaluate(() => YT.Store.get().currentStationId);
@@ -184,6 +210,7 @@ try {
   check(true, '遊ぶ人が寄り道手帖からおすすめを紹介できる（審査待ちへ・ゴロ太がお礼を言う）');
   await openTecho(a);
   check(!/坂の上の共同湯/.test(await a.textContent('[data-voices]')), '承認前は寄り道手帖に出ない');
+  check(/まっさらムツ/.test(await a.textContent('[data-voices]')), '駅ノートが空のときは、ゴロ太が最初のページをお願いする');
 
   // 7. 運営の審査（review.html）：運営でない人は審査できない → 運営にすると承認できる
   const adm = await ctx(false);
@@ -204,9 +231,10 @@ try {
   await openTecho(a);
   const item = await a.$eval('[data-voices] .voice', (e) => ({ spot: e.querySelector('.voice-spot').textContent.trim(), body: e.querySelector('.voice-body').textContent, by: e.querySelector('.voice-by').textContent }));
   check(item.spot === '坂の上の共同湯' && item.body === BODY && /くまの旅人/.test(item.by) && /帰省すると立ち寄る場所/.test(item.by), '承認したおすすめが、スポット名・文面・名前・つながりのまま出る');
-  check((await a.$$('[data-voices] img')).length === 0 && !(await a.evaluate(() => window.__xss)), '投稿の中のタグは画面で動かない');
+  check((await a.$$('[data-voices] img:not(.gart > img)')).length === 0 && !(await a.evaluate(() => window.__xss)), '投稿の中のタグは画面で動かない'); // 案内人の絵（.gart）は自前の img
   check(!/30s|noanswer|熊本県/.test(await a.textContent('[data-voices]')), '年代・性別・出身地は画面に出ない');
   check(/いつでもこの駅に帰ってこられるカチ/.test(await a.textContent('[data-voices]')), '駅ノートの欄で、カチ助が案内する');
+  check(/新しく駅ノートが1件届いてたカチ/.test(await a.textContent('[data-voices]')), '前に見たあとで新しく載ったノートを、カチ助が知らせる');
   if (OUT) { await a.evaluate(() => document.querySelector('[data-voices]').scrollIntoView()); await a.screenshot({ path: `${OUT}/techo-voices.png` }); }
 
   // 9. 登録内容を直せる
@@ -226,6 +254,8 @@ try {
   const PHOTO = join(dirname(fileURLToPath(import.meta.url)), 'fixture-photo.jpg');
   await a.click('[data-tab="letters"]');
   await a.waitForSelector('[data-pc-station]');
+  check(/まだ一枚も届いてないカチ/.test(await a.textContent('.lt-map, body')), '自分の旅の便りが空のときは、カチ助が声をかける');
+  check(/甘い醤油の匂い/.test(await a.getAttribute('[data-pc-memo]', 'placeholder')), '旅の便りの一言の例文も、九州の日常の空気');
   await a.selectOption('[data-pc-station]', 'hakata');
   await a.setInputFiles('[data-pc-file]', PHOTO);
   await a.waitForSelector('[data-pc-submit]:not([disabled])');

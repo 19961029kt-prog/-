@@ -1574,7 +1574,7 @@
 
   function savedListHtml() {
     const list = Store.getItineraries();
-    if (!list.length) return '<p class="saved-empty">まだ保存した旅しおりはありません。気に入ったコースは「しおりに保存」で残せます。</p>';
+    if (!list.length) return `<div class="saved-empty">${YT.Guides ? YT.Guides.line('emptyTrip', { small: true }) : ''}<p>まだ保存した旅しおりはありません。気に入ったコースは「しおりに保存」で残せます。</p></div>`;
     return list
       .map((it) => {
         const names = [...it.seq.day1, ...it.seq.day2].map((id) => (D.byId[id] ? D.byId[id].name : id));

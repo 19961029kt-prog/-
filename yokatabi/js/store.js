@@ -52,6 +52,8 @@
       peeks: {},
       // 停車した駅で「ある旅人から届いた記憶」を受け取った便り { 旅人のポストカードID: ISO日時 }（1通につき1回）
       memories: {},
+      // 寄り道手帖で、駅ごとに前に見た駅ノート・旅の便りの時刻（ミリ秒）。カチ助の新着の知らせに使う
+      seen: {},      // { stationId: { notes: ms, cards: ms } }
       prefaceSeen: false, // 初回の表紙（巻頭言）をひらいたか
       lang: 'ja',         // 表示の言語（'ja'／'en'。画面の枠と駅名だけ切り替える）
       // ---- ログインと記録の保存（js/cloud.js） ----
@@ -237,6 +239,15 @@
       return true;
     },
     hasLiked: (cardId) => !!state.liked[cardId],
+    // 新着の知らせ（カチ助）：前に見た時刻を読む・新しくする（kind は notes か cards）
+    seenOf: (id) => (state.seen && state.seen[id]) || {},
+    markSeen(id, kind, ms) {
+      if (!state.seen) state.seen = {};
+      const cur = state.seen[id] || {};
+      if ((cur[kind] || 0) >= ms) return;
+      state.seen[id] = { ...cur, [kind]: ms };
+      save();
+    },
     // シェアカードの発信ボーナス：今日まだなら記録して true
     claimShareDay(today) {
       if (state.shareDays.includes(today)) return false;

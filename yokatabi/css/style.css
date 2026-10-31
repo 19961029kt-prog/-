@@ -1878,14 +1878,33 @@ body.modal-open .dice-fab { opacity: 0; transform: scale(.4); visibility: hidden
 .pol-stampimg[data-real-open] { cursor: zoom-in; }
 .lt-real-more { grid-column: 1 / -1; margin: 4px 0 8px; text-align: center; }
 
-/* ---------- 案内人の吹き出し（js/guides.js）：線画の顔と、明朝の一言。駅ノートの余白に書き添えたメモの調子 ---------- */
+/* ---------- 案内人の吹き出し（js/guides.js）：設定画の顔と、明朝の一言。駅ノートの余白に書き添えたメモの調子 ---------- */
 .guide { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; margin: 4px 0 8px; text-align: left; }
-.guide-face { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; color: var(--ink); background: var(--paper); box-shadow: inset 0 0 0 1px var(--rule), inset 0 0 0 3px var(--paper), inset 0 0 0 4px var(--brass); }
+.guide-face { position: relative; width: 54px; height: 54px; display: grid; place-items: center; overflow: hidden; border-radius: 50%; color: var(--ink); background: var(--paper); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+/* 真鍮の細い輪と紙の白の縁。絵の上に重ねる（inset の影は中身の下に描かれてしまうので） */
+.guide-face::after { content: ''; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; box-shadow: inset 0 0 0 1px var(--rule), inset 0 0 0 3px var(--paper), inset 0 0 0 4px var(--brass); }
 .guide-face .ico { width: 34px; height: 34px; vertical-align: 0; }
+.guide-face .gart, .guide-face .gart img { display: block; width: 100%; height: 100%; }
+/* 吹き出しが出るとき、顔が輪の下からひょっこりのぞき、一言があとから書き添えられる */
+.guide-face .gart img { animation: gart-peek .75s var(--ease) both; }
+.guide-say { animation: guide-say .55s var(--ease) .18s both; }
+/* のぞいたあとも、それぞれの癖で小さく動きつづける：ツシ丸は首をかしげ、ゴロ太は息をするように上下し、カチ助は羽ばたいて浮く */
+.guide-face .gart-tsushimaru { transform-origin: 50% 92%; animation: gart-tilt 3.8s ease-in-out .9s infinite alternate; }
+.guide-face .gart-gorota { animation: gart-bob 1.7s ease-in-out .9s infinite alternate; }
+.guide-face .gart-kachisuke { transform-origin: 50% 80%; animation: gart-flutter 2.3s ease-in-out .9s infinite alternate; }
+/* 顔を押すと、輪ごとぴょんと跳ねる（js/guides.js） */
+.guide-face.is-hop { animation: face-hop .6s var(--ease); }
+@keyframes gart-peek { from { transform: translateY(62%); } to { transform: none; } }
+@keyframes guide-say { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+@keyframes gart-tilt { from { transform: rotate(-3deg); } to { transform: rotate(3.5deg); } }
+@keyframes gart-bob { from { transform: translateY(0); } to { transform: translateY(-5%); } }
+@keyframes gart-flutter { from { transform: translateY(0) rotate(-2deg); } to { transform: translateY(-6%) rotate(2deg); } }
+@keyframes face-hop { 0% { transform: none; } 38% { transform: translateY(-9px); } 100% { transform: none; } }
+@keyframes gart-hop { 0% { transform: none; } 38% { transform: translateY(-16%); } 100% { transform: none; } }
 .guide-say { position: relative; margin: 2px 0 0; padding: 8px 12px; font-family: var(--font-mincho); font-size: 13.5px; line-height: 1.85; color: var(--ink); background: var(--fiber), var(--paper); box-shadow: var(--frame); }
 .guide-say::before { content: ''; position: absolute; left: -6px; top: 14px; width: 10px; height: 10px; background: var(--paper); border-left: 1px solid var(--rule); border-bottom: 1px solid var(--rule); transform: rotate(45deg); }
 .guide-name { display: block; font-size: 11px; letter-spacing: .12em; color: var(--brass); font-weight: 700; }
-.guide-sm .guide-face { width: 36px; height: 36px; }
+.guide-sm .guide-face { width: 42px; height: 42px; }
 .guide-sm .guide-face .ico { width: 26px; height: 26px; }
 .guide-sm .guide-say { font-size: 12.5px; padding: 6px 10px; }
 .gate-book .guide { margin: 10px 0 14px; }
@@ -1918,3 +1937,45 @@ body.modal-open .dice-fab { opacity: 0; transform: scale(.4); visibility: hidden
 .pp-warn { margin: 10px 0 0; font-size: 12.5px; color: var(--akane); }
 .pp-row { display: flex; gap: 10px; justify-content: flex-end; margin: 14px 0 0; }
 .pp-danger { background: var(--akane); border-color: var(--akane); }
+
+/* 案内人の絵（js/guide-art.js）：運営の設定画の白い背景だけを透明にした絵（WebP）。にじまないよう、絵は縮めて使うだけにする */
+.gart { display: block; }
+.gart img { display: block; max-width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
+
+/* はじめて登録したときの歓迎の窓（3匹の全身） */
+.gw-box { width: min(760px, 100%); text-align: center; }
+.gw-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 8px 0 4px; }
+.gw-one { margin: 0; display: grid; gap: 6px; justify-items: center; opacity: 0; transform: translateY(10px); transition: opacity .6s var(--ease), transform .6s var(--ease); transition-delay: calc(var(--i) * .18s + .1s); }
+.gw-layer.is-open .gw-one { opacity: 1; transform: none; }
+/* 全身は、設定画どうしと同じ縮尺で並べる（いちばん背の高いツシ丸の 361px を --gw-h に。ゴロ太は少し小さい）。足もとに淡い影 */
+.gw-art { --gw-h: 156px; position: relative; width: 100%; height: var(--gw-h); display: flex; align-items: flex-end; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.gw-art::after { content: ''; position: absolute; left: 50%; bottom: -4px; width: 58%; height: 10px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(closest-side, rgba(44, 37, 35, .2), rgba(44, 37, 35, 0)); z-index: 0; }
+.gw-art .gart { position: relative; z-index: 1; width: calc(var(--gw-h) * var(--w, .78)); max-width: 100%; transform-origin: 50% 100%; }
+.gw-art .gart img { width: 100%; }
+/* 窓がひらいたあと、それぞれの歩き方で動く：ツシ丸は地図を持ってゆらゆら、ゴロ太は干潟の上でぴょこぴょこ跳ね、
+   カチ助は羽を広げてふわふわ浮く（跳ねる・浮くときは足もとの影も小さくなる） */
+.gw-layer.is-open .gart-tsushimaru { animation: gw-sway 4.2s ease-in-out 1.1s infinite alternate; }
+.gw-layer.is-open .gart-gorota { animation: gw-hop 1.9s ease-in-out 1.2s infinite; }
+.gw-layer.is-open .gw-gorota .gw-art::after { animation: gw-hop-shadow 1.9s ease-in-out 1.2s infinite; }
+.gw-layer.is-open .gart-kachisuke { animation: gw-float 2.6s ease-in-out 1.4s infinite alternate; }
+.gw-layer.is-open .gw-kachisuke .gw-art::after { animation: gw-shadow 2.6s ease-in-out 1.4s infinite alternate; }
+.gw-art.is-hop .gart { animation: gart-hop .6s var(--ease); }
+@keyframes gw-sway { from { transform: rotate(-1.8deg); } to { transform: rotate(1.8deg); } }
+@keyframes gw-hop { 0%, 60%, 100% { transform: none; } 28% { transform: translateY(-12px) rotate(-3deg); } }
+@keyframes gw-hop-shadow { 0%, 60%, 100% { transform: translateX(-50%) scale(1); opacity: 1; } 28% { transform: translateX(-50%) scale(.72); opacity: .6; } }
+@keyframes gw-float { from { transform: translateY(0) rotate(-1.2deg); } to { transform: translateY(-9px) rotate(1.2deg); } }
+@keyframes gw-shadow { from { transform: translateX(-50%) scale(1); opacity: 1; } to { transform: translateX(-50%) scale(.8); opacity: .65; } }
+@media (prefers-reduced-motion: reduce) {
+  .guide-face .gart, .guide-face .gart img, .guide-say, .guide-face.is-hop, .gw-art .gart, .gw-art::after { animation: none !important; }
+}
+.gw-one figcaption { display: grid; gap: 2px; font-size: 12.5px; line-height: 1.75; }
+.gw-one figcaption b { font-family: var(--font-mincho); font-size: 16px; letter-spacing: .12em; }
+.gw-one figcaption small { color: var(--brass); font-size: 10.5px; letter-spacing: .06em; }
+.gw-one figcaption span { font-family: var(--font-mincho); text-align: left; padding: 6px 8px; background: var(--paper); box-shadow: var(--frame); }
+@media (max-width: 560px) {
+  .gw-row { grid-template-columns: minmax(0, 1fr); }
+  .gw-one { grid-template-columns: 90px minmax(0, 1fr); align-items: center; text-align: left; }
+  .gw-art { --gw-h: 104px; }
+}
+.guide-news .guide-say { background: var(--fiber), var(--gold-3); }
+.lt-grid > .lt-empty { grid-column: 1 / -1; }

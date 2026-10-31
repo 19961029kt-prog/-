@@ -68,12 +68,17 @@
     try {
       const list = await load(id);
       if (!sec.isConnected) return;
+      // カチ助の新着の知らせ：前に見たあとで新しく載ったノートを数える（はじめて見る駅は数えない）
+      const last = YT.Store ? YT.Store.seenOf(id).notes : 0;
+      const times = list.map((v) => (v.approvedAt ? v.approvedAt.toMillis() : 0));
+      const fresh = last ? times.filter((t) => t > last).length : 0;
+      if (YT.Store) YT.Store.markSeen(id, 'notes', Math.max(Date.now(), ...times));
       body.innerHTML = list.length
-        ? `<ul class="voices-list">${list.map(itemHtml).join('')}</ul>`
-        : '<p class="voices-empty">この駅のノートは、まだ白いページです。この町を知っている方は、あの頃の景色を書きのこしてください。</p>';
+        ? `${fresh && G() ? G().news({ notes: fresh }) : ''}<ul class="voices-list">${list.map(itemHtml).join('')}</ul>`
+        : G() ? G().line(canSend() ? 'emptyNote' : 'emptyNoteGuest', { small: true }) : '<p class="voices-empty">この駅のノートは、まだ白いページです。</p>';
     } catch (e) {
       if (!sec.isConnected) return;
-      body.innerHTML = '<p class="voices-empty">いまは駅ノートをひらけません。通信のよいところで、もう一度ひらいてください。</p>';
+      body.innerHTML = `${G() ? G().line('offline', { small: true }) : ''}<p class="voices-empty">いまは駅ノートをひらけません。通信のよいところで、もう一度ひらいてください。</p>`;
     }
   }
 

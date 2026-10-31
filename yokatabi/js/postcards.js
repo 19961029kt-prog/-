@@ -222,7 +222,7 @@
               <span>${I('camera')} ${form.url ? '写真を選び直す' : '写真を選ぶ（ドラッグ＆ドロップもできます）'}</span>
             </label>
             <label class="lt-label">ひとこと<span class="lt-count" data-pc-count>${[...form.memo].length}/60</span>
-              <textarea data-pc-memo maxlength="60" rows="2" placeholder="湯けむりの向こうに、夕焼けが…">${esc(form.memo)}</textarea></label>
+              <textarea data-pc-memo maxlength="60" rows="2" placeholder="例：改札を出たら、甘い醤油の匂いがした">${esc(form.memo)}</textarea></label>
             ${realReady() ? `<label class="lt-share"><input type="checkbox" data-pc-share ${form.share === false ? '' : 'checked'}> ほかの旅人にも見せる（ログインした旅人の「旅人たちのポストカード」と寄り道手帖に出ます）</label>` : ''}
             <button class="primary-btn lt-submit" data-pc-submit ${form.file ? '' : 'disabled'}>${I('postcard')} この景色を、次の旅人の手帖へ託す<small>${has ? `${esc(s.name)}駅の1枚を差し替え` : `${esc(s.name)}駅へ投函・地域発信ボーナス +${api.yen(C().postBonus)}`}</small></button>
             <p class="lt-pass">あなたの1枚が、誰かの次の旅の行き先になります</p>
@@ -387,7 +387,7 @@
             <div class="cam-ctrl pm-cam"><button class="cam-btn" data-pm-cam="all" title="九州全体を一望">${I('kyushu')}<span class="cam-text">全体</span></button>
               <span class="cam-zoom-row"><button class="cam-btn cam-sq" data-pm-cam="out" aria-label="縮小">${I('minus')}</button><button class="cam-btn cam-sq" data-pm-cam="in" aria-label="拡大">${I('plus')}</button></span></div>
           </div>
-          ${own.length ? `<div class="lt-mine">${own.map(([id, c]) => `<button class="lt-mine-card" data-pm-open="${esc(id)}">${polaroid(mineCard(id, c), 'mini')}</button>`).join('')}</div>` : '<p class="lt-empty">まだ投函したポストカードはありません。上のフォームから、旅の一枚を送ってみましょう。投函した駅には、地図の上に写真のピンが浮かびます。</p>'}
+          ${own.length ? `<div class="lt-mine">${own.map(([id, c]) => `<button class="lt-mine-card" data-pm-open="${esc(id)}">${polaroid(mineCard(id, c), 'mini')}</button>`).join('')}</div>` : `<div class="lt-empty">${YT.Guides ? YT.Guides.line('emptyMine') : ''}<p>上のフォームから、旅の一枚を送ってみましょう。投函した駅には、地図の上に写真のピンが浮かびます。</p></div>`}
         </div>
       </section>
       <section class="panel lt-board">
@@ -400,7 +400,7 @@
             ${[['all', 'すべて'], ['open', '見られる'], ['locked', 'まだ']].map(([k, l]) => `<button class="seg-btn ${filter === k ? 'is-active' : ''}" data-pc-filter="${k}">${l}</button>`).join('')}
           </div>
         </div>
-        <div class="lt-grid">${realReady() ? '<div class="lt-real-slot" data-real-board></div>' : ''}${shown.map((c) => polaroid(c)).join('') || (realReady() ? '' : '<p class="lt-empty">ここに出せるポストカードはまだありません。</p>')}</div>
+        <div class="lt-grid">${realReady() ? '<div class="lt-real-slot" data-real-board></div>' : ''}${shown.map((c) => polaroid(c)).join('') || (realReady() ? '' : `<div class="lt-empty">${YT.Guides ? YT.Guides.line('emptyBoard') : 'ここに出せるポストカードはまだありません。'}</div>`)}</div>
         <p class="lt-note">※写真のポストカードは、ログインした旅人が送ったものです（気になる写真は「通報」してください。3件で見えなくなり、運営が確かめます）。絵のポストカードは、ゲームの中の架空の旅人の便りで、本物の便りがそろった駅から外れていきます。</p>
       </section>`;
     loadImages();
@@ -427,6 +427,12 @@
     let list = [];
     try { list = await Shared().forStation(id); } catch (e) { return; }
     if (!el.isConnected || !list.length) return;
+    // カチ助の新着の知らせ：前に見たあとで新しく届いた便りを数える（はじめて見る駅は数えない）
+    const last = YT.Store.seenOf(id).cards;
+    const times = list.map((c) => (c.updatedAt ? c.updatedAt.toMillis() : 0));
+    const fresh = last ? times.filter((t) => t > last).length : 0;
+    YT.Store.markSeen(id, 'cards', Math.max(Date.now(), ...times));
+    if (fresh && YT.Guides) el.insertAdjacentHTML('beforebegin', YT.Guides.news({ cards: fresh }));
     if (list.length >= REAL_ENOUGH) el.querySelectorAll('[data-pc^="seed-"]').forEach((x) => x.remove());
     el.insertAdjacentHTML('beforeend', list.map((c) => polaroid(realCard(c), 'mini')).join(''));
   }

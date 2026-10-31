@@ -110,7 +110,7 @@
         <p class="gate-reg-lead">${reagree ? 'プライバシーポリシーを新しくしました。読んで、もう一度同意をお願いします。' : edit ? '直したいところを変えて、保存してください。' : 'はじめに、あなたのことを少しだけ教えてください。'}</p>
         ${G ? G.line('register') : ''}
         <label for="reg-name">手帖に載せる名前（40字まで・ペンネームでかまいません）</label>
-        <input id="reg-name" type="text" maxlength="40" required value="${esc(p.displayName || '')}" placeholder="例：くまの旅人">
+        <input id="reg-name" type="text" maxlength="40" required value="${esc(p.displayName || '')}" placeholder="例：日田の放課後組（ペンネームでよかよ）">
         <div class="gate-reg-2">
           <div><label for="reg-age">年代</label><select id="reg-age" required><option value="">選んでください</option>${opts(YT.Places.AGES, p.ageGroup)}</select></div>
           <div><label for="reg-gender">性別</label><select id="reg-gender" required><option value="">選んでください</option>${opts(YT.Places.GENDERS, p.gender)}</select></div>
@@ -151,6 +151,8 @@
     const box = $('#gate-register');
     box.hidden = false;
     box.innerHTML = registerHtml({ ...stats, ...(Gate.profile || {}) }, edit, reagree);
+    // はじめての登録なら、登録した直後に出す歓迎の窓の全身の絵を先に読んでおく
+    if (!edit && !reagree && YT.GuideArt) YT.GuideArt.preload(true);
     const sync = () => {
       const hc = $('#reg-home-country').value, lc = $('#reg-live-country').value;
       $('#reg-home-pref').hidden = hc !== 'JP';
@@ -209,6 +211,8 @@
       $('#gate-register').hidden = true;
       renderLine();
       close();
+      // はじめての登録のときだけ、3匹があいさつする
+      if (!edit && YT.Guides) setTimeout(() => YT.Guides.welcome(), 520);
       // 登録が済んだ（名前が変わった）ことを、旅の便りなどの画面にも知らせる
       listeners.forEach((fn) => { try { fn(Gate.user); } catch (e2) { /* 画面の一部の失敗で登録を止めない */ } });
     } catch (e) {
