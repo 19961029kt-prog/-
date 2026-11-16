@@ -923,7 +923,8 @@ function formatRecordDate(d) {
 }
 function buildTopicLabel() {
   if(curMode==='year') {
-    const [year, exam] = (selExamVal||'').split('-');
+    const parts = (selExamVal||'').split('-');
+    const [year, exam] = [parts.slice(0,-1).join('-'), parts[parts.length-1]];
     return year && exam ? `${yearLabel(year)} ${EXAMS[exam].short}` : '年度別';
   }
   if(curMode==='genre') return selGenreVal || '分野別';
@@ -1185,7 +1186,8 @@ function startQuiz() {
   let pool = [];
   if(curMode==="year") {
     if(!selExamVal){alert("試験を選択してください");return;}
-    const [year, exam] = selExamVal.split('-');
+    const parts = selExamVal.split('-');
+    const [year, exam] = [parts.slice(0,-1).join('-'), parts[parts.length-1]];
     pool = [...DB[year][exam]];
   } else if(curMode==="genre") {
     if(!selGenreVal){alert("分野を選択してください");return;}
