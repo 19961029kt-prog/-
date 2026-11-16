@@ -1012,7 +1012,9 @@ function renderQ() {
   }
   html += '</div>';
   q.choices.forEach((c,ci)=>{
-    html += `<div class="choice${selAns===ci+1?' selected':''}" onclick="pickChoice(${ci+1})" id="ch-${ci}"><span class="choice-key">${CIRCLED[ci]}</span><span>${c.replace(/\n/g,'<br>')}</span></div>`;
+    if(!c && ci >= q.choices.filter(x=>x).length) return;
+    const txt = c ? c.replace(/\n/g,'<br>') : '<span style="color:#999">(テキスト抽出不可)</span>';
+    html += `<div class="choice${selAns===ci+1?' selected':''}" onclick="pickChoice(${ci+1})" id="ch-${ci}"><span class="choice-key">${CIRCLED[ci]}</span><span>${txt}</span></div>`;
   });
   document.getElementById('q-content').innerHTML = html;
 
