@@ -100,6 +100,17 @@ body{font-family:"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;background:#
 .pass-box.ok{background:#f0fdf4;border-color:#86efac;color:#15803d}
 .pass-box.ng{background:#fef2f2;border-color:#fca5a5;color:#b91c1c}
 @media(max-width:480px){.stat-grid{grid-template-columns:repeat(2,1fr)}.row{flex-direction:column}}
+.exam-info{background:#fff;border:1px solid #e0dfd8;border-radius:10px;padding:.9rem 1.1rem;margin-bottom:10px}
+.exam-info-title{font-size:13px;font-weight:700;margin-bottom:.6rem;display:flex;align-items:center;gap:5px}
+.exam-schedule{display:flex;flex-direction:column;gap:6px;margin-bottom:.7rem}
+.exam-row{display:flex;align-items:center;gap:8px;font-size:13px;padding:6px 10px;border-radius:7px;background:#f5f4f0}
+.exam-row.next{background:#f0fdfa;border:1px solid #99f6e4}
+.exam-row .exam-label{font-weight:600;min-width:68px;flex-shrink:0}
+.exam-row .exam-date{flex:1}
+.exam-row .exam-days{font-size:12px;font-weight:700;color:#0f766e;white-space:nowrap}
+.exam-row.next .exam-days{color:#0f766e}
+.exam-req{font-size:12px;color:#555;line-height:1.7;border-top:1px solid #e0dfd8;padding-top:.6rem}
+.exam-req b{color:#1a1a1a}
 </style>
 </head>
 <body>
@@ -126,6 +137,7 @@ body{font-family:"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;background:#
 <!-- HOME -->
 <div id="s-home" class="screen">
   <div id="home-userbar"></div>
+  <div id="home-exam-info"></div>
   <div id="home-buddies"></div>
   <div id="home-resume"></div>
   <div id="home-empty"></div>
@@ -1982,6 +1994,38 @@ function signOutUser() {
   showScreen('s-profile');
 }
 
+function renderExamInfo() {
+  const EXAM_SCHEDULE = [
+    {label:'R9年1月期', date:new Date(2027,0,19), days:'1/19(火)・20(水)', confirmed:true},
+    {label:'R9年7月期', date:new Date(2027,6,14), days:'7月中旬（日程未公表）', confirmed:false},
+    {label:'R10年1月期', date:new Date(2028,0,18), days:'1月中旬（日程未公表）', confirmed:false},
+  ];
+  const now = new Date();
+  now.setHours(0,0,0,0);
+  const upcoming = EXAM_SCHEDULE.filter(e => e.date >= now);
+  const next = upcoming[0] || null;
+  const next2 = upcoming[1] || null;
+  function daysUntil(d){return Math.ceil((d-now)/(1000*60*60*24));}
+  function daysStr(e){const n=daysUntil(e.date);if(n===0)return'本日';if(n<0)return'終了';return e.confirmed?`あと${n}日`:`約${n}日`;}
+  let rows = '';
+  if(next){
+    rows += `<div class="exam-row next"><span class="exam-label">次回</span><span class="exam-date">${next.label} ${next.days}</span><span class="exam-days">${daysStr(next)}</span></div>`;
+  }
+  if(next2){
+    rows += `<div class="exam-row"><span class="exam-label">次々回</span><span class="exam-date">${next2.label} ${next2.days}</span><span class="exam-days">${daysStr(next2)}</span></div>`;
+  }
+  document.getElementById('home-exam-info').innerHTML = `<div class="exam-info">
+    <div class="exam-info-title">📋 試験情報（試験地：熊本）</div>
+    <div class="exam-schedule">${rows}</div>
+    <div class="exam-req">
+      <b>合格要件</b>：各科目 <b>125点満点中75点以上</b>（60%）で合格<br>
+      科目：基礎／工学A／工学B（各2.5h）・法規（2h）<br>
+      1日目＝基礎・法規、2日目＝工学A・工学B<br>
+      <b>科目合格制度あり</b>：合格科目は<b>3年間</b>免除
+    </div>
+  </div>`;
+}
+
 async function renderHome() {
   document.getElementById('home-userbar').innerHTML = `<div class="card" style="cursor:default;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
       <div><div class="card-title">👤 ${esc(currentUser)} さん</div><div class="card-desc">⏱ 累計学習時間 <strong id="study-total">${formatDuration(studyStats.totalSec)}</strong>（今日 <span id="study-today">${formatDuration(todaySec())}</span>）</div></div>
@@ -1991,6 +2035,7 @@ async function renderHome() {
       </div>
     </div>`;
   document.getElementById('flag-count').textContent = flaggedQuestions().length;
+  renderExamInfo();
   renderBuddies();
   document.getElementById('home-empty').innerHTML = allQuestions().length ? '' :
     '<div class="notice">問題データがまだ収録されていません。過去問データを追加すると出題できるようになります。</div>';
