@@ -40,6 +40,8 @@ jobs:
               *) cp "$f" dist/ ;;
             esac
           done
+      - name: Copy image assets for rikugi exam app
+        run: cp -r img dist/img
       - name: Redirect Q-TRIP 九州よりみちダイス (yokatabi/) to its new URL
         # Q-TRIP は https://q-trip.github.io/ に移った（公開は q-trip/q-trip.github.io リポジトリ）。
         # 旧URL /yokatabi/ には、遊んだ記録を引き継いで新しいURLへ移る転送ページだけを置く
